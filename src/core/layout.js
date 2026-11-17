@@ -110,3 +110,31 @@ export const HILL = {
 
 /** Order the player usually meets things (for hint arrows). */
 export const TASK_ORDER = ['lights', 'bauble', 'scarf', 'star'];
+
+// ---------------------------------------------------------------- Advent (wave 1+)
+/** The knitted Advent calendar board in the market (players open doors here). Keep clear of the landing rug. */
+export const ADVENT_BOARD = { x: -3.0, z: -3.0, heading: 0.6 };
+
+/**
+ * Where each door's quest giver stands (doors 1–4 reuse the existing givers; 24 = the big tree).
+ * Spots are suggestions: the door system nudges a giver off any collider it lands on.
+ */
+export const DOOR_SPOTS = {
+  1: { district: 'residential', x: RESIDENTIAL.giver.x, z: RESIDENTIAL.giver.z },
+  2: { district: 'park', x: PARK.giver.x, z: PARK.giver.z },
+  3: { district: 'lakeside', x: LAKE.giver.x, z: LAKE.giver.z },
+  4: { district: 'hill', x: HILL.giver.x, z: HILL.giver.z },
+  5: { district: 'park', x: 3.2, z: 10.2 }, // snowball fight — Tilly
+  6: { district: 'market', x: -3.4, z: 2.4 }, // ornament hunt — Mr Pine the decorator
+  7: { district: 'hill', x: -2.6, z: -8.6 }, // sled race — Coach Sasha
+  8: { district: 'market', x: 3.9, z: -0.4 }, // cookie baking — Baker Bea (by the bakery stall)
+  24: { district: 'market', x: MARKET.tree.x, z: MARKET.tree.z + 1.5 },
+};
+
+/** Mini-game play areas (centre + rough radius) so games keep their props inside a known space. */
+export const ARENAS = {
+  snowball: { x: 1.5, z: 12.2, r: 3.2 },
+  ornaments: { x: 0, z: 0, r: 5.6 }, // whole plaza
+  sled: { top: { x: -1.0, z: -15.2 }, bottom: { x: -1.0, z: -8.4 } },
+  cookies: { x: 4.4, z: -0.4, r: 1.2 },
+};

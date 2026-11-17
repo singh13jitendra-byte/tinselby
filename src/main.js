@@ -14,6 +14,11 @@ import { createTasks } from './game/index.js';
 import { createUI } from './ui/index.js';
 import { createFinale } from './finale/index.js';
 import { createAudio } from './audio/index.js';
+import { createProgress } from './progress/index.js';
+import { createMiniGames } from './minigames/framework.js';
+import { MINIGAMES } from './minigames/index.js';
+import { createCalendar } from './calendar/index.js';
+import { createNet } from './net/index.js';
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
@@ -33,8 +38,13 @@ const ctx = { THREE, engine, game, colliders, interact, input, player, cam, layo
 ctx.audio = createAudio(ctx);
 ctx.city = buildCity(ctx);
 ctx.life = buildLife(ctx);
+ctx.progress = createProgress(ctx);
+ctx.minigames = createMiniGames(ctx);
+for (const def of MINIGAMES) ctx.minigames.register(def);
 ctx.tasks = createTasks(ctx);
 ctx.ui = createUI(ctx);
+ctx.calendar = createCalendar(ctx);
+ctx.net = createNet(ctx);
 ctx.finale = createFinale(ctx);
 window.__ctx = ctx; // handy for debugging
 
@@ -42,7 +52,7 @@ window.__ctx = ctx; // handy for debugging
 let district = null;
 engine.addUpdate((dt) => {
   player.update(dt);
-  if (game.state.phase === 'play' || game.state.phase === 'finale') {
+  if (game.state.phase === 'play' || game.state.phase === 'finale' || game.state.phase === 'minigame') {
     const d = layout.districtAt(player.pos.x, player.pos.z);
     if (d !== district) {
       const first = !game.state.visited.has(d);

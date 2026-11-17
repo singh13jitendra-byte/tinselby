@@ -1,0 +1,30 @@
+/* Mini-game overlays (lead-owned). Uses theme.css tokens. */
+.mg-layer { position: absolute; inset: 0; pointer-events: none; }
+.mg-intro, .mg-results {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, 86vw);
+  text-align: center; animation: fadeIn .4s ease both;
+}
+.mg-intro h2, .mg-results h2 { margin: 6px 0 8px; font: 700 26px/1.1 var(--font); color: var(--red); }
+.mg-intro p, .mg-results p { margin: 0 0 16px; font: 500 15px/1.4 var(--font); }
+.mg-icon { font-size: 34px; line-height: 1; }
+.mg-row { display: flex; gap: 12px; justify-content: center; }
+.mg-stars { font-size: 40px; letter-spacing: 6px; color: #d9cdb6; margin: 4px 0 6px; }
+.mg-stars .on { color: var(--gold); text-shadow: 0 2px 0 #b07b1c, 0 0 14px rgba(255, 200, 80, .6); }
+.mg-res-score { font: 600 16px/1.2 var(--font); margin-bottom: 10px; }
+.mg-count {
+  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+  font: 700 120px/1 var(--font); color: var(--cream); text-shadow: 0 6px 0 var(--red-dark), 0 14px 40px rgba(0,0,0,.45);
+}
+.mg-count.pop { animation: mgPop .6s ease both; }
+.mg-count.go { color: var(--gold); animation: mgPop .5s ease both; }
+@keyframes mgPop { from { transform: translate(-50%, -50%) scale(1.6); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+.mg-hud { position: absolute; inset: 0; }
+.mg-hud .knit-card { padding: 8px 16px; border-radius: 16px; outline-offset: -6px; }
+.mg-goal { position: absolute; left: 50%; top: calc(14px + var(--safe-t)); transform: translateX(-50%); font: 600 15px/1.2 var(--font); max-width: 60vw; text-align: center; }
+.mg-score, .mg-timer { position: absolute; top: calc(14px + var(--safe-t)); min-width: 86px; text-align: center; }
+.mg-score { left: calc(14px + var(--safe-l)); }
+.mg-timer { right: calc(80px + var(--safe-r)); }
+.mg-score small, .mg-timer small { display: block; font: 600 10px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+.mg-score b, .mg-timer b { font: 700 24px/1.1 var(--font); }
+.mg-timer.low b { color: var(--red); }
+.mg-quit { position: absolute; top: calc(12px + var(--safe-t)); right: calc(14px + var(--safe-r)); }
