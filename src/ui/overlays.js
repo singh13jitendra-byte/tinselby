@@ -104,7 +104,7 @@ export function createOverlays(ctx, root) {
 
   function update(dt) {
     updateBubbles(dt);
-    shotT = cam.shotActive ? shotT + dt : 0;
+    shotT = cam.shotSkippable ? shotT + dt : 0;
     const showSkip = shotT > 0.6 && game.state.phase !== 'entry';
     if (skip.hidden === showSkip) skip.hidden = !showSkip;
   }

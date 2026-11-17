@@ -102,8 +102,8 @@ export function buildGift(mat, name) {
   tex.anisotropy = 4;
   const tagMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, emissive: '#ffffff', emissiveMap: tex, emissiveIntensity: 0.35 });
   const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.085, 0.053), tagMat);
-  tag.position.set(s * 0.24, -s * 0.52, s / 2 + 0.018);
-  tag.rotation.set(-0.08, 0.38, 0.1);
+  tag.position.set(s * 0.26, -s * 0.55, s / 2 + 0.032);
+  tag.rotation.set(-0.08, 0.7, 0.1);
   group.add(tag);
   group.userData.tag = tag;
   return group;

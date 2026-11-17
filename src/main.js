@@ -78,7 +78,14 @@ game.on('game:start', ({ name, style }) => {
 // ?reveal=all → reveal every district immediately
 window.__tinselby = {
   ready: false,
-  step(dt = 1 / 30, n = 1) { for (let i = 0; i < n; i++) engine.step(dt); return engine.stats(); },
+  step(dt = 1 / 30, n = 1) {
+    const gl = engine.renderer.getContext(), px = new Uint8Array(4);
+    for (let i = 0; i < n; i++) {
+      engine.step(dt);
+      if (i % 5 === 4) gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); // keep the GPU queue short in capture mode
+    }
+    return engine.stats();
+  },
   stats() { return { ...engine.stats(), phase: game.state.phase, spirit: game.state.spirit, pos: [+player.pos.x.toFixed(2), +player.pos.z.toFixed(2)], district }; },
   ctx,
 };

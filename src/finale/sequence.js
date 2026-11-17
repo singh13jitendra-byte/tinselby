@@ -6,7 +6,7 @@ import { Fireworks } from '../core/fx.js';
 import { createFlight } from './rig.js';
 import { buildGift } from './sleigh.js';
 import {
-  createCinemaRig, treeStarPose, landingPose, greetPose, giftClosePose, crowdPose, pullbackPose, endOrbitPose,
+  createCinemaRig, treeStarPose, landingPose, greetPose, giftClosePose, crowdPose, pullbackPose,
 } from '../camera/shots.js';
 
 const T = {
@@ -210,7 +210,8 @@ export function createSequence(ctx, rig, trail, overlay, sfx, pxScale) {
     [46.0, () => { try { ctx.life?.cheer?.(); } catch (e) { /* */ } }],
     [T.lift[1], () => { rig.group.visible = false; }],
     [T.end, () => {
-      camRig.cut(endOrbitPose(ctx), 4);
+      ctx.cam.setMode('attract'); // slow orbit over the city behind the end card (no cinematic shot left running)
+      camRig.release(3.5);
       game.state.phase = 'end';
       overlay.endCard(game.state.playerName || 'Traveller', () => location.reload());
       game.emit('game:end', {});

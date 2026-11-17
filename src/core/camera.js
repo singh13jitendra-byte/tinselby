@@ -35,6 +35,8 @@ export function createCameraDirector(engine, game) {
     yaw: BASE_YAW,
     get mode() { return mode; },
     get shotActive() { return !!shot; },
+    /** True while a shot the player may skip is running (UI shows 'Tap to skip'). */
+    get shotSkippable() { return !!shot && shot.skippable && !shot.skipping; },
     follow(obj) { subject = obj; if (obj) target.copy(obj.pos); },
     setMode(m, opts = {}) { mode = m; closeYaw = opts.yaw ?? null; },
     toggleView() { director.setMode(mode === 'high' ? 'follow' : 'high'); game.emit('camera:mode', { mode }); },
@@ -42,7 +44,7 @@ export function createCameraDirector(engine, game) {
       if (shot) shot.resolve();
       return new Promise((resolve) => {
         shot = { blendIn: 0.7, blendOut: 0.7, skippable: true, tilt: 1, ...spec, t: 0, resolve, skipping: false };
-        game.emit('camera:shot', { name: spec.name || '' });
+        game.emit('camera:shot', { name: spec.name || '', skippable: spec.skippable !== false });
       });
     },
     skip() { if (shot && shot.skippable && !shot.skipping) { shot.skipping = true; shot.skipT = shot.t; } },

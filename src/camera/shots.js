@@ -59,7 +59,7 @@ export function cableCarShot(ctx, { cabin, duration = 6, dir = 'up' } = {}) {
       if (!init) { cur.copy(p); init = true; }
       cur.lerp(p, damp(info?.dt ?? 1 / 60, 6));
       const swing = Math.sin(u * Math.PI) * 0.6;
-      out.pos.set(cur.x + 3.4 + swing * 0.5, cur.y + 0.35, cur.z + s * (1.5 - u * 1.3));
+      out.pos.set(cur.x + 3.4 + swing * 0.5, cur.y + 0.12, cur.z + s * (1.7 - u * 1.4));
       tgt.set(cur.x - 0.4, cur.y - 0.6, cur.z - s * 0.6);
       out.target.copy(tgt);
     },
@@ -72,9 +72,9 @@ export function treeStarPose(ctx, dur = 5.5) {
   const { pos, star } = treeInfo(ctx);
   return (t, out) => {
     const k = ease(t / dur);
-    const a = 0.42 - k * 0.32, r = 4.6 + k * 0.9;
-    out.pos.set(pos.x + Math.sin(a) * r, 0.7 + k * (star.y - 0.2), pos.z + Math.cos(a) * r);
-    out.target.set(star.x, 1.1 + k * (star.y - 1.1) + 0.15, star.z);
+    const a = 0.42 - k * 0.32, r = 6.4 + k * 1.4;
+    out.pos.set(pos.x + Math.sin(a) * r, 0.8 + k * (star.y - 0.6), pos.z + Math.cos(a) * r);
+    out.target.set(star.x, 1.0 + k * (star.y - 1.05), star.z);
   };
 }
 
@@ -119,11 +119,11 @@ export function giftClosePose(ctx, getGift, getHeading) {
     const h = getHeading();
     const rx = Math.cos(h), rz = -Math.sin(h), fx = Math.sin(h), fz = Math.cos(h);
     const push = 1 - Math.min(1, t / 5) * 0.12;
-    pos.set(g.x + (rx * 0.62 + fx * 0.72) * push, g.y + 0.1, g.z + (rz * 0.62 + fz * 0.72) * push);
+    pos.set(g.x + (rx * 0.8 + fx * 0.26) * push, g.y + 0.3, g.z + (rz * 0.8 + fz * 0.26) * push); // above doll height so passers-by rarely block it
     if (!init) { cur.copy(g); out.pos.copy(pos); init = true; }
     cur.lerp(g, damp(dt, 5));
     out.pos.lerp(pos, damp(dt, 4));
-    out.target.set(cur.x - rx * 0.02, cur.y - 0.01, cur.z - rz * 0.02);
+    out.target.set(cur.x + fx * 0.14, cur.y, cur.z + fz * 0.14);
   };
 }
 
@@ -185,13 +185,20 @@ export function createCinemaRig(ctx, { tilt = 1.2, blendIn = 1.0, name = 'cinema
         update: (u, out, info) => rig.update(out, info?.dt ?? 1 / 60),
       }).then(() => { active = false; });
     },
+    /** Hand the camera back to the base camera (cam.setMode first): hold the last pose, blend out over `blendOut` s. */
+    release(blendOut = 3) {
+      if (!active) return;
+      const p = last.pos.clone(), q = last.target.clone();
+      gen = null;
+      ctx.cam.playShot({ name: name + 'Out', duration: blendOut + 0.05, blendIn: 0.001, blendOut, skippable: false, tilt, update: (u, out) => { out.pos.copy(p); out.target.copy(q); } });
+    },
     /** Switch to a new pose generator, cross-fading from the current camera over `blend` seconds. */
     cut(g, blend = 1.2) {
       if (gen) { from.pos.copy(last.pos); from.target.copy(last.target); hasFrom = blend > 0; }
       gen = g; segT = 0; blendT = 0; blendDur = blend;
     },
     update(out, dt) {
-      if (!gen) return;
+      if (!gen) { out.pos.copy(last.pos); out.target.copy(last.target); return; }
       segT += dt;
       gen(segT, cur, dt);
       if (hasFrom && blendT < blendDur) {
