@@ -2,6 +2,8 @@
 import * as THREE from 'three';
 import { C, part, xf, box, rbox, KNIT, FELT, GLOSS, faceColor, col, mulberry32 } from './kit.js';
 
+const PLAZA_SNOW = ['#f7f5f1', '#f1efeb', '#fbfaf7', '#f4f2ee', '#eeece8'];
+
 /** Flat grid of knit "cobbles": per-cell colour jitter (cheap mosaic). Top face at y. */
 export function cobbles(x0, z0, x1, z1, cell, palette, y, seed = 1, k = KNIT) {
   const w = x1 - x0, d = z1 - z0;
@@ -57,7 +59,7 @@ export function buildBook(K) {
 /** Cotton-snow ground tiles for every district (the hill makes its own sculpted ground). */
 export function buildGroundTiles(K) {
   const { WORLD } = K.layout;
-  const tones = [C.snow, '#f2ede5', '#f7f4ee', '#efeae2'];
+  const tones = ['#f8f6f2', '#f4f2ee', '#fbfaf7', '#f1efeb'];
   const rnd = mulberry32(7);
   const tile = (x0, z0, x1, z1) => {
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
@@ -107,11 +109,17 @@ export function buildRoads(K) {
   chunks(-6.6, -5.6, 6.6, 5.6, 2.2, (a, b, c, d) => {
     const B = K.G.market.ground;
     B.begin([(a + c) / 2, 0, (b + d) / 2], { kind: 'tile', hinge: [(a + c) / 2, 0, b] });
-    const g = cobbles(a, b, c, d, 0.34, C.cobble, 0.055, seed++);
+    // cotton-snow square (felt) with knitted inlays: brick + pine rings round the tree, candy-stripe border
+    const g = cobbles(a, b, c, d, 0.34, PLAZA_SNOW, 0.055, seed++, FELT);
+    const kind = g.attributes.aMat;
     faceColor(g, (x, y, z, f) => {
       const r = Math.hypot(x - tree.x, z - tree.z);
-      if (r > 1.35 && r < 1.62) return f % 4 < 2 ? '#a5493a' : '#b85a45';
-      return null;
+      let c2 = null;
+      if (r > 1.35 && r < 1.62) c2 = f % 4 < 2 ? '#a5493a' : '#b85a45';
+      else if (r > 1.62 && r < 1.9) c2 = f % 4 < 2 ? '#2f6446' : '#3a7a52';
+      else if (Math.abs(x) > 6.24 || Math.abs(z) > 5.29) c2 = (Math.floor((x + 6.6) / 0.36667) + Math.floor((z + 5.6) / 0.32)) % 2 ? '#b8302d' : '#f5efe4';
+      if (c2) for (let j = 0; j < 3; j++) kind.setX(f * 3 + j, KNIT);
+      return c2;
     });
     B.add(g);
   });

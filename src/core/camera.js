@@ -13,7 +13,7 @@ import * as THREE from 'three';
 export function createCameraDirector(engine, game) {
   const cam = engine.camera;
   const MODES = {
-    follow: { dist: 8.2, pitch: 40, fov: 32, tilt: 1.0, lead: 0.35 },
+    follow: { dist: 6.7, pitch: 36, fov: 32, tilt: 1.0, lead: 0.35 },
     high: { dist: 21, pitch: 60, fov: 32, tilt: 0.7, lead: 0.2 },
     close: { dist: 3.3, pitch: 16, fov: 36, tilt: 1.6, lead: 0.1 },
     attract: { dist: 24, pitch: 48, fov: 32, tilt: 0.8, lead: 0 },

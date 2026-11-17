@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { makeKnitTexture, makeFeltTexture, makeYarnMaterial } from './yarn.js';
 import { TiltShift } from './post.js';
+import { Snow } from './fx.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -12,14 +13,14 @@ export function createEngine(canvas) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.NeutralToneMapping;
-  renderer.toneMappingExposure = 0.9;
+  renderer.toneMappingExposure = 0.92;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.info.autoReset = false;
 
   const scene = new THREE.Scene();
-  const bg = new THREE.Color('#2b3452');
+  const bg = new THREE.Color('#46567a');
   scene.background = bg;
-  scene.fog = new THREE.Fog(bg, 38, 90);
+  scene.fog = new THREE.Fog(bg, 30, 84);
 
   const camera = new THREE.PerspectiveCamera(32, 1, 0.3, 140);
   camera.position.set(0, 8, 20);
@@ -27,8 +28,8 @@ export function createEngine(canvas) {
   const mat = makeYarnMaterial(makeKnitTexture(), makeFeltTexture());
 
   // twilight: cool sky fill, low warm key with long soft shadows, blue rim fill
-  const hemi = new THREE.HemisphereLight('#a9bdee', '#d6cdc6', 0.78);
-  const key = new THREE.DirectionalLight('#ffd6a8', 2.3);
+  const hemi = new THREE.HemisphereLight('#c3d3fb', '#eeeae6', 1.55);
+  const key = new THREE.DirectionalLight('#fff0e0', 1.9);
   key.castShadow = true;
   const sm = isMobile ? 1024 : 2048;
   key.shadow.mapSize.set(sm, sm);
@@ -36,11 +37,13 @@ export function createEngine(canvas) {
   sc.left = -13; sc.right = 13; sc.top = 13; sc.bottom = -13; sc.near = 1; sc.far = 60;
   key.shadow.bias = -0.0004;
   key.shadow.normalBias = 0.02;
-  const fill = new THREE.DirectionalLight('#7f9cff', 0.75);
+  key.shadow.radius = 2.2;
+  const fill = new THREE.DirectionalLight('#9db4ff', 0.45);
   scene.add(hemi, key, key.target, fill, fill.target);
-  const KEY_DIR = new THREE.Vector3(-0.55, 0.62, 0.56).normalize();
+  const KEY_DIR = new THREE.Vector3(-0.5, 0.84, 0.46).normalize();
   const FILL_DIR = new THREE.Vector3(0.6, 0.45, -0.66).normalize();
 
+  const snow = new Snow(scene, isMobile ? 500 : 900); // soft falling flakes around the camera focus (1 draw call)
   const post = new TiltShift(renderer);
   const maxPR = isMobile ? Math.min(window.devicePixelRatio || 1, 1.0) : Math.min(window.devicePixelRatio || 1, 1.25);
   let pixelRatio = maxPR;
@@ -85,13 +88,13 @@ export function createEngine(canvas) {
   function applyEvening(dt) {
     engine._evening += (engine._eveningTarget - engine._evening) * (1 - Math.exp(-dt * 0.8));
     const k = engine._evening;
-    hemi.intensity = 0.78 - 0.22 * k;
-    key.intensity = 2.3 - 0.9 * k;
-    key.color.copy(cA.set('#ffd6a8').lerp(cB.set('#ffc28a'), k));
-    renderer.toneMappingExposure = 0.9 - 0.08 * k;
-    bg.copy(cA.set('#2b3452').lerp(cB.set('#18203a'), k));
+    hemi.intensity = 1.55 - 0.5 * k;
+    key.intensity = 1.9 - 0.85 * k;
+    key.color.copy(cA.set('#fff0e0').lerp(cB.set('#ffd9b0'), k));
+    renderer.toneMappingExposure = 0.92 - 0.06 * k;
+    bg.copy(cA.set('#46567a').lerp(cB.set('#1b2444'), k));
     scene.fog.color.copy(bg);
-    mat.userData.uniforms.uGlow.value = 6.0 + 2.5 * k;
+    mat.userData.uniforms.uGlow.value = 7.0 + 2.5 * k;
   }
 
   function step(dt) {
@@ -105,6 +108,7 @@ export function createEngine(canvas) {
     key.position.set(fx + KEY_DIR.x * 20, KEY_DIR.y * 20, fz + KEY_DIR.z * 20);
     fill.target.position.set(fx, 0, fz);
     fill.position.set(fx + FILL_DIR.x * 12, FILL_DIR.y * 12, fz + FILL_DIR.z * 12);
+    snow.update(engine.time, engine.focus, renderer.domElement.height / 540);
     renderer.info.reset();
     post.render(scene, camera, engine.time);
   }

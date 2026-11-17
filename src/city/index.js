@@ -2,7 +2,7 @@
 // See CONTRACTS.md §City for the API returned by buildCity(ctx).
 import * as THREE from 'three';
 import { RevealGroup, Lights } from './reveal.js';
-import { merge, mulberry32, GLOW } from './kit.js';
+import { merge, mulberry32, GLOW, lampSpots } from './kit.js';
 import { buildBook, buildGroundTiles, buildRoads } from './ground.js';
 import { buildMarket } from './market.js';
 import { buildResidential } from './residential.js';
@@ -142,6 +142,44 @@ export function buildCity(ctx) {
   for (const h of residential.houses) h.setLights(h.lit);
   if (K.hillSlope?.mesh) colliders.groundMeshes.push(K.hillSlope.mesh);
 
+  // ---------------------------------------------------------------- warm light pools on the snow
+  // Lamps, doorways, stalls and the big tree spill soft lantern light on the ground: additive decals, one instanced
+  // mesh per district (hidden until that district has popped up). No real lights, so it stays cheap on phones.
+  const pools = buildPools();
+  function buildPools() {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 64;
+    const cg = cv.getContext('2d');
+    const grd = cg.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0, 'rgba(255,255,255,1)');
+    grd.addColorStop(0.25, 'rgba(255,255,255,0.62)');
+    grd.addColorStop(0.6, 'rgba(255,255,255,0.18)');
+    grd.addColorStop(1, 'rgba(255,255,255,0)');
+    cg.fillStyle = grd;
+    cg.fillRect(0, 0, 64, 64);
+    const tex = new THREE.CanvasTexture(cv);
+    const pmat = new THREE.MeshBasicMaterial({ map: tex, color: '#ff9a45', transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const spots = {}; // gid → [x, y, z, radius, strength]
+    const add = (x, y, z, r, k = 1) => { const gid = K.groupAt(x, z); (spots[gid] ||= []).push([x, Math.max(y, 0.07) + 0.022, z, r, k]); };
+    for (const [x, y, z, sc] of lampSpots) add(x, y, z, 1.55 * sc, 1);
+    for (const h of residential.houses) add(h.door[0], 0.07, h.door[1], 1.15, 0.7);
+    for (const st of M.stalls) { const d = Math.hypot(st.x, st.z) || 1; add(st.x - (st.x / d) * 0.75, 0.07, st.z - (st.z / d) * 0.75, 1.5, 0.8); }
+    add(M.tree.x, 0.07, M.tree.z, 3.3, 0.9);
+    add(M.carousel.x, 0.07, M.carousel.z, 2.5, 0.7);
+    const quad = new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2);
+    const m4 = new THREE.Matrix4(), q0 = new THREE.Quaternion(), v0 = new THREE.Vector3(), s0 = new THREE.Vector3(), c0 = new THREE.Color();
+    const out = [];
+    for (const gid of Object.keys(spots)) {
+      const list = spots[gid];
+      const im = new THREE.InstancedMesh(quad, pmat, list.length);
+      list.forEach(([x, y, z, r, k], i) => { im.setMatrixAt(i, m4.compose(v0.set(x, y, z), q0, s0.set(r, 1, r))); im.setColorAt(i, c0.setScalar(k)); });
+      im.frustumCulled = false; im.renderOrder = 2; im.name = 'city-pools-' + gid;
+      engine.scene.add(im);
+      out.push({ im, group: G[gid].group });
+    }
+    return { list: out, mat: pmat };
+  }
+
   // ---------------------------------------------------------------- walk physics: heights
   const inRect = (x, z, r) => x >= r[0] && x <= r[2] && z >= r[1] && z <= r[3];
   const pier = lakeside.pierRect;
@@ -193,6 +231,8 @@ export function buildCity(ctx) {
   engine.addUpdate((dt, t) => {
     for (const id of GROUP_IDS) G[id].group.update(t);
     for (const fn of K.updates) fn(dt, t);
+    for (const p of pools.list) p.im.visible = p.group.state === 'shown';
+    pools.mat.opacity = 0.42 + 0.4 * engine._evening;
   }, 5);
 
   return {

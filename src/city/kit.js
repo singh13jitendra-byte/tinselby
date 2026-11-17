@@ -12,8 +12,8 @@ export const C = {
   rose: '#c98585',
   dusk: '#5f7fa8',
   stone: '#c9bfb2',
-  cobble: ['#c9bba4', '#d6cab5', '#bfae96', '#cdbfa8', '#b8a78f'],
-  road: ['#8f8780', '#9a9189', '#867e78', '#a39a90', '#7f7872'],
+  cobble: ['#f2efea', '#e9e6e0', '#f7f5f1', '#e4e1db', '#edeae5'], // snowy cream knit patchwork
+  road: ['#bcc3cc', '#c7cdd5', '#b2bac4', '#cfd4da', '#abb3be'], // trodden snow over grey wool
   lampPost: '#2f3b36',
   rail: '#55504c',
   path: '#ece6dc',
@@ -41,7 +41,10 @@ export function prefab(key, build) {
   return g;
 }
 /** Cached prefab cloned into world space. */
+/** Where lamps were placed ([x, y, z, scale]); the city lays warm light pools on the snow under them. */
+export const lampSpots = [];
 export function put(key, build, x, y, z, ry = 0, s = 1) {
+  if (key === 'lamp') lampSpots.push([x, y, z, s]);
   return xf(prefab(key, build).clone(), [x, y, z], [0, ry, 0], s);
 }
 /** Transform an array of local geos into world space (in place) and return them. */
@@ -152,7 +155,7 @@ export function lampGeos(h = 1.25) {
   g.push(xf(cyl(0.07, 0.09, 0.1, 8, C.lampPost), [0, 0.05, 0]));
   g.push(xf(cyl(0.025, 0.035, h, 6, C.lampPost), [0, h / 2, 0]));
   g.push(xf(cyl(0.07, 0.05, 0.04, 6, C.lampPost), [0, h + 0.02, 0]));
-  g.push(xf(box(0.11, 0.15, 0.11, C.warm, GLOW), [0, h + 0.115, 0]));
+  g.push(xf(box(0.125, 0.16, 0.125, C.warm, GLOW), [0, h + 0.115, 0]));
   for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) g.push(xf(box(0.018, 0.16, 0.018, C.lampPost), [x * 0.056, h + 0.115, z * 0.056]));
   g.push(xf(cone(0.1, 0.09, 4, C.lampPost), [0, h + 0.235, 0], [0, Math.PI / 4, 0]));
   g.push(xf(ball(0.075, C.snow, FELT, 8, 5), [0, h + 0.28, 0], null, [1, 0.45, 1]));
@@ -174,7 +177,7 @@ export function benchGeos() {
   return g;
 }
 
-export function snowLump(r = 0.3) { return [xf(ball(r, C.snow, FELT, 8, 5), [0, 0, 0], null, [1, 0.38, 0.8])]; }
+export function snowLump(r = 0.3) { return [xf(ball(r, C.snow, FELT, 12, 7), [0, 0, 0], null, [1, 0.38, 0.8])]; }
 
 export function snowmanGeos() {
   const g = [];

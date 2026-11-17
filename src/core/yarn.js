@@ -123,7 +123,32 @@ export function makeFeltTexture(size = 256) {
     g.quadraticCurveTo(x + Math.cos(a + 1) * len * 0.6, y + Math.sin(a + 1) * len * 0.6, x + Math.cos(a) * len, y + Math.sin(a) * len);
     g.stroke();
   }
-  // draw wrapped copies at edges are skipped: fine-grained enough that seams don't read
+  // cotton-wool puffs (tileable soft lumps) go in the green channel: used for fluffy snow shading
+  const pc = document.createElement('canvas');
+  pc.width = pc.height = size;
+  const pg = pc.getContext('2d');
+  pg.fillStyle = '#000';
+  pg.fillRect(0, 0, size, size);
+  pg.globalCompositeOperation = 'lighter';
+  let sd = 1234567;
+  const pr = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 46; i++) {
+    const x = pr() * size, y = pr() * size, r = 16 + pr() * 26;
+    for (const ox of [-size, 0, size]) for (const oy of [-size, 0, size]) {
+      if (x + ox < -r || x + ox > size + r || y + oy < -r || y + oy > size + r) continue;
+      const grd = pg.createRadialGradient(x + ox - r * 0.15, y + oy - r * 0.15, 0, x + ox, y + oy, r);
+      grd.addColorStop(0, 'rgba(255,255,255,0.5)');
+      grd.addColorStop(0.6, 'rgba(255,255,255,0.28)');
+      grd.addColorStop(1, 'rgba(255,255,255,0)');
+      pg.fillStyle = grd;
+      pg.beginPath();
+      pg.arc(x + ox, y + oy, r, 0, Math.PI * 2);
+      pg.fill();
+    }
+  }
+  const fib = g.getImageData(0, 0, size, size), puf = pg.getImageData(0, 0, size, size);
+  for (let i = 0; i < size * size; i++) fib.data[i * 4 + 1] = puf.data[i * 4];
+  g.putImageData(fib, 0, 0);
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.anisotropy = 8;
@@ -141,15 +166,38 @@ uniform float uTime;
 uniform float uGlow;
 varying float vMat;
 varying float vTw;
+float knitFar() { vec2 fw = fwidth(vBumpMapUv); return smoothstep(0.07, 0.42, max(fw.x, fw.y)); }
+float snowW() { return smoothstep(0.6, 0.78, min(vColor.r, min(vColor.g, vColor.b))); }
 float yarnH(vec2 uv) {
-  if (vMat < 0.5) return texture2D(feltTex, uv * 0.12).x * 0.9;
-  if (vMat < 1.5) return texture2D(bumpMap, uv).x;
+  if (vMat < 0.5) { vec4 f = texture2D(feltTex, uv * 0.12); return f.x * 0.9 + texture2D(feltTex, uv * 0.027).y * 4.0 * snowW(); }
+  if (vMat < 1.5) return texture2D(bumpMap, uv).x * (1.0 - 0.75 * knitFar());
   return 0.0;
 }
 vec3 yarnShade() {
-  if (vMat < 0.5) return vec3(0.8 + 0.38 * texture2D(feltTex, vBumpMapUv * 0.12).x);
-  if (vMat < 1.5) return vec3(0.42 + 0.72 * texture2D(bumpMap, vBumpMapUv).x);
+  if (vMat < 0.5) {
+    float w = snowW();
+    float puff = texture2D(feltTex, vBumpMapUv * 0.027).y;
+    vec3 f = vec3(0.8 + 0.38 * texture2D(feltTex, vBumpMapUv * 0.12).x);
+    // cotton wool: soft bluish hollows between bright puffs
+    return f * mix(vec3(1.0), mix(vec3(0.8, 0.86, 0.98), vec3(1.07, 1.06, 1.04), smoothstep(0.08, 0.7, puff)), w);
+  }
+  if (vMat < 1.5) {
+    float far = knitFar();
+    float h = texture2D(bumpMap, vBumpMapUv).x;
+    // chunky stitches up close; contrast eases off with distance so far knit reads as soft wool, not noise
+    return vec3(mix(0.5 + 0.66 * h, 0.78 + 0.22 * h, far));
+  }
   return vec3(1.0);
+}
+float snowGlitter() {
+  if (vMat > 0.5) return 0.0;
+  vec2 q = vBumpMapUv * 1.3;
+  vec2 cell = floor(q);
+  float h = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+  float dotm = smoothstep(0.42, 0.12, length(fract(q) - 0.5));
+  vec2 fw = fwidth(q);
+  float fade = 1.0 - smoothstep(0.25, 0.7, max(fw.x, fw.y));
+  return step(0.972, h) * dotm * fade * snowW() * (0.5 + 0.5 * sin(uTime * 2.6 + h * 400.0));
 }
 vec2 dHdxy_fwd() {
   vec2 dSTdx = dFdx(vBumpMapUv);
@@ -202,10 +250,10 @@ export function makeYarnMaterial(knitTex, feltTex) {
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nif (vMat > 2.5) roughnessFactor = 0.25;')
       .replace(
         '#include <emissivemap_fragment>',
-        '#include <emissivemap_fragment>\nif (vMat > 1.5 && vMat < 2.5) totalEmissiveRadiance += vColor.rgb * uGlow * (0.72 + 0.28 * sin(uTime * 2.4 + vTw * 6.283));'
+        '#include <emissivemap_fragment>\nif (vMat > 1.5 && vMat < 2.5) totalEmissiveRadiance += vColor.rgb * uGlow * (0.72 + 0.28 * sin(uTime * 2.4 + vTw * 6.283));\ntotalEmissiveRadiance += vec3(0.9, 0.95, 1.0) * snowGlitter() * 0.55;'
       );
   };
-  m.customProgramCacheKey = () => 'yarn-v1';
+  m.customProgramCacheKey = () => 'yarn-v2';
   return m;
 }
 

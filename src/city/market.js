@@ -80,7 +80,20 @@ export function buildMarket(K) {
     const dx = top[0] - x, dz = top[2] - z, d = Math.hypot(dx, dz);
     const end = [top[0] - (dx / d) * 0.25, top[1], top[2] - (dz / d) * 0.25];
     const gl = garland([x, 2.15, z], end, 0.45, { n: 16, cord: C.cream, cordR: 0.013, bulbR: 0.028, colors: [C.warm, '#ffe0a0'], beads: [C.red, C.gold, C.red, '#efe1c6'] });
-    b.add(gl.cord).add(gl.beads).add(gl.bulbs, 'festive2');
+    b.add(gl.cord).add(gl.beads).add(gl.bulbs);
+  }
+  // warm fairy-light strings swagged lamp to lamp round the plaza (always lit: the cosy base glow)
+  {
+    const ring = [[-6.05, -5.15], [-3.4, -5.05], [3.6, -5.1], [6.05, -5.15], [5.85, -2.2], [6.1, 1.5], [5.85, 4.9], [1.25, 5.1], [-1.25, 5.1], [-5.85, 4.9], [-6.1, 1.9], [-5.85, -2.0]];
+    const cords = [], bulbs = [];
+    for (let i = 0; i < ring.length; i++) {
+      const p = ring[i], q = ring[(i + 1) % ring.length];
+      const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      if (d < 2.6 && Math.abs(p[1]) > 5 && Math.abs(p[0]) < 2) continue; // keep the south entrance open
+      const gl = garland([p[0], 1.33, p[1]], [q[0], 1.33, q[1]], 0.1 + d * 0.035, { n: Math.round(d * 3.2), cord: C.pine, cordR: 0.011, bulbR: 0.027, colors: [C.warm, '#ffe0a0', C.warm, '#ff9a6a'] });
+      cords.push(gl.cord); bulbs.push(...gl.bulbs);
+    }
+    K.prop('market', [0, 1.3, 0], cords, { cast: false }).add(bulbs);
   }
 
   // ---------------------------------------------------------------- benches, gifts, snow
@@ -114,7 +127,7 @@ export function buildMarket(K) {
     colliders.addCircle(x, z, 0.26, 'planter');
   }
   pile(-5.6, -4.6, 4); pile(5.5, -4.3, 4); pile(-5.5, 2.9, 3); pile(3.0, -4.9, 3);
-  const lumps = [[-6.2, -5.3], [6.2, -5.3], [-6.25, 5.25], [6.2, 5.25], [-6.3, -0.6], [6.3, 0.6], [-3.0, 5.35], [3.0, 5.35], [0, -5.35]];
+  const lumps = [[-6.2, -5.3], [6.2, -5.3], [-6.25, 5.25], [6.2, 5.25], [-6.3, -0.6], [6.3, 0.6], [-3.0, 5.35], [3.0, 5.35], [0, -5.35], [-5.7, -2.25], [5.7, -2.45], [-5.65, 4.65], [5.65, 4.65], [-3.55, -5.3], [3.75, -5.35], [-4.6, 5.4], [4.7, -5.4], [-6.3, 0.9], [6.3, -1.0], [-1.6, -5.4], [1.9, 5.4]];
   for (const [x, z] of lumps) K.prop('market', [x, 0.05, z], [put('lump', () => snowLump(0.32), x, 0.05, z, rnd() * 3, 0.8 + rnd() * 0.5)], { cast: false });
 
   return { tree };

@@ -37,10 +37,12 @@ varying vec2 vUv;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void main(){
   vec3 col = texture2D(tDiffuse, vUv).rgb + texture2D(tBloom, vUv).rgb * bloom;
-  col *= vec3(1.03, 1.0, 0.96);                        // warm lantern grade
+  float lum = dot(col, vec3(0.299, 0.587, 0.114));
+  col = max(mix(vec3(lum), col, 1.22), 0.0);            // richer yarn colours
+  col *= vec3(1.02, 1.0, 0.975);                       // warm lantern grade
   float v = smoothstep(1.0, 0.32, length((vUv - 0.5) * vec2(1.0, 1.25)));
-  col *= mix(0.72, 1.0, v);                            // soft warm vignette
-  col = mix(col, col * vec3(0.9, 0.94, 1.08), 1.0 - v);  // cool twilight at the edges
+  col *= mix(0.66, 1.0, v);                            // soft warm vignette
+  col = mix(col, col * vec3(0.93, 0.96, 1.06), 1.0 - v);  // cool twilight at the edges
   col += (hash(vUv * res + fract(time) * 91.0) - 0.5) * 0.012; // film grain
   gl_FragColor = vec4(max(col, 0.0), 1.0);
   #include <tonemapping_fragment>
@@ -62,17 +64,17 @@ export class TiltShift {
       fragmentShader: BLUR,
       uniforms: {
         tDiffuse: { value: null }, dir: { value: new THREE.Vector2(1, 0) }, res: { value: new THREE.Vector2(1, 1) },
-        focus: { value: 0.45 }, band: { value: 0.07 }, falloff: { value: 0.38 }, maxBlur: { value: 3 },
+        focus: { value: 0.45 }, band: { value: 0.085 }, falloff: { value: 0.33 }, maxBlur: { value: 3 },
       },
       depthTest: false, depthWrite: false, toneMapped: false,
     });
     this.final = new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FINAL,
-      uniforms: { tDiffuse: { value: null }, tBloom: { value: null }, bloom: { value: 1.15 }, res: { value: new THREE.Vector2(1, 1) }, time: { value: 0 } },
+      uniforms: { tDiffuse: { value: null }, tBloom: { value: null }, bloom: { value: 1.45 }, res: { value: new THREE.Vector2(1, 1) }, time: { value: 0 } },
       depthTest: false, depthWrite: false,
     });
-    this.bright = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: BRIGHT, uniforms: { tDiffuse: { value: null }, thr: { value: 0.95 } }, depthTest: false, depthWrite: false, toneMapped: false });
+    this.bright = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: BRIGHT, uniforms: { tDiffuse: { value: null }, thr: { value: 1.12 } }, depthTest: false, depthWrite: false, toneMapped: false });
     this.bloomBlur = this.blur.clone();
     this.bloomBlur.uniforms.band.value = -1;
     this.bloomBlur.uniforms.falloff.value = 0.001;
@@ -105,12 +107,13 @@ export class TiltShift {
     r.render(scene, camera);
     const u = this.blur.uniforms;
     u.focus.value = this.focus;
-    const base = 2.6 * (this.h / 900) * this.strength;
+    const base = 3.7 * (this.h / 900) * this.strength;
+    // small axis-aligned pair first (pre-filter), then a wide diagonal pair: no visible tap grid in the bokeh
     const passes = [
-      [this.rtScene, this.rtA, 1, 0, base],
-      [this.rtA, this.rtB, 0, 1, base],
-      [this.rtB, this.rtA, 1, 0, base * 0.55],
-      [this.rtA, this.rtB, 0, 1, base * 0.55],
+      [this.rtScene, this.rtA, 1, 0, base * 0.45],
+      [this.rtA, this.rtB, 0, 1, base * 0.45],
+      [this.rtB, this.rtA, 0.7071, 0.7071, base],
+      [this.rtA, this.rtB, -0.7071, 0.7071, base],
     ];
     for (const [src, dst, dx, dy, m] of passes) {
       u.tDiffuse.value = src.texture;
@@ -122,7 +125,12 @@ export class TiltShift {
     this.bright.uniforms.tDiffuse.value = this.rtScene.texture;
     this.pass(this.bright, this.rtH);
     const bu = this.bloomBlur.uniforms;
-    const bp = [[this.rtH, this.rtQ1, 1, 0, 2.2], [this.rtQ1, this.rtQ2, 0, 1, 2.2], [this.rtQ2, this.rtQ1, 1, 0, 4.5], [this.rtQ1, this.rtQ2, 0, 1, 4.5]];
+    // tight → wide so the wide taps never see sharp points (no grid of ghost bulbs in the glow)
+    const bp = [
+      [this.rtH, this.rtQ1, 1, 0, 1.0], [this.rtQ1, this.rtQ2, 0, 1, 1.0],
+      [this.rtQ2, this.rtQ1, 0.7071, 0.7071, 2.2], [this.rtQ1, this.rtQ2, -0.7071, 0.7071, 2.2],
+      [this.rtQ2, this.rtQ1, 1, 0, 4.2], [this.rtQ1, this.rtQ2, 0, 1, 4.2],
+    ];
     for (const [src, dst, dx, dy, m] of bp) {
       bu.tDiffuse.value = src.texture;
       bu.dir.value.set(dx, dy);

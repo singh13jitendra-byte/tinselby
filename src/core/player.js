@@ -90,8 +90,8 @@ export function buildCharacter(mat, style = DEFAULT_STYLE, opts = {}) {
     body.add(piv);
     return piv;
   });
-  const hands = new THREE.Object3D(); // carry anchor: in front of the chest
-  hands.position.set(0, 0.17, 0.09);
+  const hands = new THREE.Object3D(); // carry anchor: held up above the bobble so it shows from behind in the follow view
+  hands.position.set(0, 0.45, 0.01);
   body.add(hands);
 
   let phase = 0, idle = 0;
@@ -109,7 +109,7 @@ export function buildCharacter(mat, style = DEFAULT_STYLE, opts = {}) {
       legs[0].rotation.x = sn * 0.7 * k;
       legs[1].rotation.x = -sn * 0.7 * k;
       if (!this.armsUp) { arms[0].rotation.x = -sn * 0.6 * k; arms[1].rotation.x = sn * 0.6 * k; }
-      else { arms[0].rotation.x = arms[1].rotation.x = -1.2; }
+      else { arms[0].rotation.x = arms[1].rotation.x = -2.85 + sn * 0.06 * k; }
       if (!walking) { idle += dt; body.scale.y = 1 + Math.sin(idle * 2.2) * 0.012; } else body.scale.y = 1;
       if (walking && onStep && Math.floor(prev / Math.PI) !== Math.floor(phase / Math.PI)) onStep();
     },
