@@ -31,7 +31,7 @@ export function createEntry(ctx, root) {
     <div class="tb-entry-head fade-in">
       <div class="tb-garland" aria-hidden="true">${bulbs}</div>
       <h1 class="tb-title" aria-label="Welcome to Tinselby"><span class="tb-welcome">Welcome to</span><span class="tb-word">${letters}</span></h1>
-      <div class="knit-sub">Christmas &amp; New Year 2027</div>
+      <div class="knit-sub">A cosy knitted Christmas town</div>
     </div>
     <div class="tb-entry-body">
       <form class="knit-card tb-entry-card fade-in" autocomplete="off">

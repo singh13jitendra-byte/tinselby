@@ -1,5 +1,5 @@
 // Finale DOM overlay (in ctx.uiRoot, using theme.css variables / classes): gift tag card,
-// big knitted countdown numbers, "Happy New Year" banner and the end card.
+// big knitted Christmas Eve countdown numbers (10 → 1 to midnight), the "Merry Christmas!" banner and the end card.
 const CSS = `
 .fin-layer { position: absolute; inset: 0; pointer-events: none; font-family: var(--font); z-index: 40; }
 .fin-tag { position: absolute; right: calc(5vw + var(--safe-r)); bottom: calc(10vh + var(--safe-b)); transform: rotate(-4deg); text-align: center;
@@ -24,17 +24,23 @@ const CSS = `
 .fin-count.pop { animation: finPop .55s cubic-bezier(.2,1.5,.35,1) both; }
 @keyframes finPop { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.3) rotate(-10deg); } 35% { opacity: 1; transform: translate(-50%,-50%) scale(1.08) rotate(2deg); }
   100% { opacity: 1; transform: translate(-50%,-50%) scale(1) rotate(0); } }
-.fin-label { position: absolute; left: 50%; top: calc(14px + var(--safe-t)); transform: translateX(-50%); }
-.fin-ny { position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%); text-align: center; animation: finNY 6s ease both; white-space: nowrap; }
-.fin-ny .knit-title { font-size: clamp(34px, 8vw, 92px); }
-.fin-ny .year { font: 700 clamp(28px, 6vw, 72px)/1 var(--font); color: var(--gold); text-shadow: 0 3px 0 var(--red-dark), 0 8px 24px rgba(0,0,0,.45); margin-top: 6px; letter-spacing: .12em; }
-@keyframes finNY { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.5); } 12% { opacity: 1; transform: translate(-50%,-50%) scale(1.05); }
-  20% { transform: translate(-50%,-50%) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%,-60%) scale(1); } }
+.fin-label { position: absolute; left: 50%; top: calc(16px + var(--safe-t)); transform: translateX(-50%); white-space: nowrap;
+  padding: 7px 18px 8px; border-radius: 999px; background: rgba(40,22,18,.42); animation: finLab .6s ease both; }
+.fin-label .knit-sub { font-size: clamp(11px, 1.7vw, 15px); }
+@keyframes finLab { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translateX(-50%); } }
+.fin-xmas { position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%); text-align: center; animation: finXmas 1.2s cubic-bezier(.2,1.4,.4,1) both; white-space: nowrap;
+  transition: opacity .9s ease, top .9s ease; }
+.fin-xmas.out { opacity: 0; top: 24%; }
+.fin-xmas .knit-title { font-size: clamp(40px, 9.5vw, 110px); }
+.fin-xmas .stitch { display: flex; gap: 10px; justify-content: center; margin-top: 12px; }
+.fin-xmas .stitch i { width: 13px; height: 13px; border-radius: 50%; background: var(--gold); box-shadow: 0 2px 0 rgba(0,0,0,.25), 0 0 12px rgba(255,200,110,.7); }
+.fin-xmas .stitch i:nth-child(2n) { background: var(--red); } .fin-xmas .stitch i:nth-child(3n) { background: var(--green); }
+@keyframes finXmas { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.5); } 60% { opacity: 1; transform: translate(-50%,-50%) scale(1.05); }
+  100% { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
 .fin-end { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; max-width: min(92vw, 640px);
   padding: 30px 40px 28px; animation: finEnd .9s cubic-bezier(.2,1.4,.4,1) both; }
 .fin-end h1 { margin: 0; font: 700 clamp(26px, 5.4vw, 52px)/1.1 var(--font); color: var(--red); text-shadow: 0 2px 0 rgba(139,37,35,.25); word-break: break-word; }
-.fin-end .love { margin-top: 10px; font: 500 clamp(16px, 2.4vw, 22px)/1.2 var(--font); color: var(--ink); }
-.fin-end .yr { margin: 6px 0 18px; font: 600 13px/1 var(--font); letter-spacing: .3em; color: var(--green); text-transform: uppercase; }
+.fin-end .love { margin: 10px 0 20px; font: 500 clamp(16px, 2.4vw, 22px)/1.2 var(--font); color: var(--ink); }
 .fin-end .stitch { display: flex; gap: 8px; justify-content: center; margin: 0 0 14px; }
 .fin-end .stitch i { width: 12px; height: 12px; border-radius: 50%; background: var(--gold); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
 .fin-end .stitch i:nth-child(2n) { background: var(--red); } .fin-end .stitch i:nth-child(3n) { background: var(--green); }
@@ -51,7 +57,7 @@ export function createOverlay(root) {
   const layer = document.createElement('div');
   layer.className = 'fin-layer';
   (root || document.body).appendChild(layer);
-  let tag = null, count = null, ny = null;
+  let tag = null, count = null, label = null, xmas = null;
 
   return {
     layer,
@@ -64,26 +70,40 @@ export function createOverlay(root) {
     },
     hideTag() { if (tag) { tag.style.transition = 'opacity .5s'; tag.style.opacity = '0'; const t = tag; tag = null; setTimeout(() => t.remove(), 600); } },
     countdown(n) {
+      if (!label) {
+        label = el('div', 'fin-label', layer);
+        el('div', 'knit-sub', label).textContent = 'Christmas Eve \u00b7 countdown to midnight';
+      }
       count?.remove();
       count = el('div', 'fin-count pop', layer);
       el('span', 'back', count).textContent = String(n);
       el('span', 'front', count).textContent = String(n);
     },
-    newYear(year = '2027') {
+    christmas() {
       count?.remove(); count = null;
-      ny?.remove();
-      ny = el('div', 'fin-ny', layer);
-      el('div', 'knit-title', ny).textContent = 'Happy New Year!';
-      el('div', 'year', ny).textContent = year;
+      label?.remove(); label = null;
+      xmas?.remove();
+      xmas = el('div', 'fin-xmas', layer);
+      el('div', 'knit-title', xmas).textContent = 'Merry Christmas!';
+      const st = el('div', 'stitch', xmas);
+      for (let i = 0; i < 9; i++) el('i', '', st);
+    },
+    /** Fade the banner out (driven by the finale timeline, so it also behaves with stepped / paused time). */
+    hideChristmas() {
+      if (!xmas) return;
+      const x = xmas; xmas = null;
+      x.classList.add('out');
+      setTimeout(() => x.remove(), 1000);
     },
     endCard(name, onReplay) {
-      ny?.remove(); ny = null;
+      xmas?.remove(); xmas = null;
+      count?.remove(); count = null;
+      label?.remove(); label = null;
       const card = el('div', 'knit-card fin-end interactive', layer);
       const st = el('div', 'stitch', card);
       for (let i = 0; i < 7; i++) el('i', '', st);
-      el('h1', '', card).textContent = `Happy New Year, ${name}!`;
+      el('h1', '', card).textContent = `Merry Christmas, ${name}!`;
       el('div', 'love', card).textContent = '— love, Tinselby';
-      el('div', 'yr', card).textContent = 'Christmas & New Year 2027';
       const b = el('button', 'knit-btn green', card);
       b.textContent = 'Play again';
       b.addEventListener('click', (e) => { e.stopPropagation(); onReplay?.(); });

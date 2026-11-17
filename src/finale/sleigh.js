@@ -1,4 +1,4 @@
-// Santa's sleigh (red knit body, gold trim + runners, piled wrapped gifts, a sack) and the gift with a knitted name tag.
+// Santa's sleigh (red knit body, gold trim + runners, piled wrapped gifts, a sack). The gift itself is built in gift.js.
 // Sleigh faces +z (front scroll at +z); origin on the ground under its middle.
 import * as THREE from 'three';
 import { cyl, sph, box, rbox, torus, tube, xf, merge, poly, part, boxUV, KNIT, FELT, GLOSS, GLOW } from '../core/prims.js';
@@ -61,50 +61,5 @@ export function buildSleigh(mat) {
 /** Convert an ExtrudeGeometry into a yarn part (colour + knit uv). */
 function boxify(geo, color) { return part(boxUV(geo), color, KNIT); }
 
-/** The gift Santa hands over: red knit box, gold ribbon + bow, and a knitted tag "For {name}" hanging at its front-right. */
-export function buildGift(mat, name) {
-  const group = new THREE.Group();
-  const s = 0.11;
-  const g = [xf(rbox(s, s * 0.9, s, 0.014, '#c22f2b', KNIT), [0, 0, 0])];
-  g.push(xf(box(s + 0.008, s * 0.9 + 0.006, 0.022, P.gold, FELT), [0, 0, 0]));
-  g.push(xf(box(0.022, s * 0.9 + 0.008, s + 0.008, P.gold, FELT), [0, 0, 0]));
-  for (const a of [0.5, -0.5, 2.6, -2.6]) g.push(xf(sph(0.026, P.gold, FELT, 8, 6), [Math.sin(a) * 0.022, s * 0.45 + 0.016, Math.cos(a) * 0.022], [0, a, 0.5], [1.3, 0.55, 0.7]));
-  g.push(xf(sph(0.013, P.gold, FELT, 8, 6), [0, s * 0.45 + 0.022, 0]));
-  // yarn loop the tag hangs from
-  g.push(tube([[s * 0.42, s * 0.45, s / 2 + 0.004], [s * 0.4, s * 0.1, s / 2 + 0.012], [s * 0.3, -s * 0.3, s / 2 + 0.016]], 0.0024, P.cream, KNIT, 12, 4));
-  const box3 = new THREE.Mesh(merge(g), mat);
-  box3.castShadow = true;
-  group.add(box3);
-
-  // tag: knitted cream card with stitched border and the player's name (canvas texture)
-  const cv = document.createElement('canvas');
-  cv.width = 256; cv.height = 160;
-  const c = cv.getContext('2d');
-  c.fillStyle = '#f6ead2';
-  c.fillRect(0, 0, 256, 160);
-  for (let y = 0; y < 160; y += 8) for (let x = (y / 8) % 2 ? 0 : 6; x < 256; x += 12) { // knit V texture
-    c.strokeStyle = 'rgba(150,110,70,0.18)'; c.lineWidth = 2;
-    c.beginPath(); c.moveTo(x, y); c.lineTo(x + 3, y + 7); c.lineTo(x + 6, y); c.stroke();
-  }
-  c.setLineDash([10, 7]); c.strokeStyle = '#b8302d'; c.lineWidth = 5;
-  c.strokeRect(12, 12, 232, 136);
-  c.setLineDash([]);
-  c.fillStyle = '#8b2523';
-  c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.font = '600 30px Fredoka, Nunito, "Trebuchet MS", sans-serif';
-  c.fillText('For', 128, 52);
-  let fs = 50;
-  const label = (name || 'you').slice(0, 18);
-  do { c.font = `700 ${fs}px Fredoka, Nunito, "Trebuchet MS", sans-serif`; fs -= 2; } while (c.measureText(label).width > 210 && fs > 16);
-  c.fillText(label, 128, 104);
-  const tex = new THREE.CanvasTexture(cv);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
-  const tagMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, emissive: '#ffffff', emissiveMap: tex, emissiveIntensity: 0.35 });
-  const tag = new THREE.Mesh(new THREE.PlaneGeometry(0.085, 0.053), tagMat);
-  tag.position.set(s * 0.26, -s * 0.55, s / 2 + 0.032);
-  tag.rotation.set(-0.08, 0.7, 0.1);
-  group.add(tag);
-  group.userData.tag = tag;
-  return group;
-}
+// The gift Santa hands over (ornate knitted music box with a hinged lid) lives in gift.js.
+export { buildGift } from './gift.js';

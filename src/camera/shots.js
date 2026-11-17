@@ -1,6 +1,6 @@
 // Camera shot library (played through ctx.cam.playShot).
 //  - Standalone shots (blend in from / out to the follow camera): districtRevealShot, cableCarShot, poseShot.
-//  - Pose generators gen(t, out, dt) for continuous cinematics: treeStarPose, landingPose, greetPose, giftClosePose,
+//  - Pose generators gen(t, out, dt) for continuous cinematics: treeStarPose, landingPose, greetPose, giftClosePose, giftOpenPose,
 //    crowdPose, pullbackPose, endOrbitPose.
 //  - createCinemaRig(ctx): ONE long playShot whose pose is cross-faded between generators with rig.cut(gen, blend).
 //    (cam.playShot always blends via the follow camera, so back-to-back cinematics use the rig instead.)
@@ -124,6 +124,27 @@ export function giftClosePose(ctx, getGift, getHeading) {
     cur.lerp(g, damp(dt, 5));
     out.pos.lerp(pos, damp(dt, 4));
     out.target.set(cur.x + fx * 0.14, cur.y, cur.z + fz * 0.14);
+  };
+}
+
+/** Slow push-in on the opened music box, from its front and a little above, so the tree inside and the
+ *  "Merry Christmas!" lettering in the lid both read. getGift(out) → box origin, getFront(out) → box front (world). */
+export function giftOpenPose(ctx, getGift, getFront) {
+  const g = V(), f = V(), cur = V(), pos = V();
+  let init = false;
+  return (t, out, dt) => {
+    getGift(g);
+    getFront(f);
+    f.y = 0;
+    if (f.lengthSq() < 1e-6) f.set(0, 0, 1);
+    f.normalize();
+    const lx = -f.z, lz = f.x; // towards the box's left (where the name tag hangs)
+    const k = ease(Math.min(1, t / 4.5)), dist = 0.6 - 0.07 * k; // ≈30° down: sees into the box and onto the open lid
+    if (!init) { cur.copy(g); init = true; }
+    cur.lerp(g, damp(dt, 5));
+    pos.set(cur.x + f.x * dist + lx * 0.1, cur.y + 0.38 - 0.05 * k, cur.z + f.z * dist + lz * 0.1);
+    out.pos.copy(pos);
+    out.target.set(cur.x + lx * 0.012, cur.y + 0.055, cur.z + lz * 0.012);
   };
 }
 

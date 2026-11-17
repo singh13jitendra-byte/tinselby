@@ -61,12 +61,13 @@ export function createAudio(ctx) {
     if (music) music.setLevel(level);
   }
 
-  function newYearSwell() {
+  /** Midnight on Christmas Eve: swell into the finale carol (Joy to the World), then settle back into the medley. */
+  function christmasSwell() {
     if (!ac) return;
     setMusicLevel(4);
     const t = ac.currentTime + 0.35;
     music.playSpecial(t, (end) => {
-      // after Auld Lang Syne: settle into a gentle loop
+      // after Joy to the World: settle into a gentle loop
       const bus = music.out.gain;
       bus.cancelScheduledValues(end); bus.setValueAtTime(1.35, end); bus.setTargetAtTime(1, end, 2);
       setTimeout(() => setMusicLevel(2), Math.max(0, (end - ac.currentTime) * 1000));
@@ -140,7 +141,7 @@ export function createAudio(ctx) {
   game.on('santa:arrive', () => sfx('sleighBells'));
   game.on('santa:gift', () => sfx('gift'));
   game.on('finale:start', () => setMusicLevel(4));
-  game.on('newyear', () => { newYearSwell(); sfx('cheer'); });
+  game.on('christmas', () => { christmasSwell(); sfx('cheer'); });
   game.on('countdown', () => sfx('countdown'));
   game.on('item:pickup', () => sfx('pickup'));
   game.on('item:drop', () => sfx('drop'));
@@ -158,7 +159,7 @@ export function createAudio(ctx) {
   }
 
   // ---------------------------------------------------------------- offline self-test (debug only)
-  /** Render `sec` seconds of music at `lvl` (and optionally the New Year swell) offline; returns {rms, peak}. */
+  /** Render `sec` seconds of music at `lvl` (and optionally the Christmas finale carol) offline; returns {rms, peak}. */
   async function renderTest({ sec = 8, lvl = 4, special = false, sfxAll = false } = {}) {
     const sr = 44100;
     const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;

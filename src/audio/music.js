@@ -2,7 +2,7 @@
 // The scheduler itself is time-agnostic: call tick(untilTime) and every event whose time falls before
 // untilTime is scheduled on the AudioContext clock. The live engine calls it every 25 ms with a 150 ms
 // lookahead; the offline test calls it once for the whole render.
-import { MEDLEY, AULD_LANG_SYNE } from './songs.js';
+import { MEDLEY, FINALE_SONG } from './songs.js';
 import { musicBox, glock, bass, padChord, jingle } from './instruments.js';
 
 // layer index → [name, level gain]
@@ -38,7 +38,7 @@ export function createMusic(ac, graph) {
   const activePads = [];
 
   function startSong(song, start) {
-    cur = { song, start, spb: 60 / song.bpm, i: 0, chord: null, special: song === AULD_LANG_SYNE };
+    cur = { song, start, spb: 60 / song.bpm, i: 0, chord: null, special: song === FINALE_SONG };
   }
 
   function setLevel(n, instant = false) {
@@ -146,9 +146,9 @@ export function createMusic(ac, graph) {
     }
   }
 
-  /** Jump to a special tune (Auld Lang Syne) at time `at`; callback when it ends. */
+  /** Jump to the finale carol (Joy to the World) at time `at`; callback when it ends. */
   function playSpecial(at, cb) {
-    pendingSpecial = { song: AULD_LANG_SYNE, at };
+    pendingSpecial = { song: FINALE_SONG, at };
     onSpecialEnd = cb;
   }
 

@@ -1,6 +1,6 @@
-// Note data for the music-box medley. All tunes are public domain:
+// Note data for the music-box medley and the finale carol. All tunes are public domain:
 //   Jingle Bells (James Lord Pierpont, 1857), Deck the Halls (traditional Welsh),
-//   We Wish You a Merry Christmas (traditional English), Auld Lang Syne (traditional Scottish).
+//   We Wish You a Merry Christmas (traditional English), Joy to the World (tune "Antioch", Lowell Mason, 1839).
 // Transcribed by hand into G major so the medley flows without key changes.
 //
 // Melody tokens: NOTE[:beats]  (e.g. "F#4:1.5"), "r" = rest, "|" = bar line (ignored, for readability).
@@ -105,21 +105,26 @@ export const WE_WISH = compile({
     G:3 | D7:3 | C:1 D:2 | G:3 |`,
 });
 
-export const AULD_LANG_SYNE = compile({
-  name: 'Auld Lang Syne', bpm: 72, meter: 4, tail: 4,
+// Finale carol at midnight. Antioch is in 2/4; written here as 4/4 bars (two 2/4 bars each, 10 bars = 40 beats),
+// with the last note held over a full bar. Opens on the high tonic: "Joy!" lands right on the stroke of midnight.
+export const JOY_TO_THE_WORLD = compile({
+  name: 'Joy to the World', bpm: 92, meter: 4, tail: 4,
   melody: `
-    r:3 D4 |
-    G4:1.5 G4:.5 G4 B4 | A4:1.5 G4:.5 A4 B4 | G4:1.5 G4:.5 B4 D5 | E5:3 E5 |
-    D5:1.5 B4:.5 B4 G4 | A4:1.5 G4:.5 A4 B4 | G4:1.5 E4:.5 E4 D4 | G4:3 E5 |
-    D5:1.5 B4:.5 B4 G4 | A4:1.5 G4:.5 A4 E5 | D5:1.5 B4:.5 B4 D5 | E5:3 G5 |
-    D5:1.5 B4:.5 B4 G4 | A4:1.5 G4:.5 A4 B4 | G4:1.5 E4:.5 E4 D4 | G4:4 |`,
+    G5 F#5:.75 E5:.25 D5:1.5 C5:.5 | B4 A4 G4:1.5 D5:.5 |
+    E5:1.5 E5:.5 F#5:1.5 F#5:.5 | G5:1.5 G5:.5 G5:.5 F#5:.5 E5:.5 D5:.5 |
+    D5:.75 C5:.25 B4:.5 G5:.5 G5:.5 F#5:.5 E5:.5 D5:.5 | D5:.75 C5:.25 B4:.5 B4:.5 B4:.5 B4:.5 B4:.5 B4:.25 C5:.25 |
+    D5:1.5 C5:.25 B4:.25 A4:.5 A4:.5 A4:.5 A4:.25 B4:.25 | C5:1.5 B4:.25 A4:.25 G4:.5 G5 E5:.5 |
+    D5:.75 C5:.25 B4:.5 C5:.5 B4 A4 | G4:4 |`,
   chords: `
-    N:3 D:1 |
-    G:4 | D:4 | G:4 | C:4 |
-    G:4 | D:4 | Em:2 C:1 D:1 | G:4 |
-    G:4 | D:4 | G:4 | C:4 |
-    G:4 | D:4 | Em:2 C:1 D:1 | G:4 |`,
+    G:3 C:1 | G:1 D:1 G:2 |
+    C:2 D:2 | G:4 |
+    D7:1 G:3 | D7:1 G:3 |
+    D7:2 D:2 | D7:2 G:1 C:1 |
+    G:3 D7:1 | G:4 |`,
 });
+
+/** The tune played once at the `christmas` moment (midnight), before the medley resumes. */
+export const FINALE_SONG = JOY_TO_THE_WORLD;
 
 /** The looping medley, in order. */
 export const MEDLEY = [JINGLE_BELLS, DECK_THE_HALLS, WE_WISH];

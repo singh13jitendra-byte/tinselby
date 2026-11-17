@@ -4,18 +4,22 @@
 import * as THREE from 'three';
 import { Fireworks } from '../core/fx.js';
 import { createFlight } from './rig.js';
-import { buildGift } from './sleigh.js';
+import { buildGift } from './gift.js';
 import {
-  createCinemaRig, treeStarPose, landingPose, greetPose, giftClosePose, crowdPose, pullbackPose,
+  createCinemaRig, treeStarPose, landingPose, greetPose, giftClosePose, giftOpenPose, crowdPose, pullbackPose,
 } from '../camera/shots.js';
 
 const T = {
   approach: [2.0, 14.0], landed: 14.0, out: [15.0, 16.0], wave: [16.0, 18.6], walk: 16.6, gift: [21.0, 22.0, 22.6],
-  gather: 26.5, count: 28.0, newyear: 38.0, hopIn: [38.3, 39.2], lift: [39.5, 51.0], end: 52.0,
+  open: [23.0, 23.8], // music box lid swings open in the player's hands (camera holds on it until the gather)
+  gather: 26.5, count: 28.0, christmas: 38.0, hopIn: [38.3, 39.2], lift: [39.5, 51.0], end: 52.0,
 };
+const GIFT_YAW = Math.PI / 2; // box front turned to the player's side, towards the close-up camera
 const SKIPS = [[0.4, T.landed], [44.0, T.end]];
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const ss = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
+const easeOut = (x) => { x = Math.min(1, Math.max(0, x)); return 1 - Math.pow(1 - x, 3); };
+const qGift = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), GIFT_YAW);
 
 export function createSequence(ctx, rig, trail, overlay, sfx, pxScale) {
   const { engine, game, player, layout } = ctx;
@@ -48,10 +52,13 @@ export function createSequence(ctx, rig, trail, overlay, sfx, pxScale) {
   const meetSpot = () => { const s = santaSpot(); return V(s.x + sideX * -0.5, 0, s.z - sideZ * 0.5 + 0.12); };
   const sleighPos = V();
   const santaFrom = V(), santaTo = V(), giftFrom = V(), qFrom = new THREE.Quaternion(), qTo = new THREE.Quaternion();
-  let gift = null, giftFlying = false, walk = null, emitAcc = 0;
+  let gift = null, giftFlying = false, walk = null, emitAcc = 0, giftAcc = 0;
 
   function sleighWorld() { return sleighPos.copy(rig.group.position).add(V(0, 0.3, 0)); }
   function giftWorld(out) { if (gift) gift.getWorldPosition(out); else out.copy(meetSpot()).setY(0.25); return out; }
+  const qTmp = new THREE.Quaternion();
+  function giftFront(out) { out.set(0, 0, 1); if (gift) out.applyQuaternion(gift.getWorldQuaternion(qTmp)); return out; }
+  function giftInside(out) { if (gift?.userData.inside) gift.userData.inside.getWorldPosition(out); else giftWorld(out); return out; }
 
   function startWalk() {
     const m = meetSpot();
@@ -147,7 +154,7 @@ export function createSequence(ctx, rig, trail, overlay, sfx, pxScale) {
       gift = buildGift(engine.mat, game.state.playerName || 'you');
       gift.scale.setScalar(0.01);
       rig.santa.hands.add(gift);
-      gift.position.set(0, 0.0, 0.0);
+      gift.position.set(0, 0.01, 0.03);
       rig.santa.pose = 'give';
       sfx('pickup', { vol: 0.6 });
     }],
@@ -161,13 +168,19 @@ export function createSequence(ctx, rig, trail, overlay, sfx, pxScale) {
       giftFlying = false;
       gift.scale.setScalar(1);
       player.carry(gift);
-      gift.rotation.set(0, 0, 0);
+      gift.rotation.set(0, GIFT_YAW, 0);
       rig.santa.pose = 'stand';
       game.emit('santa:gift', { name: game.state.playerName });
       sfx('gift', { vol: 1 });
       if (!jumping) trail.puff(engine.time, giftWorld(V()), 30, new THREE.Color('#ffd27a'), 0.35, 0.9);
       if (!jumping) overlay.giftTag(game.state.playerName || 'you');
     }],
+    [T.open[0] - 0.1, () => camRig.cut(giftOpenPose(ctx, giftWorld, giftFront), 1.2)],
+    [T.open[0], () => {
+      sfx('bell', { vol: 0.45 });
+      if (!jumping) trail.puff(engine.time, giftInside(V()), 34, new THREE.Color('#ffd889'), 0.17, 0.13);
+    }],
+    [T.open[0] + 0.45, () => { if (!jumping) trail.puff(engine.time, giftInside(V()).add(V(0, 0.03, 0)), 22, new THREE.Color('#fff1c9'), 0.11, 0.1); }],
     [T.gather - 0.3, () => overlay.hideTag()],
     [T.gather, () => {
       const tp = treeP();
@@ -183,9 +196,9 @@ export function createSequence(ctx, rig, trail, overlay, sfx, pxScale) {
       game.emit('countdown', { n });
       if (!jumping) { overlay.countdown(n); sfx('countdown', { vol: 1, n }); }
     }]),
-    [T.newyear, () => {
-      game.emit('newyear', {});
-      overlay.newYear('2027');
+    [T.christmas, () => { // midnight: Merry Christmas!
+      game.emit('christmas', {});
+      overlay.christmas();
       try { ctx.life?.cheer?.(); } catch (e) { /* */ }
       rig.santa.pose = 'cheer';
       sfx('cheer', { vol: 1 });
@@ -194,6 +207,7 @@ export function createSequence(ctx, rig, trail, overlay, sfx, pxScale) {
       for (let i = 0; i < 4; i++) burst(i * 0.18);
       camRig.cut(pullbackPose(ctx, () => (rig.group.visible ? rig.group.position : null), 14), 1.2);
     }],
+    [T.christmas + 5.5, () => overlay.hideChristmas()],
     [T.hopIn[0], () => {
       santaFrom.copy(rig.santa.group.position);
       rig.seatWorld(santaTo);
@@ -291,7 +305,19 @@ export function createSequence(ctx, rig, trail, overlay, sfx, pxScale) {
       hands.getWorldQuaternion(qTo);
       gift.position.lerpVectors(giftFrom, to, k);
       gift.position.y += Math.sin(k * Math.PI) * 0.12;
+      qTo.multiply(qGift);
       gift.quaternion.slerpQuaternions(qFrom, qTo, k);
+    }
+    // music box: lid swings open (ease-out), contents pop up, warm sparkles drift out while the camera holds on it
+    if (gift?.userData.setOpen && t >= T.open[0]) {
+      gift.userData.setOpen(easeOut((t - T.open[0]) / (T.open[1] - T.open[0])));
+      if (!jumping && t < T.gather + 1.5) {
+        giftAcc += dt * (t < T.open[1] + 0.6 ? 36 : 20);
+        if (giftAcc >= 1) {
+          const n = Math.floor(giftAcc); giftAcc -= n;
+          trail.emit(engine.time, giftInside(V()), n, 0.07, 0.09, null, 0.17);
+        }
+      }
     }
     // fireworks
     if (fw) {
