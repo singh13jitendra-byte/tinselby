@@ -124,7 +124,7 @@ export const DOOR_SPOTS = {
   2: { district: 'park', x: PARK.giver.x, z: PARK.giver.z },
   3: { district: 'lakeside', x: LAKE.giver.x, z: LAKE.giver.z },
   4: { district: 'hill', x: HILL.giver.x, z: HILL.giver.z },
-  5: { district: 'park', x: 3.2, z: 10.2 }, // snowball fight — Tilly
+  5: { district: 'park', x: 3.5, z: 13.0 }, // snowball fight — Tilly (clear of the gazebo roof)
   6: { district: 'market', x: -3.4, z: 2.4 }, // ornament hunt — Mr Pine the decorator
   7: { district: 'hill', x: -2.6, z: -8.6 }, // sled race — Coach Sasha
   8: { district: 'market', x: 3.9, z: -0.4 }, // cookie baking — Baker Bea (by the bakery stall)

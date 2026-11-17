@@ -118,6 +118,18 @@ export function cushionGeo() {
   ]);
 }
 
+/** Knitted pedestal with a felt cushion beside the big tree: the star rests here (door 4) until Christmas Eve (door 24). */
+export function standGeo() {
+  const g = [];
+  g.push(xf(cyl(0.15, 0.17, 0.04, 16, P.woodDark, FELT), [0, 0.02, 0])); // felt base disc
+  g.push(xf(cyl(0.085, 0.11, 0.24, 14, P.cream, KNIT), [0, 0.16, 0])); // knitted column
+  for (const y of [0.09, 0.2]) g.push(xf(torus(0.1 - (y - 0.09) * 0.2, 0.012, P.red, KNIT, Math.PI * 2, 18), [0, y, 0], [Math.PI / 2, 0, 0]));
+  g.push(xf(cyl(0.13, 0.1, 0.035, 16, P.red, KNIT), [0, 0.295, 0])); // top plate
+  g.push(xf(cushionGeo(), [0, 0.31, 0], null, [0.72, 0.9, 0.72]));
+  for (const [x, z] of [[-0.12, -0.1], [0.12, -0.1], [-0.12, 0.1], [0.12, 0.1]]) g.push(xf(cyl(0.008, 0.016, 0.05, 6, P.gold, KNIT), [x, 0.31, z])); // tassels
+  return merge(g);
+}
+
 /** Bobbing marker above quest givers (small glowing star with a felt halo bead). */
 export function markerGeo() {
   return merge([starGeo(0.075, 0.028, false), xf(dot(0.018, P.glowSoft, GLOW), [0, -0.11, 0])]);
@@ -150,6 +162,7 @@ export function makeModels(mat) {
     scarfCarry: () => mesh(scarfCarryGeo(), mat),
     star: () => mesh(star, mat),
     cushion: () => mesh(cushionGeo(), mat),
+    stand: () => mesh(standGeo(), mat),
     markerGeo: markerGeo(),
     sparkleGeo: sparkleGeo(),
     chevron: () => mesh(chevronGeo(), mat, false),
