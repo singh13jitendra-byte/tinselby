@@ -9,3 +9,5 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - Time of day follows the player's local clock by default (my call), `?tod=` overrides. Festive progress adds lights instead of darkening the sky.
 - Character choice (hair, hair colour, skin, outfit) is identity and always unlocked; hats, scarves and coats are door rewards (my call).
 - Ornament hunt done (Sonnet). To fix at merge: tray icons are emoji; replace with knitted SVG icons.
+- 04:35 IST: all 7 agents hit the 5-hour usage limit around 03:40; resumed after the 4am reset.
+- Cookie bakery done (Sonnet). Merge fixes: no emoji on intro cards (framework renders SVG icons only), player doll hidden during the counter close-up (new mg.setPlayerVisible). For the polish pass: cookie close-up bloom/blur is too strong (the oven meter is hard to read); lower glow and tilt there.
