@@ -55,7 +55,6 @@ export function buildHill(K) {
     const uv = g.attributes.uv;
     for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / 0.072, p.getZ(i) / 0.058);
     const geo = part(g, C.snow, FELT);
-    faceColor(geo, (x, y, z, f) => ((f * 7919) % 13 === 0 ? '#efeae2' : null));
     slope.begin([(x0 + x1) / 2, 0, (z0 + z1) / 2], { kind: 'rise', delay: 0, dur: 0.8 });
     slope.add(geo);
     // back wall of the plateau (seen from the attract orbit)
@@ -103,7 +102,7 @@ export function buildHill(K) {
   { const x = -6.8, z = -9.0, y = H(x, z); K.prop('hill', [x, y, z], [put('snowman', snowmanGeos, x, y, z, 0.4, 1.2)]); colliders.addCircle(x, z, 0.18); K.keepCircle(x, z, 0.4); }
 
   // ---------------------------------------------------------------- pines all over the slope (sitting on the surface)
-  K.scatter([-8.3, -16.8, 8.8, -7.9], 34, 0.3, (x, z, i) => {
+  K.scatter([-8.3, -16.8, 8.8, -7.9], 30, 0.3, (x, z, i) => {
     const y = H(x, z) + 0.02, s = 0.9 + rnd() * 1.1;
     const v = i % 3;
     if (i % 7 === 3) K.prop('hill', [x, y, z], [put('pomH' + (i % 2), () => pomTreeGeos(i % 2 ? C.mint : C.cream), x, y, z, rnd() * 6, s * 0.9)]);
@@ -115,5 +114,5 @@ export function buildHill(K) {
     K.prop('hill', [x, y, z], [put('lump', () => snowLump(0.32), x, y, z, rnd() * 3, 0.8 + rnd() * 0.7)], { cast: false });
   });
   // north-west corner beside the hill
-  forest(K, [-20.8, -16.8, -8.6, -7.7], 13, { minS: 1.1, maxS: 2.3, pines: 0.8 });
+  forest(K, [-20.8, -16.8, -8.6, -7.7], 11, { minS: 1.1, maxS: 2.3, pines: 0.8 });
 }

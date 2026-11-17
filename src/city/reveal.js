@@ -188,6 +188,17 @@ export class RevealGroup {
   }
 }
 
+/** Squash props vertically about their anchors (s = height scale), e.g. a cut-away so the camera sees past a row. */
+export function squashProps(props, s) {
+  const dirty = new Set();
+  for (const p of props) {
+    const B = p.batch.base, O = p.batch.pos, ay = p.at[1];
+    for (let i = p.start * 3; i < p.end * 3; i += 3) { O[i] = B[i]; O[i + 1] = ay + (B[i + 1] - ay) * s; O[i + 2] = B[i + 2]; }
+    dirty.add(p.batch);
+  }
+  for (const b of dirty) b.geo.attributes.position.needsUpdate = true;
+}
+
 function writeProp(p, f, g, s) {
   const B = p.batch.base, O = p.batch.pos;
   const i0 = p.start * 3, i1 = p.end * 3;

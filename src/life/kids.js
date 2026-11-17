@@ -26,19 +26,22 @@ export function createKids(W) {
   };
 
   // --- snowball fight: two pairs facing each other
-  const fighters = [
-    { d: kid(-0.7, 11.5), home: [-0.7, 11.5], foe: 1 }, { d: kid(1.9, 11.0), home: [1.9, 11.0], foe: 0 },
-    { d: kid(-0.5, 12.6), home: [-0.5, 12.6], foe: 3 }, { d: kid(2.2, 12.35), home: [2.2, 12.35], foe: 2 },
-  ];
+  // (spots are checked against the city's colliders so kids don't play inside the gazebo or a tree)
+  const fighters = [[-0.75, 11.5, 1], [1.75, 11.0, 0], [-0.55, 12.4, 3], [1.9, 12.3, 2]].map(([x, z, foe]) => {
+    const home = W.findFree(x, z, 0.15, 0.1);
+    return { d: kid(home[0], home[1]), home, foe };
+  });
   fighters.forEach((f, i) => { f.timer = 0.8 + i * 0.9 + rnd() * 1.5; f.throwT = -1; f.hitT = 0; f.dodge = rnd() * TAU; });
   const flying = []; // {t, dur, ax, ay, az, bx, by, bz, h, target}
 
   // --- chasing in a circle
-  const RC = { x: 3.4, z: 11.7, r: 0.62 };
+  const RC = { x: 2.4, z: 13.6, r: 0.62 };
+  [RC.x, RC.z] = W.findFree(RC.x, RC.z, RC.r, 0.12);
   const runners = [0, 1, 2].map((i) => ({ d: kid(RC.x, RC.z), a: (i / 3) * TAU }));
 
   // --- snowball roller near the snowman spot
   const RS = { x: -3.9, z: 11.1, rx: 0.6, rz: 0.42 };
+  [RS.x, RS.z] = W.findFree(RS.x, RS.z, 0.8, 0.12);
   const roller = { d: kid(RS.x, RS.z), a: 0, r: 0.05, spin: 0, axis: new THREE.Vector3(1, 0, 0), qb: new THREE.Quaternion(), reset: 0 };
 
   const all = [...fighters.map((f) => f.d), ...runners.map((r) => r.d), roller.d];

@@ -1,10 +1,7 @@
-// Finale DOM overlay (in ctx.uiRoot, using theme.css variables / classes): skip hint, gift tag card,
+// Finale DOM overlay (in ctx.uiRoot, using theme.css variables / classes): gift tag card,
 // big knitted countdown numbers, "Happy New Year" banner and the end card.
 const CSS = `
 .fin-layer { position: absolute; inset: 0; pointer-events: none; font-family: var(--font); z-index: 40; }
-.fin-skip { position: absolute; left: 50%; bottom: calc(18px + var(--safe-b)); transform: translateX(-50%); font: 600 13px/1 var(--font);
-  letter-spacing: .16em; text-transform: uppercase; color: var(--cream); opacity: 0; transition: opacity .4s; text-shadow: 0 2px 6px rgba(0,0,0,.5); }
-.fin-skip.on { opacity: .8; }
 .fin-tag { position: absolute; right: calc(5vw + var(--safe-r)); bottom: calc(10vh + var(--safe-b)); transform: rotate(-4deg); text-align: center;
   padding: 14px 26px 16px; min-width: 170px; animation: finTag .6s cubic-bezier(.2,1.6,.4,1) both; }
 .fin-tag .fin-tag-for { font: 600 15px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--red); }
@@ -54,13 +51,10 @@ export function createOverlay(root) {
   const layer = document.createElement('div');
   layer.className = 'fin-layer';
   (root || document.body).appendChild(layer);
-  const skip = el('div', 'fin-skip', layer);
-  skip.textContent = 'Tap to skip';
   let tag = null, count = null, ny = null;
 
   return {
     layer,
-    skipHint(on) { skip.classList.toggle('on', !!on); },
     giftTag(name) {
       tag?.remove();
       tag = el('div', 'knit-card fin-tag', layer);

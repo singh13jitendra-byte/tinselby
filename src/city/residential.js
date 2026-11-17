@@ -1,5 +1,6 @@
 // Holly Lane: two rows of tall narrow knitted townhouses, string lights (task houses switch on), smoking chimneys.
 import * as THREE from 'three';
+import { squashProps } from './reveal.js';
 import {
   C, xf, box, rbox, cyl, cone, ball, bead, torus, extrude, poly, part, faceColor, garland, bulbLine, lampGeos,
   giftGeos, wreathGeos, wreathLights, snowmanGeos, pineGeos, pomTreeGeos, shrubGeos, fenceGeos, snowLump, put,
@@ -96,6 +97,7 @@ export function buildResidential(K) {
   const rnd = mulberry32(77);
   const houses = [];
   const chimneys = [];
+  const southRow = [];
   const taskKey = (x, z) => R.taskHouses.findIndex((t) => Math.abs(t.x - x) < 0.01 && Math.abs(t.z - z) < 0.01);
   const all = [];
   let n = 0;
@@ -120,6 +122,7 @@ export function buildResidential(K) {
     const name = 'house' + k;
     b.add(th.lights.map(toW), name);
     b.add(th.wreath.map(toW), name);
+    if (hd.z > 0) southRow.push(...b.props);
     colliders.addRect(hd.x - w / 2 - 0.04, hd.z - d / 2 - 0.04, hd.x + w / 2 + 0.04, hd.z + d / 2 + 0.04, 'house');
     K.keepCircle(hd.x, hd.z, 1.05);
     const sz = hd.z < 0 ? 1 : -1;
@@ -202,7 +205,8 @@ export function buildResidential(K) {
     chimneys.forEach((c, ci) => {
       for (let p = 0; p < PUFFS; p++) {
         const u = ((t * 0.22 + p / PUFFS + ci * 0.137) % 1);
-        v.set(c.x + Math.sin(u * 5 + ci) * 0.05 + u * 0.25, c.y + u * 0.9, c.z - u * 0.1);
+        const cy = c.z > 0 ? c.y * (1 - 0.74 * smokeCut()) : c.y;
+        v.set(c.x + Math.sin(u * 5 + ci) * 0.05 + u * 0.25, cy + u * 0.9, c.z - u * 0.1);
         const r = 0.05 + u * 0.1;
         const fade = Math.sin(Math.PI * Math.min(1, u * 1.15));
         s.setScalar(r * Math.max(0.01, fade));
@@ -212,6 +216,22 @@ export function buildResidential(K) {
     });
     smoke.instanceMatrix.needsUpdate = true;
   });
+
+  // ---------------------------------------------------------------- cut-away: the south row folds down while the player is in the street
+  const player = K.ctx.player;
+  let cut = 0, applied = -1;
+  K.updates.push((dt) => {
+    const grp = K.G.residential.group;
+    if (grp.state !== 'shown') { applied = -1; cut = 0; return; }
+    const p = player?.pos;
+    const inStreet = p && p.x < -8.3 && p.z > -2.3 && p.z < 2.15 ? 1 : 0;
+    cut += (inStreet - cut) * (1 - Math.exp(-dt * 5));
+    if (Math.abs(cut - inStreet) < 0.003) cut = inStreet;
+    const k = Math.round(cut * 200) / 200;
+    if (k !== applied) { squashProps(southRow, 1 - 0.74 * k); applied = k; }
+  });
+  // chimney smoke follows the cut-away
+  const smokeCut = () => cut;
 
   return { houses, setHouseLights(i, on) { houses[i]?.setLights(on); } };
 }

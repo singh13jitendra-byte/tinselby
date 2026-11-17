@@ -155,7 +155,7 @@ export function buildPark(K) {
     b.add([put('pomL', pomLights, x, 0.03, z, ry, s)], 'festive3');
     colliders.addCircle(x, z, 0.12 * s, 'tree');
   });
-  forest(K, [-7.3, 7.8, 7.3, 15.4], 8, { pines: 1, lumps: 1.2, minS: 0.9, maxS: 1.5 });
+  forest(K, [-7.3, 7.8, 7.3, 15.4], 5, { pines: 1, lumps: 1.2, minS: 0.9, maxS: 1.5 });
   // corners south-west / south-east of the park
   forest(K, [-20.8, 7.7, -7.7, 15.8], 15, { minS: 1.0, maxS: 2.1 });
   forest(K, [7.7, 9.8, 20.8, 15.8], 15, { minS: 1.0, maxS: 2.1 });

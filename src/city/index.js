@@ -35,6 +35,12 @@ export function buildCity(ctx) {
     Object.defineProperty(G[id], 'props', { get() { const d = layout.DISTRICTS.find((x) => x.id === id); const c = d ? d.center : [0, 0]; return G[id].cell(c[0], c[1]).props; } });
   }
 
+  // tiny parts (beads, trims, berries) don't need to cast shadows: keeps the shadow pass cheap
+  const small = (g) => {
+    if (!g.boundingBox) g.computeBoundingBox();
+    const b = g.boundingBox;
+    return Math.max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z) < 0.14;
+  };
   // ---------------------------------------------------------------- shared build context
   const keepSegs = [], keepCircles = [];
   const K = {
@@ -60,11 +66,12 @@ export function buildCity(ctx) {
       const castB = opts.cast === false ? cell.deco : cell.props, glowB = cell.deco;
       const begun = new Set();
       const ref = {
+        props: [],
         add(gs, light) {
           for (const g of [].concat(gs)) {
             if (!g) continue;
-            const b = g.attributes.aMat.array[0] === GLOW ? glowB : castB;
-            if (!begun.has(b)) { b.begin(anchor, opts); begun.add(b); }
+            const b = g.attributes.aMat.array[0] === GLOW || small(g) ? glowB : castB;
+            if (!begun.has(b)) { b.begin(anchor, opts); begun.add(b); ref.props.push(b.cur); }
             b.add(g, light);
           }
           return ref;
@@ -175,7 +182,7 @@ export function buildCity(ctx) {
     if (level === festive) return;
     festive = level;
     for (let i = 1; i <= 4; i++) lights.set('festive' + i, level >= i ? 1 : 0);
-    market.tree.setLights(Math.min(1, 0.55 + level * 0.12));
+    market.tree.setLights(Math.min(1, 0.7 + level * 0.075));
   }
   setFestive(0);
 

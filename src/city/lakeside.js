@@ -51,7 +51,7 @@ export function buildLakeside(K) {
     // pebbles + reeds
     const pg = [];
     const pcol = [C.pebble, C.pebbleDark, C.stone, '#a9a39b'];
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < 64; i++) {
       const t = rnd() * TAU, f = 1.05 + rnd() * 0.1;
       const x = cx + Math.cos(t) * rx * f, z = cz + Math.sin(t) * rz * f;
       if (distProm(x, z) < 0.45 || (Math.abs(z - LK.pier.z) < 0.5 && x < cx)) continue;
@@ -130,11 +130,11 @@ export function buildLakeside(K) {
 
   // ---------------------------------------------------------------- trees around
   forest(K, [9.0, -7.4, 20.8, 9.4], 18, { minS: 0.9, maxS: 1.9 });
-  forest(K, [9.2, -16.8, 20.8, -7.7], 16, { minS: 1.1, maxS: 2.3, pines: 0.8 });
+  forest(K, [9.2, -16.8, 20.8, -7.7], 12, { minS: 1.1, maxS: 2.3, pines: 0.8 });
   return { isIce, pierRect };
 }
 
-const sphLo = (r, c) => part(new THREE.SphereGeometry(r, 7, 5), c, FELT);
+const sphLo = (r, c) => part(new THREE.SphereGeometry(r, 5, 4), c, FELT);
 
 function buildFerris(K, x, z) {
   const { engine, colliders } = K;

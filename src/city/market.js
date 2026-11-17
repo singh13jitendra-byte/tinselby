@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import {
   C, xf, box, rbox, cyl, cylS, cone, ball, bead, torus, extrude, tube, poly, part, faceColor, angleStripes,
-  garland, bulbLine, lampGeos, benchGeos, giftGeos, wreathGeos, snowLump, textGeos, put, prefab, merge,
+  garland, bulbLine, lampGeos, benchGeos, pineGeos, giftGeos, wreathGeos, snowLump, textGeos, put, prefab, merge,
   KNIT, FELT, GLOW, GLOSS, mulberry32,
 } from './kit.js';
 import { spring, squash } from './reveal.js';
@@ -99,6 +99,20 @@ export function buildMarket(K) {
     }
     K.prop('market', [x, 0.055, z], g, { cast: false });
   };
+  // little decorated firs in knitted planters at the plaza edges
+  for (const [x, z] of [[-6.05, 3.4], [6.12, 3.3], [-6.1, -3.7], [6.15, -3.45]]) {
+    const g = [];
+    const pl = cyl(0.24, 0.2, 0.26, 10, C.red);
+    faceColor(pl, (px, py) => (py > 0.05 ? C.cream : null));
+    g.push(xf(pl, [x, 0.185, z]));
+    g.push(...pineGeos(C.pine, '#285a3e', { bobbles: false }).map((q) => xf(q, [x, 0.3, z], [0, x, 0], 1.05)));
+    for (let k = 0; k < 6; k++) { const a = k * 1.7 + x; const yy = 0.45 + k * 0.1; const r = (0.42 - (yy - 0.3) / 1.05 * 0.35) * 1.05; g.push(xf(bead(0.04, k % 2 ? C.red : C.gold, GLOSS), [x + Math.cos(a) * r, yy, z + Math.sin(a) * r])); }
+    const b = K.prop('market', [x, 0.055, z], g);
+    const lg = [];
+    for (let k = 0; k < 18; k++) { const t = k / 18, yy = 0.42 + t * 0.75, a = t * TAU * 3; const r = (0.44 - t * 0.34) * 1.05; lg.push(xf(bead(0.025, C.warm, GLOW), [x + Math.cos(a) * r, yy, z + Math.sin(a) * r])); }
+    b.add(lg);
+    colliders.addCircle(x, z, 0.26, 'planter');
+  }
   pile(-5.6, -4.6, 4); pile(5.5, -4.3, 4); pile(-5.5, 2.9, 3); pile(3.0, -4.9, 3);
   const lumps = [[-6.2, -5.3], [6.2, -5.3], [-6.25, 5.25], [6.2, 5.25], [-6.3, -0.6], [6.3, 0.6], [-3.0, 5.35], [3.0, 5.35], [0, -5.35]];
   for (const [x, z] of lumps) K.prop('market', [x, 0.05, z], [put('lump', () => snowLump(0.32), x, 0.05, z, rnd() * 3, 0.8 + rnd() * 0.5)], { cast: false });
@@ -128,7 +142,7 @@ function buildTree(K, T) {
   // gold yarn garland spiral
   const gp = [];
   for (let i = 0; i <= 90; i++) { const t = i / 90, y = 0.55 + t * 2.4, a = t * TAU * 4.5 + 1.5; const r = radiusAt(y) + 0.035; gp.push([Math.cos(a) * r, y, Math.sin(a) * r]); }
-  g.push(tube(gp, 0.02, C.gold, KNIT, 180, 5));
+  g.push(tube(gp, 0.02, C.gold, KNIT, 120, 4));
   // baubles
   for (let i = 0; i < 40; i++) {
     const y = 0.5 + rnd() * 2.35, a = rnd() * TAU, r = radiusAt(y) + 0.03;
@@ -186,7 +200,7 @@ function buildTree(K, T) {
     setLights(k) { K.lights.set('tree', Math.max(0, Math.min(1, k))); },
   };
 }
-const sph8 = (r, c) => part(new THREE.SphereGeometry(r, 8, 6), c, GLOSS);
+const sph8 = (r, c) => part(new THREE.SphereGeometry(r, 6, 5), c, GLOSS);
 function starPtsLocal(r, ri) {
   const pts = [];
   for (let i = 0; i < 10; i++) { const a = Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? ri : r; pts.push([Math.cos(a) * rr, Math.sin(a) * rr]); }
@@ -215,7 +229,7 @@ function stallGeos(i, rnd) {
   const aw = box(W + 0.18, 0.035, len, pal[0]);
   faceColor(aw, (x) => (Math.floor((x + W) / 0.18) % 2 ? pal[1] : null));
   g.push(xf(aw, [0, 1.0, 0.1], [ang, 0, 0]));
-  g.push(xf(rbox(W + 0.1, 0.07, len - 0.08, 0.03, C.snow, FELT, 1), [0, 1.05, 0.08], [ang, 0, 0]));
+  g.push(xf(rbox(W + 0.06, 0.05, len * 0.42, 0.022, C.snow, FELT, 1), [0, 1.04 + 0.27 * Math.sin(ang), 0.1 - 0.27 * Math.cos(ang)], [ang, 0, 0]));
   const zf = 0.1 + Math.cos(ang) * len / 2 + 0.01, yf = 1.0 - Math.sin(ang) * len / 2;
   const sc = new THREE.Shape();
   sc.absarc(0, 0, 0.085, Math.PI, TAU, false);

@@ -12,11 +12,12 @@ lock = open('/tmp/tinselby-chrome.lock', 'w'); fcntl.flock(lock, fcntl.LOCK_EX)
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
     pg = b.new_page(viewport={'width': 960, 'height': 540})
+    pg.set_default_timeout(180000)
     logs = []
     pg.on('console', lambda m: logs.append(m.type + ': ' + m.text) if m.type in ('error', 'warning') and 'GPU stall' not in m.text else None)
     pg.on('pageerror', lambda e: logs.append('PAGEERROR ' + str(e)))
     pg.goto('file:///home/claude/tinselby/dist/index.html?capture' + ('&' + query if query else ''))
-    pg.wait_for_function('window.__tinselby && window.__tinselby.ready', timeout=30000)
+    pg.wait_for_function('window.__tinselby && window.__tinselby.ready', timeout=180000)
     for cmd in plan:
         if cmd[0] == 'step':
             t = time.time(); pg.evaluate(f'window.__tinselby.step(1/30,{cmd[1]})')

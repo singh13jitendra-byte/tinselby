@@ -22,6 +22,32 @@ export function buildLife(ctx) {
     near: (x, z, r) => { const p = ctx.player.pos; return (p.x - x) ** 2 + (p.z - z) ** 2 < r * r; },
     sfx: (name, x, z) => { try { ctx.audio?.sfx?.(name, { x, z }); } catch (e) { /* audio optional */ } },
     vehicleNear: () => false,
+    /** Nearest spot to (x, z) where a ring of radius ringR (plus clearance) touches no collider. */
+    findFree(x, z, ringR = 0, clr = 0.12) {
+      const col = ctx.colliders;
+      if (!col?.resolve) return [x, z];
+      const q = { x: 0, z: 0 };
+      const clear = (cx, cz) => {
+        const n = ringR > 0 ? 8 : 0;
+        for (let i = -1; i < n; i++) {
+          const a = (i / n) * Math.PI * 2;
+          q.x = i < 0 ? cx : cx + Math.cos(a) * ringR; q.z = i < 0 ? cz : cz + Math.sin(a) * ringR;
+          const ox = q.x, oz = q.z;
+          col.resolve(q, clr);
+          if (Math.abs(q.x - ox) + Math.abs(q.z - oz) > 0.005 || col.blocked?.(ox, oz)) return false;
+        }
+        return true;
+      };
+      for (let rr = 0; rr <= 2.4; rr += 0.3) {
+        const n = rr === 0 ? 1 : 10;
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2;
+          const cx = x + Math.cos(a) * rr, cz = z + Math.sin(a) * rr;
+          if (clear(cx, cz)) return [cx, cz];
+        }
+      }
+      return [x, z];
+    },
   };
 
   const crowd = createCrowd(W);
@@ -43,6 +69,21 @@ export function buildLife(ctx) {
     revealT.clear();
   });
   if (params.has('reveal')) revealAll();
+  // stay in step with the city's own state (it starts fully revealed for the entry screen without
+  // emitting events, and folds everything at game start)
+  let syncT = 0;
+  function syncReveal(dt, now) {
+    syncT -= dt;
+    if (syncT > 0) return;
+    syncT = 0.2;
+    const isRev = ctx.city?.isRevealed;
+    if (typeof isRev !== 'function') return;
+    for (const d of layout.DISTRICTS) {
+      const on = !!isRev(d.id);
+      if (on && !revealT.has(d.id)) revealT.set(d.id, now);
+      else if (!on && revealT.has(d.id) && !params.has('reveal') && !gatherPoint) revealT.delete(d.id);
+    }
+  }
 
   // ---------------------------------------------------------------- gathering (finale)
   let gatherPoint = null;
@@ -130,6 +171,7 @@ export function buildLife(ctx) {
   engine.addUpdate((dt, t) => {
     const t0 = performance.now();
     const now = time();
+    syncReveal(dt, now);
     for (const m of modules) m.update(dt, t);
     updateGather(dt, t);
     traffic.update(dt, t, roadPeople);

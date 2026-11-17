@@ -100,8 +100,10 @@ export function createEntry(ctx, root) {
     if (gone) return;
     gone = true;
     offUpdate();
+    const done = () => { el.remove(); preview?.dispose(); preview = null; };
+    if (engine.capture) { done(); return; } // headless capture: no fade
     el.classList.add('tb-leaving');
-    setTimeout(() => { el.remove(); preview?.dispose(); preview = null; }, 600);
+    setTimeout(done, 600);
   }
   return { el, hide, openTray, style };
 }

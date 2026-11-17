@@ -59,8 +59,8 @@ export function cableCarShot(ctx, { cabin, duration = 6, dir = 'up' } = {}) {
       if (!init) { cur.copy(p); init = true; }
       cur.lerp(p, damp(info?.dt ?? 1 / 60, 6));
       const swing = Math.sin(u * Math.PI) * 0.6;
-      out.pos.set(cur.x + 3.6 + swing * 0.5, cur.y + 0.9, cur.z + s * (1.4 - u * 1.2));
-      tgt.set(cur.x - 0.4, cur.y - 0.15, cur.z - s * 0.6);
+      out.pos.set(cur.x + 3.4 + swing * 0.5, cur.y + 0.35, cur.z + s * (1.5 - u * 1.3));
+      tgt.set(cur.x - 0.4, cur.y - 0.6, cur.z - s * 0.6);
       out.target.copy(tgt);
     },
   };

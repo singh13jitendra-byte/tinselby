@@ -64,7 +64,8 @@ export function createCrowd(W) {
       const kid = nb === 2 && j === 1;
       const b = pool.create({ district: 'market', rnd, scale: kid ? 0.74 : 0.95 + rnd() * 0.12 });
       b.x = st.x + nx * (0.72 + rnd() * 0.12) + -nz * lat; b.z = st.z + nz * (0.72 + rnd() * 0.12) + nx * lat;
-      b.yaw = Math.atan2(-nx, -nz) + (rnd() - 0.5) * 0.4;
+      [b.x, b.z] = W.findFree(b.x, b.z, 0, 0.08); // step out of any prop the city put here
+      b.yaw = Math.atan2(st.x - b.x, st.z - b.z) + (rnd() - 0.5) * 0.4;
       b.gift = rnd() < 0.3 ? (rnd() < 0.5 ? 2 : 1) : false;
       browsers.push({ d: b, home: [b.x, b.z], yaw: b.yaw, point: 0, next: 1 + rnd() * 6, look: rnd() * TAU });
     }

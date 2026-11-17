@@ -30,7 +30,7 @@ export const flatShapeE = (shape, depth, c, k = FELT, segs = 24) => {
 };
 
 /** Low-poly bead (6×4) for lights, baubles, pom-poms. */
-export const bead = (r, c, k = FELT) => (k === GLOW ? part(new THREE.OctahedronGeometry(r, 0), c, GLOW) : sph(r, c, k, 5, 3));
+export const bead = (r, c, k = FELT) => (k === GLOW ? part(r > 0.027 ? new THREE.IcosahedronGeometry(r, 0) : new THREE.OctahedronGeometry(r, 0), c, GLOW) : sph(r, c, k, 5, 3));
 export const ball = (r, c, k = FELT, ws = 8, hs = 6) => sph(r, c, k, ws, hs);
 
 // ------------------------------------------------------------------ prefab cache
@@ -100,14 +100,12 @@ export function bulbLine(a, b, n, r = 0.03, colors = C.bulbs) {
 export function pineGeos(colour = C.pine, shade = '#285a3e', { bobbles = true, lights = false } = {}) {
   const g = [];
   g.push(xf(cyl(0.045, 0.06, 0.18, 6, C.woodDark), [0, 0.09, 0]));
-  const tiers = [[0.42, 0.42, 0.12], [0.34, 0.38, 0.33], [0.26, 0.34, 0.52], [0.17, 0.3, 0.7]];
+  const tiers = [[0.42, 0.46, 0.12], [0.32, 0.42, 0.38], [0.2, 0.36, 0.64]];
   tiers.forEach(([r, h, y], i) => {
-    const c = angleStripes(cone(r, h, 12, colour), 12, colour, shade);
+    const c = angleStripes(cone(r, h, 10, colour), 10, colour, shade);
     g.push(xf(c, [0, y + h / 2, 0]));
-    // underside cap so it isn't hollow from low angles
-    g.push(xf(part(new THREE.CircleGeometry(r, 12), shade, KNIT), [0, y + 0.002, 0], [Math.PI / 2, 0, 0]));
     if (bobbles) {
-      const n = i < 3 ? 4 - i : 0;
+      const n = i < 2 ? 3 - i : 0;
       for (let k = 0; k < n; k++) {
         const a = (k / n) * TAU + i * 0.7;
         g.push(xf(bead(0.04, C.snow), [Math.cos(a) * r * 0.92, y + 0.03, Math.sin(a) * r * 0.92]));
@@ -123,12 +121,12 @@ export function pomTreeGeos(crown = C.pink, rnd = Math.random) {
   const g = [];
   g.push(xf(cyl(0.035, 0.05, 0.38, 6, C.wood), [0, 0.19, 0]));
   const r = 0.27;
-  g.push(xf(ball(r, crown), [0, 0.55, 0]));
-  g.push(xf(ball(r * 0.72, crown), [0.17, 0.46, 0.06]));
-  g.push(xf(ball(r * 0.66, crown), [-0.15, 0.48, -0.05]));
-  g.push(xf(ball(r * 0.8, C.snow), [0, 0.68, 0], null, [1, 0.42, 1]));
-  for (let k = 0; k < 6; k++) {
-    const a = k * 1.1 + 0.3, yy = 0.42 + (k % 3) * 0.08;
+  g.push(xf(ball(r, crown, FELT, 8, 6), [0, 0.55, 0]));
+  g.push(xf(ball(r * 0.72, crown, FELT, 7, 5), [0.17, 0.46, 0.06]));
+  g.push(xf(ball(r * 0.66, crown, FELT, 7, 5), [-0.15, 0.48, -0.05]));
+  g.push(xf(ball(r * 0.8, C.snow, FELT, 7, 4), [0, 0.68, 0], null, [1, 0.42, 1]));
+  for (let k = 0; k < 3; k++) {
+    const a = k * 2.1 + 0.3, yy = 0.42 + (k % 3) * 0.08;
     g.push(xf(bead(0.03, C.snow), [Math.cos(a) * r * 0.98, yy, Math.sin(a) * r * 0.98]));
   }
   return g;
@@ -158,9 +156,9 @@ export function lampGeos(h = 1.25) {
   for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) g.push(xf(box(0.018, 0.16, 0.018, C.lampPost), [x * 0.056, h + 0.115, z * 0.056]));
   g.push(xf(cone(0.1, 0.09, 4, C.lampPost), [0, h + 0.235, 0], [0, Math.PI / 4, 0]));
   g.push(xf(ball(0.075, C.snow, FELT, 8, 5), [0, h + 0.28, 0], null, [1, 0.45, 1]));
-  // tiny wreath + bow on the post
-  g.push(xf(torus(0.06, 0.022, C.pine, KNIT, TAU, 7), [0, h * 0.62, 0.035]));
-  g.push(xf(bead(0.025, C.red), [0, h * 0.62 - 0.05, 0.05]));
+  // red bow on the post
+  g.push(xf(bead(0.03, C.red), [-0.025, h * 0.62, 0.03], null, [1.2, 0.8, 0.6]));
+  g.push(xf(bead(0.03, C.red), [0.025, h * 0.62, 0.03], null, [1.2, 0.8, 0.6]));
   return g;
 }
 
@@ -176,7 +174,7 @@ export function benchGeos() {
   return g;
 }
 
-export function snowLump(r = 0.3) { return [xf(ball(r, C.snow, FELT, 10, 6), [0, 0, 0], null, [1, 0.38, 0.8])]; }
+export function snowLump(r = 0.3) { return [xf(ball(r, C.snow, FELT, 8, 5), [0, 0, 0], null, [1, 0.38, 0.8])]; }
 
 export function snowmanGeos() {
   const g = [];

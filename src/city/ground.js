@@ -121,7 +121,7 @@ export function buildRoads(K) {
   const curb = (gid, x0, z0, x1, z1, y = 0.07) => {
     const B = K.G[gid].ground;
     B.begin([(x0 + x1) / 2, 0, (z0 + z1) / 2], { kind: 'pop' });
-    B.add(xf(rbox(Math.abs(x1 - x0) || 0.07, 0.05, Math.abs(z1 - z0) || 0.07, 0.02, C.cream, KNIT, 1), [(x0 + x1) / 2, y - 0.025, (z0 + z1) / 2]));
+    B.add(xf(box(Math.abs(x1 - x0) || 0.07, 0.05, Math.abs(z1 - z0) || 0.07, C.cream, KNIT), [(x0 + x1) / 2, y - 0.025, (z0 + z1) / 2]));
   };
   for (let x = -20.5; x < -8.6; x += 2.98) { curb('residential', x, 0.8, Math.min(x + 2.98, -8.6), 0.8, 0.085); curb('residential', x, -0.8, Math.min(x + 2.98, -8.6), -0.8, 0.085); }
   // ring curbs (outer edge) + plaza curb

@@ -38,6 +38,8 @@ export function buildRig(engine) {
     santaOut() { if (santa.group.parent !== engine.scene) engine.scene.attach(santa.group); },
     santaIn() { if (santa.group.parent !== tilt) { tilt.attach(santa.group); santa.group.position.copy(SLEIGH.seat); santa.group.rotation.set(0, 0, 0); santa.group.scale.setScalar(1); } },
     _tmp: tmpV,
+    /** Toggle shadow casting (off for the tiny far-away teaser so it doesn't drop a shadow next to the player). */
+    setShadows(on) { group.traverse((o) => { if (o.isMesh) o.castShadow = on; }); },
   };
   return rig;
 }

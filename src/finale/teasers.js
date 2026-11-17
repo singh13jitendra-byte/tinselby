@@ -19,19 +19,21 @@ export function createTeasers(ctx, rig, trail, sfx, pxScale) {
   function begin() {
     if (rig.group.visible) return;
     const dir = Math.random() < 0.5 ? 1 : -1;
-    active = { t: 0, dur: 7.5, dir, y0: 0.5 + Math.random() * 0.2, y1: 0.62 + Math.random() * 0.2, emitAcc: 0 };
+    active = { t: 0, dur: 7.5, dir, y0: 0.36 + Math.random() * 0.14, y1: 0.46 + Math.random() * 0.14, emitAcc: 0 };
     rig.santaIn();
     rig.santa.pose = 'sit';
     rig.team.mode = 'fly';
     rig.team.blend = 1;
     rig.group.scale.setScalar(0.2);
     rig.group.visible = true;
+    rig.setShadows(false);
     sfx('sleighBells', { vol: 0.5 });
   }
   function end() {
     active = null;
     rig.group.visible = false;
     rig.group.scale.setScalar(1);
+    rig.setShadows(true);
   }
 
   const teaser = {
@@ -104,18 +106,19 @@ export function createTeasers(ctx, rig, trail, sfx, pxScale) {
       ...[[0.05, 0.08, 0.06, P.red], [-0.06, 0.1, 0.03, P.gold], [0.03, 0.17, 0.05, P.glowSoft], [-0.03, 0.2, 0.03, P.red], [0.06, 0.12, -0.04, P.glowSoft]]
         .map(([x, y, z, c]) => xf(dot(0.011, c, c === P.glowSoft ? GLOW : GLOSS), [x, y, z])),
     ]), engine.mat);
-    tree.position.set(0.16, 0, -0.02);
+    tree.position.set(0.17, 0, -0.03);
+    tree.scale.setScalar(1.45);
     g.add(tree);
-    // fit inside the cabin: ~55% of its height, standing on the floor (cabin local frame)
+    // fit inside the cabin: Santa ≈ 45% of the cabin's full height (incl. hanger), standing on the floor (cabin local frame)
     const h = size.y / ws.y;
-    const s = Math.max(0.15, Math.min(1.2, (h * 0.55) / 0.52));
+    const s = Math.max(0.15, Math.min(1.2, (h * 0.45) / 0.52));
     g.scale.setScalar(s);
     const lb = new THREE.Box3();
     // compute floor in cabin-local space
     cabin.updateMatrixWorld(true);
     const inv = new THREE.Matrix4().copy(cabin.matrixWorld).invert();
     lb.copy(box).applyMatrix4(inv);
-    g.position.set((lb.min.x + lb.max.x) / 2 - 0.05 * s, lb.min.y + h * 0.12, (lb.min.z + lb.max.z) / 2);
+    g.position.set((lb.min.x + lb.max.x) / 2 - 0.08 * s, lb.min.y + h * 0.065, (lb.min.z + lb.max.z) / 2);
     // face the camera side (east / south) as well as we can
     g.rotation.y = 0.9;
     cabin.add(g);
@@ -134,7 +137,11 @@ export function createTeasers(ctx, rig, trail, sfx, pxScale) {
     cameoDone = true;
     try { addCameo(); } catch (e) { cameo = null; }
   });
-  game.on('cablecar:ride', ({ cabin } = {}) => { if (cameo && (cabin === cameo.cabin || !cabin)) removeCameo(); });
+  game.on('cablecar:ride', ({ cabin, duration = 7.5 } = {}) => {
+    if (!cameo) return;
+    if (cabin === cameo.cabin || !cabin) removeCameo();
+    else cameo.t = Math.min(cameo.t, 11.5 - duration); // keep waving from the other cabin as it passes the player
+  });
 
   return teaser;
 }
