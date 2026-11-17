@@ -1,16 +1,24 @@
 // Kids and little gnomes sledging down HILL.sledLanes, then trudging back up pulling their sleds.
 import * as THREE from 'three';
-import { P, KNIT, FELT, part, xf, merge } from '../core/yarn.js';
+import { KNIT, FELT, part, boxUV, xf, merge } from '../core/yarn.js';
 import { turnTo } from './paths.js';
 
+// Little wooden sled: slatted deck on two bent-wood runners that curl right over at the front, a
+// cross-bar between the curls and a pull rope. Modelled in pale wood tones; tinted per instance.
 function sledGeo() {
-  const g = (geo, c, k = KNIT) => part(geo, c, k, [3, 2]);
-  const parts = [xf(g(new THREE.BoxGeometry(0.13, 0.014, 0.24), '#ffffff', FELT), [0, 0.038, -0.005])];
-  for (const x of [-0.05, 0.05]) {
-    const curve = new THREE.CatmullRomCurve3([[x, 0.008, -0.13], [x, 0.008, 0.08], [x, 0.02, 0.14], [x, 0.055, 0.15], [x, 0.06, 0.12]].map((p) => new THREE.Vector3(...p)));
-    parts.push(part(new THREE.TubeGeometry(curve, 10, 0.008, 4), P.red, KNIT, [4, 1]));
-    for (const z of [-0.08, 0.04]) parts.push(xf(g(new THREE.BoxGeometry(0.012, 0.03, 0.012), P.woodDark), [x, 0.022, z]));
+  const g = (geo, c, k = FELT) => part(boxUV(geo), c, k);
+  const parts = [];
+  for (const x of [-0.052, -0.0175, 0.0175, 0.052]) parts.push(xf(g(new THREE.BoxGeometry(0.03, 0.012, 0.25), x * x > 0.001 ? '#f4ead8' : '#ffffff'), [x, 0.05, -0.01])); // slats
+  for (const z of [-0.1, 0.0, 0.09]) parts.push(xf(g(new THREE.BoxGeometry(0.14, 0.01, 0.022), '#d9c8ac'), [0, 0.041, z])); // cross battens
+  for (const x of [-0.062, 0.062]) {
+    const pts = [[x, 0.009, -0.15], [x, 0.008, 0.06], [x, 0.014, 0.13], [x, 0.04, 0.175], [x, 0.075, 0.17], [x, 0.09, 0.135], [x, 0.078, 0.108], [x, 0.058, 0.115]];
+    const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)));
+    parts.push(part(new THREE.TubeGeometry(curve, 16, 0.0095, 5), '#e2cfae', FELT, [5, 1]));
+    for (const z of [-0.1, 0.0, 0.09]) parts.push(xf(g(new THREE.BoxGeometry(0.012, 0.034, 0.014), '#c9b592'), [x, 0.026, z])); // posts
   }
+  parts.push(xf(g(new THREE.BoxGeometry(0.13, 0.012, 0.012), '#d9c8ac'), [0, 0.083, 0.145])); // bar joining the curls
+  const rope = new THREE.CatmullRomCurve3([[-0.05, 0.085, 0.145], [-0.02, 0.06, 0.12], [0, 0.058, 0.06], [0.02, 0.06, 0.12], [0.05, 0.085, 0.145]].map((p) => new THREE.Vector3(...p)));
+  parts.push(part(new THREE.TubeGeometry(rope, 10, 0.004, 3), '#fff6e6', KNIT, [4, 1]));
   return merge(parts);
 }
 
@@ -24,7 +32,7 @@ export function createSledders(W) {
   sleds.receiveShadow = true;
   sleds.count = 0;
   sleds.name = 'life-sleds';
-  const woods = [P.wood, '#9a6a45', P.wood, '#8a5a3a', P.wood, '#a87a50'];
+  const woods = ['#b98554', '#a8713f', '#c2925f', '#9c6a40', '#b98554', '#c79a6a'];
   for (let i = 0; i < 8; i++) sleds.setColorAt(i, new THREE.Color(woods[i % woods.length]));
   engine.scene.add(sleds);
 
@@ -95,7 +103,7 @@ export function createSledders(W) {
         if (r.up >= rideLen + 0.7) { r.state = 'sit'; r.t = 0; }
       }
       const fx = Math.sin(d.yaw), fz = Math.cos(d.yaw);
-      d.y = hAt(d.x, d.z) + (d.sit ? 0.03 * d.s : 0);
+      d.y = hAt(d.x, d.z) + (d.sit ? 0.052 : 0);
       d.pitch = d.sit ? pitchAt(d.x, d.z, fx, fz) : 0;
       // sled transform
       if (sledAttached) {

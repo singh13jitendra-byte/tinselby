@@ -1,4 +1,4 @@
-// Skaters gliding figure-eights on the frozen lake (one couple holding hands).
+// Skaters on little steel blades gliding figure-eights on the frozen lake (a couple and two kids holding hands).
 import { clamp } from './paths.js';
 
 const TAU = Math.PI * 2;
@@ -39,13 +39,17 @@ export function createSkaters(W) {
   };
 
   for (let i = 0; i < 5; i++) {
-    const d = pool.create({ district: 'lakeside', rnd, scale: i === 4 ? 0.74 : 0.95 + rnd() * 0.1 });
+    const d = pool.create({ district: 'lakeside', rnd, scale: i >= 3 ? 0.74 + (i - 3) * 0.04 : 0.95 + rnd() * 0.1, skates: true, holdSpread: 0.55 });
     skaters.push({ d, cv: mkCurve(i), t: rnd() * TAU, v: 0.65 + rnd() * 0.25, off: 0, partner: null, lastYaw: 0, check: rnd() });
   }
   // the couple: skater 1 follows skater 0 holding hands
   skaters[1].partner = skaters[0];
   skaters[0].d.hold = 1; skaters[1].d.hold = -1;
-  skaters[0].off = -0.1;
+  skaters[0].off = -0.14;
+  // two kids skating hand in hand as well
+  skaters[4].partner = skaters[3];
+  skaters[3].d.hold = 1; skaters[4].d.hold = -1;
+  skaters[3].off = -0.1;
 
   const P = { x: 0, z: 0, dx: 0, dz: 1, sp: 1 };
   function update(dt, t) {
@@ -58,9 +62,9 @@ export function createSkaters(W) {
       if (d.gather) continue;
       if (k.partner) { k.t = k.partner.t; k.cv = k.partner.cv; }
       else { pos(k.cv, k.t, 0, P); k.t += (dt * k.v) / Math.max(0.3, P.sp); }
-      pos(k.cv, k.t, k.partner ? k.partner.off + 0.19 : k.off, P);
+      pos(k.cv, k.t, k.partner ? k.partner.off + 0.29 * k.d.s : k.off, P);
       d.x = P.x; d.z = P.z;
-      d.y = W.groundAt(d.x, d.z);
+      d.y = W.groundAt(d.x, d.z) + 0.02 * d.s; // standing on the blades
       const yaw = Math.atan2(P.dx, P.dz);
       let dy = yaw - k.lastYaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       k.lastYaw = yaw;

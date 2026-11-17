@@ -2,6 +2,7 @@
 // with a bobbing glowing star above them while their task is waiting.
 import * as THREE from 'three';
 import { buildCharacter } from '../core/player.js';
+const DOLL_H = 0.44; // doll height incl. pom-pom (chibi dolls)
 
 export function createGiver(ctx, models, { id, who, style, opts, scale, x, z }) {
   const { engine, colliders, player } = ctx;
@@ -14,7 +15,7 @@ export function createGiver(ctx, models, { id, who, style, opts, scale, x, z }) 
   root.position.set(x, y, z);
   root.add(ch.group);
   const marker = models.mesh(models.markerGeo, false);
-  marker.position.y = 0.37 * scale + 0.28;
+  marker.position.y = DOLL_H * scale + 0.28;
   root.add(marker);
   engine.scene.add(root);
   try { colliders.addCircle(x, z, 0.11 * scale); } catch (e) { /* colliders optional */ }
@@ -27,7 +28,7 @@ export function createGiver(ctx, models, { id, who, style, opts, scale, x, z }) 
     id, who, root, ch, marker, x, z,
     showMarker: false,
     /** World position just above the head (for speech bubbles). */
-    headPos() { return head.set(x, root.position.y + 0.37 * scale + 0.12, z); },
+    headPos() { return head.set(x, root.position.y + DOLL_H * scale + 0.12, z); },
     hop() { hop = 1.2; },
     wave() { wave = 1.6; },
     update(dt, t) {
@@ -50,7 +51,7 @@ export function createGiver(ctx, models, { id, who, style, opts, scale, x, z }) 
       } else ch.group.position.y = 0;
       marker.visible = giver.showMarker;
       if (marker.visible) {
-        marker.position.y = 0.37 * scale + 0.28 + Math.sin(t * 2.6) * 0.05;
+        marker.position.y = DOLL_H * scale + 0.28 + Math.sin(t * 2.6) * 0.05;
         marker.rotation.y = t * 1.6;
       }
     },

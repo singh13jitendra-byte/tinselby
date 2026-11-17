@@ -104,7 +104,7 @@ export function createCrowd(W) {
       }
       const path = w.path;
       path.at(w.s, P);
-      const off = L ? L.off + 0.19 : w.off;
+      const off = L ? L.off + 0.22 : w.off;
       d.x = P.x - P.dz * off;
       d.z = P.z + P.dx * off;
       d.y = W.groundAt(d.x, d.z);
