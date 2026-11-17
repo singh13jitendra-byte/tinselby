@@ -133,7 +133,7 @@ export const DOOR_SPOTS = {
 
 /** Mini-game play areas (centre + rough radius) so games keep their props inside a known space. */
 export const ARENAS = {
-  snowball: { x: 1.5, z: 12.2, r: 3.2 },
+  snowball: { x: 5.45, z: 12.2, r: 1.6 } /* open clearing east of the gazebo */,
   ornaments: { x: 0, z: 0, r: 5.6 }, // whole plaza
   sled: { top: { x: -1.0, z: -15.2 }, bottom: { x: -1.0, z: -8.4 } },
   cookies: { x: 4.4, z: -0.4, r: 1.2 },

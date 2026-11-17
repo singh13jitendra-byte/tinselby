@@ -166,6 +166,14 @@ export function buildLife(ctx) {
     }
   }
 
+  // ---------------------------------------------------------------- hide a district's ambient people (mini-games)
+  const hidden = new Map(); // district id → hold count
+  function hideDistrict(id) {
+    hidden.set(id, (hidden.get(id) || 0) + 1);
+    let done = false;
+    return () => { if (done) return; done = true; const n = (hidden.get(id) || 1) - 1; if (n > 0) hidden.set(id, n); else hidden.delete(id); };
+  }
+
   // ---------------------------------------------------------------- per-frame
   const perf = { ms: 0, n: 0 };
   engine.addUpdate((dt, t) => {
@@ -177,6 +185,7 @@ export function buildLife(ctx) {
     traffic.update(dt, t, roadPeople);
     // reveal pop-in (squash & stretch) and hide unrevealed districts
     for (const d of pool.dolls) {
+      if (hidden.size && !d.gather && hidden.has(d.district)) { d.pop = 0; continue; }
       const rt = revealT.get(d.district);
       if (rt === undefined) { if (!d.gather) d.vis = false; d.pop = 0; continue; }
       const a = (now - rt - 0.35 - d.stagger) / 0.45;
@@ -188,5 +197,5 @@ export function buildLife(ctx) {
     perf.ms = perf.ms * 0.95 + (performance.now() - t0) * 0.05;
   }, 5);
 
-  return { gatherAt, release, cheer, setFestive, perf, _debug: { pool, traffic, revealT, W } };
+  return { gatherAt, release, cheer, setFestive, hideDistrict, perf, _debug: { pool, traffic, revealT, W } };
 }
