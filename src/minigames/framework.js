@@ -82,7 +82,7 @@ export function createMiniGames(ctx) {
       intro({ title = def.title, text = def.intro, icon = def.icon } = {}) {
         return new Promise((resolve) => {
           const card = el('div', 'knit-card mg-intro interactive', layer);
-          if (icon) el('div', 'mg-icon', card).textContent = icon;
+          if (icon && String(icon).trim().startsWith('<svg')) el('div', 'mg-icon', card).innerHTML = icon; // SVG only (no emoji)
           el('h2', '', card).textContent = title;
           el('p', '', card).textContent = text || '';
           const b = el('button', 'knit-btn green', card);
@@ -136,6 +136,11 @@ export function createMiniGames(ctx) {
         const h = (e) => { if (!finished) cb(e); };
         window.addEventListener('keydown', h);
         disposers.push(() => window.removeEventListener('keydown', h));
+      },
+      /** Hide the player's doll (e.g. for close-up camera games); restored automatically. */
+      setPlayerVisible(on) {
+        player.object.visible = !!on;
+        if (!on && !mg._visRestore) { mg._visRestore = true; disposers.push(() => { player.object.visible = true; }); }
       },
       /** Let the player walk with joystick / keys during the game (default: off). */
       setPlayerControl(on) { player.controllable = !!on; ctx.input.enabled = !!on; if (!on) ctx.input.clearTap(); },
