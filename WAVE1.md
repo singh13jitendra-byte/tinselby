@@ -22,6 +22,7 @@ Read `CONTRACTS.md` first (base modules, ctx, events, yarn material, budgets). T
 | Ornament hunt | `src/minigames/ornaments/**` |
 | Sled race | `src/minigames/sled/**` |
 | Cookie baking | `src/minigames/cookies/**` |
+| World & time of day | `src/world/**`, `src/city/**`, `src/core/engine.js` (lighting), `src/core/post.js`, `src/core/fx.js`, `src/life/{index,tram,cars,traffic}.js` + new `src/life/carriage.js` |
 
 City, life, finale, audio and camera stay as they are. Don't edit them; ask in your report if you need something. Read-only imports across folders are fine.
 
@@ -98,6 +99,9 @@ Supabase (`@supabase/supabase-js` v2, already installed). Config in `src/core/ne
 - **API:** `net.online` (bool), `net.players()` → `[{id, name, style, x, z}]`, `net.townSpirit` `{doors, helpers}` (refresh every 30 s plus after recordDoor), `net.recordDoor(n)` (rpc, fire and forget), `net.setStyle(style)`, `net.setName(name)`. Emit `net:status {online, room, count}`, `town:spirit {doors, helpers}`, `net:join {name}`, `net:leave {name}`.
 - Must never break the game offline: catch everything, back off and retry, run fine with no network. Pause sending when the tab is hidden. No chat, no free text besides the filtered name.
 - Test: two Playwright pages in one run (same lock) seeing each other. The shell cannot reach supabase.co (sandbox allowlist), so **test against a local mock**: write a tiny in-page fake transport behind the same interface (`src/net/transport.js` with `supabase` and `local` (BroadcastChannel) implementations; choose `local` when URL has `?net=local`). Two tabs in one Chrome context then sync via BroadcastChannel. The real Supabase path must still be written carefully against the supabase-js v2 Realtime API (channel().on('presence'…)/on('broadcast'…)/track()/send()).
+
+## §World & time of day (`createWorld(ctx)` → `ctx.world`)
+The town follows the **player's local clock** by default: morning (bright snowy day), afternoon (golden), evening (twilight, lights on), night (deep blue, moon and stars). URL `?tod=HOURS` overrides it for testing. Festive progress still adds decorations and lights, but no longer darkens the sky. API: `world.timeOfDay` (0–24), `world.setTimeOfDay(h)`, `world.phase` ('morning'|'day'|'evening'|'night'), event `world:phase {phase}`.
 
 ## New events
 `door:open {n}`, `door:complete {n, stars, score}`, `reward:grant {id, slot, key, label}`, `daily:claim {reward, streak}`, `minigame:start {id}`, `minigame:end {id, score, stars, completed}`, `net:status`, `net:join`, `net:leave`, `town:spirit`, `calendar:open`, `calendar:close`, `wave:end` (after the last available door is done).

@@ -19,6 +19,7 @@ import { createMiniGames } from './minigames/framework.js';
 import { MINIGAMES } from './minigames/index.js';
 import { createCalendar } from './calendar/index.js';
 import { createNet } from './net/index.js';
+import { createWorld } from './world/index.js';
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
@@ -37,6 +38,7 @@ cam.follow(player);
 const ctx = { THREE, engine, game, colliders, interact, input, player, cam, layout, uiRoot, params };
 ctx.audio = createAudio(ctx);
 ctx.city = buildCity(ctx);
+ctx.world = createWorld(ctx);
 ctx.life = buildLife(ctx);
 ctx.progress = createProgress(ctx);
 ctx.minigames = createMiniGames(ctx);
