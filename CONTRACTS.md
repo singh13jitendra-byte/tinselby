@@ -1,0 +1,132 @@
+# Tinselby — module contracts
+
+A 5-minute browser game in Three.js. The player types a name, optionally restyles a knitted character, enters **Tinselby**, a small knitted/felted city that pops up out of a giant book. They help the city get ready for Christmas & New Year 2027 with 4 light tasks; then Santa lands and the New Year countdown + fireworks finale plays. It must run on desktop and on phones (landscape).
+
+**Look:** knitted and needle-felted miniature diorama, twilight, warm glowing windows, string lights, cotton snow, tilt-shift macro blur. Reference images: `/mnt/user-data/uploads/*.jpg` (view a few with the Read tool before modelling).
+
+## Ownership (only edit your own files)
+
+| Agent | Owns |
+|---|---|
+| Lead (integration) | `src/main.js`, `src/core/*`, `index.html`, `CONTRACTS.md`, `vite.config.js`, `package.json` |
+| City | `src/city/**` |
+| Life | `src/life/**` |
+| Gameplay + UI | `src/game/**`, `src/ui/**` |
+| Santa + Finale + Cinematics | `src/finale/**`, `src/camera/**` |
+| Audio | `src/audio/**` |
+
+Need something in core? Don't edit it. Work around it inside your module and put the request in your final report.
+
+## Shared context `ctx` (passed to every factory)
+
+`{ THREE, engine, game, colliders, interact, input, player, cam, layout, uiRoot, params, audio, city, life, tasks, ui, finale }`. It is filled in this order: audio → city → life → tasks → ui → finale. So `ctx.city` exists when Life / Tasks / UI / Finale are built, but `ctx.life` does not exist yet when City is built. Read other modules lazily, inside event handlers or update functions.
+
+- **engine** (`src/core/engine.js`): `scene`, `camera`, `renderer`, `mat` (THE shared yarn material: use it for everything you model), `addUpdate(fn(dt, t), order)` (returns an unregister function), `setEvening(k)`, `isMobile`, `quality` ('high'|'medium'|'low'), `time`, `focus`.
+- **Modelling** (`src/core/prims.js`, `src/core/yarn.js`): `cone, cyl, sph, dot, box, rbox, torus, extrude, tube, flatShape, recolor, xf, merge, poly, circlePts, starPts` and surface kinds `KNIT, FELT, GLOW, GLOSS`; colours `P` in yarn.js (you may add local colours). **Merge each prop into ONE geometry → ONE mesh** (`new THREE.Mesh(merge(parts), engine.mat)`). `GLOW` parts are emissive (windows, fairy lights, lanterns); they twinkle and bloom. Set `castShadow` / `receiveShadow` on props. For many copies use `THREE.InstancedMesh(geo, engine.mat, n)`; `setColorAt` tints.
+- **game** (`src/core/events.js`): `state` {phase, playerName, style, spirit, spiritMax=4, tasks{lights,bauble,scarf,star: 'available'|'active'|'done'}, carrying, visited, starPlaced}, `on(evt, fn)` (returns an off function), `once`, `emit(evt, data)`, `completeTask(id)` (marks it done, bumps spirit, emits task:complete + spirit:change), `allTasksDone()`.
+- **colliders**: `addCircle(x,z,r)`, `addSegment(ax,az,bx,bz,r)`, `addRect(x0,z0,x1,z1)`, `addHeightFn(fn(x,z)→y|null)`, `addBlockFn(fn(x,z)→bool)`, `heightAt(x,z)`, `resolve(pos, r)`, `groundMeshes` (push ground meshes so tap-to-walk raycasts hit them).
+- **interact**: `add({id, x, z, r=0.9, label, icon?, enabled:()=>bool, onInteract})` → spot; `remove(spot)`. The UI shows a big button while the player is in range; E/Space/Enter or the button emits `'interact'`.
+- **input**: `getMove(yaw,px,pz)`, `setJoystick(x,y)`, `setTap(x,z)`, `clearTap()`, `enabled`.
+- **player**: `object` (Group), `pos` (Vector3), `vel` (Vector2), `heading`, `speed`, `controllable` (bool), `setStyle(style)`, `teleport(x,z,heading)`, `carry(obj|null)`, `carrying`, `walkTo(x,z)` → Promise, `faceTowards(x,z)`, `onStep` callback. `buildCharacter(mat, style, {skin, hair})` and `STYLE_OPTIONS`, `DEFAULT_STYLE` are exported from `src/core/player.js` for previews and NPCs.
+- **cam** (`src/core/camera.js`): `setMode('follow'|'high'|'close'|'attract', {yaw?})`, `toggleView()`, `playShot({name, duration, update(t01, out:{pos,target}), blendIn, blendOut, skippable, tilt})` → Promise, `skip()`, `shotActive`, `mode`, `yaw`.
+- **layout** (`src/core/layout.js`): the city map. Districts, roads, tram loop, car lanes, crossings, walk loops, and all landmark / task coordinates. **Use these numbers; don't invent new positions for shared things.**
+
+## Events (name → payload, who emits)
+
+| Event | Payload | Emitted by |
+|---|---|---|
+| `input:gesture` | — | core (first key/tap, start audio here) |
+| `game:start` | {name, style} | UI entry screen |
+| `district:enter` | {id, first, prev} | core |
+| `district:revealed` | {id} | City (after its pop-up animation) |
+| `task:accepted` | {id} | Tasks |
+| `task:progress` | {id, step, of, text?} | Tasks |
+| `task:complete` | {id} | `game.completeTask` |
+| `spirit:change` | {value, max} | `game.completeTask` |
+| `item:pickup` / `item:drop` | {id} | Tasks |
+| `tree:starPlaced` | — | Tasks (starts the finale) |
+| `cablecar:ride` | {dir:'up'|'down', duration, cabin:Object3D} | City |
+| `cablecar:arrive` | {dir} | City |
+| `finale:start`, `santa:arrive`, `santa:landed`, `santa:gift`, `countdown` {n}, `newyear`, `game:end` | | Finale |
+| `interact`, `interact:available` {id,label,icon}, `interact:none`, `interact:done` {id} | | core / UI |
+| `camera:toggle`, `camera:mode`, `camera:shot`, `camera:shotEnd` | | core |
+| `audio:toggle` | — | UI / M key |
+| `ui:toast` | {text, ms?} | anyone → UI shows a toast |
+| `dialog` | {who, text, ms?} | Tasks → UI shows a speech bubble |
+
+## Game flow
+
+1. **Entry** (`phase='entry'`): camera `attract` orbit over the fully revealed city (`city.revealDistrict(id, true)` for all). UI: knitted "Welcome to Tinselby" title, name input, **Enter Tinselby** button, optional **Change style** tray with live 3D preview. Emits `game:start`.
+2. On `game:start`: core teleports the player to the gate (`layout.SPAWN`) and switches to the follow camera. City folds everything flat (`foldAll()`); each district then pops up on its first `district:enter` (the park immediately, since the gate is in it).
+3. **Play**: 4 tasks in any order (see §Tasks). Each completion → spirit +1 → `engine.setEvening` darker and more festive; `city.setFestive(n)`, `life.setFestive(n)`, audio adds a music layer.
+4. The tree star can be fetched anytime. **Placing it on the big tree is enabled only after the other 3 tasks are done.** Placing it calls `completeTask('star')`, then emits `tree:starPlaced`.
+5. **Finale**: Santa's sleigh arrives, lands at `layout.MARKET.landing`, gives the player a gift tagged with their name. Crowd gathers, countdown 10→1, `newyear`, fireworks, end card "Happy New Year, {name}! — love, Tinselby" with a Play again button. About 60–75 s total.
+
+## §City (`buildCity(ctx)` → city)
+
+Static world built district by district, positions from `layout`. The ground: oatmeal felt book page outside the city; snowy felt ground (cotton snow) inside; knitted cobbles / road surfaces; tram tracks on the ring. Districts:
+- **market**: big tree (height 3.2, spiral fairy lights, baubles, empty star socket), stalls with striped awnings and string lights, carousel (rotating), countdown clock, bead garlands.
+- **residential**: two rows of tall narrow knitted townhouses (red / teal / cream / mustard, snow roofs, glowing windows, chimneys with smoke).
+- **park**: pom-pom trees, benches, snowy paths, snowman spot, the "Welcome to Tinselby" gate arch at the south edge with knitted letters.
+- **lakeside**: frozen lake (walkable ice), pier, benches, lamps, reeds, pebble banks.
+- **hill**: snow slope using `layout.HILL.heightAt`, pines, cable car (base and top stations, cable, 2 cabins).
+
+API:
+- `revealDistrict(id, instant=false)`: pop-up animation (tiles flip up from the page, props puff up with squash & stretch, staggered, about 1.2 s) → emit `district:revealed`. Idempotent. Auto-reveal on the first `district:enter`.
+- `foldAll(instant=false)`: fold every district back into the page (used at game start).
+- `setFestive(level 0..4)`: progressively more lights and garlands (e.g. street garlands light up, stall lights on).
+- `residential.houses`: [{x, z, door:[x,z], taskHouse:bool, setLights(on)}]. Task houses match `layout.RESIDENTIAL.taskHouses` (same order); `setLights(true)` turns on their string lights + door wreath glow.
+- `tree`: {pos:Vector3, starSocket:Vector3 (world), placeStar() (shows the star with a pop and glow), setLights(k 0..1)}.
+- `cableCar`: {base:Vector3, top:Vector3 (y = hill top), ride(dir:'up'|'down') → Promise}. It moves the player inside a cabin (player.controllable false during the ride, re-enabled after), emits `cablecar:ride` / `cablecar:arrive`.
+- `lake`: {isIce(x,z)} (Life uses this for skaters, Tasks / player for slide feel).
+- `landing`: Vector3 (keep a clear 3 × 2 area there).
+- Register colliders for buildings, stalls, tree, benches, lamp posts; add height fns (hill, ice, pavements); push ground meshes into `colliders.groundMeshes`.
+- Budget: ≤ 220 draw calls with all districts revealed, ≤ 350k triangles.
+
+## §Life (`buildLife(ctx)` → life)
+
+Ambient city life, all cheap (instancing, or a few merged meshes animated by transforms):
+- pedestrians on `layout.WALK_LOOPS` (knitted dolls, varied coats / hats, some carrying gifts, pairs holding hands), visible only once their district is revealed (`district:revealed`);
+- kids in the park (snowball throwing, building a snowman, running in circles);
+- skaters gliding loops on the lake ice;
+- sledders and gnomes on sleds going down `layout.HILL.sledLanes`, walking back up;
+- a knitted tram (red / cream, glowing windows, pantograph) running `layout.TRAM_LOOP`, pausing at `TRAM_STOP`, ding (`ctx.audio.sfx('tram')`);
+- 3–5 knitted cars with glowing headlights on `layout.CAR_LANES`; cars and tram slow / stop when the player or a pedestrian is ahead (≤ 1.2 units) or at an occupied crossing;
+- market browsers standing at stalls, a stall keeper behind each.
+- API: `gatherAt(x, z, radius)` (move nearby NPCs to form a crowd facing the point, for the finale), `release()`, `cheer()` (hop + arms up), `setFestive(level)`.
+- Budget: ≤ 40 draw calls total, ≤ 120k triangles; update cost ≤ 1.5 ms/frame on desktop.
+
+## §Tasks (`createTasks(ctx)`) + §UI (`createUI(ctx)`)
+
+Tasks (quest givers built with `buildCharacter`, with a glowing star marker bobbing above them while their task is available; positions in layout):
+- `lights` (residential): neighbour asks for help. Visit the 3 task-house doors (interact spot at each) → `city.residential.houses[i].setLights(true)` one by one → complete.
+- `bauble` (park): kid lost a bauble. It's at `PARK.bauble` in a snow pile (sparkle hint). Pick it up (carry it), bring it back → complete.
+- `scarf` (lakeside): skater lost a scarf on the ice at `LAKE.scarf`. Fetch it, return it → complete.
+- `star` (hill): the operator says the tree star is at the top. Ride the cable car up (`city.cableCar.ride('up')`), pick up the star (`HILL.starSpot`), ride down (or walk down the slope), carry it to the big tree; "Place the star" spot at the tree base is enabled only when the other 3 are done (otherwise a toast tells you what's left) → `city.tree.placeStar()`, `completeTask('star')`, emit `tree:starPlaced`.
+- Short, warm dialog lines (`dialog` event) using the player's name. A hint arrow / compass toward the nearest unfinished task.
+
+UI (DOM in `ctx.uiRoot`, using classes from `src/core/theme.css`; mobile-first, landscape):
+- Entry screen: title "Welcome to Tinselby", subtitle "Christmas & New Year 2027", name input, Enter button, Change style tray (coat / hat / scarf from `STYLE_OPTIONS`, randomise, live rotating preview: render `buildCharacter` into a small separate WebGL canvas or a corner of the main view), saved to localStorage (try/catch).
+- HUD: Festive Spirit meter (4 knitted hearts or stars) top-centre, current task chip, interact button (large, bottom-right), on-screen joystick (bottom-left, touch devices only), camera toggle and mute buttons (top-right), toasts and speech bubbles.
+- Portrait overlay on phones: "Turn your phone sideways".
+- Tap during a skippable cinematic → `cam.skip()`.
+
+## §Finale (`createFinale(ctx)`) + §Camera shots (`src/camera/shots.js`)
+
+- Knitted Santa (red knit suit, white felt beard and trim, black boots), sleigh (red / gold trim, piled gifts), 4–6 reindeer (felt, red yarn antlers, Rudolph's glowing nose, flying leg cycle), sparkle trail.
+- Teasers during play: every 45–70 s a tiny sleigh crosses the sky far away (bells via `audio.sfx('sleighBells')`).
+- On `tree:starPlaced`: phase 'finale', player not controllable; camera shot up the tree; sleigh swoops in a wide arc and lands at `layout.MARKET.landing`; Santa steps out, waves (`audio.sfx('hohoho')`), hands a gift with a knitted tag "For {name}" (close camera); `life.gatherAt(tree)`; countdown overlay 10→1 (big knitted numbers) with `countdown` events; at 0 → `newyear`, fireworks (`src/core/fx.js` Fireworks, bursts above the market), sleigh lifts off through the fireworks, camera pulls up and back; end card with Play again (reload).
+- Camera shot library: district reveal (first `district:enter` → short sweep to a high angle and back), cable car ride (follow the cabin, on `cablecar:ride`), tree star moment, Santa landing, gift close-up, finale pull-back. Play them through `cam.playShot`.
+
+## §Audio (`createAudio(ctx)` → audio)
+
+Procedural Web Audio only (no files). `start()` (on the first gesture), `sfx(name, {x, z, vol})` (positional falloff from the player), `setMusicLevel(n)`, `toggleMute()` → bool, `muted`.
+- Music: a music-box arrangement of public-domain carols (Jingle Bells, Deck the Halls, We Wish You a Merry Christmas), looping. Layers join with spirit: 0 music box, 1 + sleigh bells, 2 + warm bass, 3 + choir pad, 4 + glockenspiel. Finale: full arrangement, then an "Auld Lang Syne" swell at `newyear`.
+- SFX names (all must exist, even if simple): `step`, `pop`, `fold`, `bell`, `pickup`, `drop`, `task`, `ui`, `tram`, `car`, `chatter`, `ice`, `cable`, `sleighBells`, `hohoho`, `whoosh`, `countdown`, `firework`, `cheer`, `gift`.
+- Listens itself to `spirit:change`, `task:complete` (chime), `district:revealed` (pops), `newyear`, `audio:toggle`.
+
+## Testing
+
+- `npx vite build` must succeed (other agents' modules may still be stubs; that's fine).
+- Screenshots: `python3 tools/shot.py <prefix> '[["step",60,"a"]]' 'play&reveal=all&at=-14,0&view=follow'` writes `shots/<prefix>_a.png`, then look at it with Read. **Chrome runs one at a time (lock) on a 2-CPU box: keep it to a handful of runs, ≤ 150 steps each.** URL flags: `play`, `reveal=all`, `at=x,z`, `view=high|close|follow`, `spirit=n`.
+- No console errors. Check `stats()` draw calls and triangles against your budget.
