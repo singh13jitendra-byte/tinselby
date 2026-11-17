@@ -57,6 +57,11 @@ export function createOverlays(ctx, root) {
     b.life = (ms || Math.min(7000, 2200 + text.length * 45)) / 1000;
   }
   game.on('dialog', say);
+  // the finale has its own overlays: clear any leftover task chatter when it starts
+  game.on('finale:start', () => {
+    toasts.replaceChildren();
+    for (const o of live.values()) o.life = Math.min(o.life, 0);
+  });
   const v = new THREE.Vector3();
   function updateBubbles(dt) {
     const W = window.innerWidth, H = window.innerHeight;
