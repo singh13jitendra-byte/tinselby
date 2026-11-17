@@ -59,7 +59,7 @@ export function buildBook(K) {
 /** Cotton-snow ground tiles for every district (the hill makes its own sculpted ground). */
 export function buildGroundTiles(K) {
   const { WORLD } = K.layout;
-  const tones = ['#f8f6f2', '#f4f2ee', '#fbfaf7', '#f1efeb'];
+  const tones = ['#f9f7f4', '#f7f5f2', '#fbfaf7', '#f6f4f1']; // near-uniform cotton white: no visible patchwork
   const rnd = mulberry32(7);
   const tile = (x0, z0, x1, z1) => {
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
@@ -115,9 +115,7 @@ export function buildRoads(K) {
     faceColor(g, (x, y, z, f) => {
       const r = Math.hypot(x - tree.x, z - tree.z);
       let c2 = null;
-      if (r > 1.35 && r < 1.62) c2 = f % 4 < 2 ? '#a5493a' : '#b85a45';
-      else if (r > 1.62 && r < 1.9) c2 = f % 4 < 2 ? '#2f6446' : '#3a7a52';
-      else if (Math.abs(x) > 6.24 || Math.abs(z) > 5.29) c2 = (Math.floor((x + 6.6) / 0.36667) + Math.floor((z + 5.6) / 0.32)) % 2 ? '#b8302d' : '#f5efe4';
+      if (Math.abs(x) > 6.24 || Math.abs(z) > 5.29) c2 = (Math.floor((x + 6.6) / 0.36667) + Math.floor((z + 5.6) / 0.32)) % 2 ? '#b8302d' : '#f5efe4';
       if (c2) for (let j = 0; j < 3; j++) kind.setX(f * 3 + j, KNIT);
       return c2;
     });

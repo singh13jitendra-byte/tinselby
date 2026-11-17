@@ -83,7 +83,7 @@ void main() {
   gl_FragColor = vec4(vC * a * vA * 5.0, 1.0);
 }`;
 
-/** New Year fireworks: bursts of glowing sparks (additive, picked up by bloom). */
+/** Christmas-night fireworks: bursts of glowing sparks (additive, picked up by bloom). */
 export class Fireworks {
   constructor(scene, max = 1600) {
     this.max = max;

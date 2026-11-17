@@ -88,9 +88,9 @@ export function createEngine(canvas) {
   function applyEvening(dt) {
     engine._evening += (engine._eveningTarget - engine._evening) * (1 - Math.exp(-dt * 0.8));
     const k = engine._evening;
-    hemi.intensity = 1.55 - 0.5 * k;
+    hemi.intensity = 1.55 - 0.42 * k;
     key.intensity = 1.9 - 0.85 * k;
-    key.color.copy(cA.set('#fff0e0').lerp(cB.set('#ffd9b0'), k));
+    key.color.copy(cA.set('#fff0e0').lerp(cB.set('#ffe6cc'), k));
     renderer.toneMappingExposure = 0.92 - 0.06 * k;
     bg.copy(cA.set('#46567a').lerp(cB.set('#1b2444'), k));
     scene.fog.color.copy(bg);

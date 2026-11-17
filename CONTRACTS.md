@@ -1,6 +1,6 @@
 # Tinselby — module contracts
 
-A 5-minute browser game in Three.js. The player types a name, optionally restyles a knitted character, enters **Tinselby**, a small knitted/felted city that pops up out of a giant book. They help the city get ready for Christmas & New Year 2027 with 4 light tasks; then Santa lands and the New Year countdown + fireworks finale plays. It must run on desktop and on phones (landscape).
+A 5-minute browser game in Three.js. The player types a name, optionally restyles a knitted character, enters **Tinselby**, a small knitted/felted city that pops up out of a giant book. They help the city get ready for Christmas with 4 light tasks; then Santa lands and the Christmas Eve countdown + fireworks finale plays. **Christmas only — no New Year wishes anywhere.** It must run on desktop and on phones (landscape).
 
 **Look:** knitted and needle-felted miniature diorama, twilight, warm glowing windows, string lights, cotton snow, tilt-shift macro blur. Reference images: `/mnt/user-data/uploads/*.jpg` (view a few with the Read tool before modelling).
 
@@ -47,7 +47,7 @@ Need something in core? Don't edit it. Work around it inside your module and put
 | `tree:starPlaced` | — | Tasks (starts the finale) |
 | `cablecar:ride` | {dir:'up'|'down', duration, cabin:Object3D} | City |
 | `cablecar:arrive` | {dir} | City |
-| `finale:start`, `santa:arrive`, `santa:landed`, `santa:gift`, `countdown` {n}, `newyear`, `game:end` | | Finale |
+| `finale:start`, `santa:arrive`, `santa:landed`, `santa:gift`, `countdown` {n}, `christmas` (midnight, fireworks), `game:end` | | Finale |
 | `interact`, `interact:available` {id,label,icon}, `interact:none`, `interact:done` {id} | | core / UI |
 | `camera:toggle`, `camera:mode`, `camera:shot`, `camera:shotEnd` | | core |
 | `audio:toggle` | — | UI / M key |
@@ -60,7 +60,7 @@ Need something in core? Don't edit it. Work around it inside your module and put
 2. On `game:start`: core teleports the player to the gate (`layout.SPAWN`) and switches to the follow camera. City folds everything flat (`foldAll()`); each district then pops up on its first `district:enter` (the park immediately, since the gate is in it).
 3. **Play**: 4 tasks in any order (see §Tasks). Each completion → spirit +1 → `engine.setEvening` darker and more festive; `city.setFestive(n)`, `life.setFestive(n)`, audio adds a music layer.
 4. The tree star can be fetched anytime. **Placing it on the big tree is enabled only after the other 3 tasks are done.** Placing it calls `completeTask('star')`, then emits `tree:starPlaced`.
-5. **Finale**: Santa's sleigh arrives, lands at `layout.MARKET.landing`, gives the player a gift tagged with their name. Crowd gathers, countdown 10→1, `newyear`, fireworks, end card "Happy New Year, {name}! — love, Tinselby" with a Play again button. About 60–75 s total.
+5. **Finale**: Santa's sleigh arrives, lands at `layout.MARKET.landing`, gives the player a gift tagged with their name. Crowd gathers, Christmas Eve countdown 10→1, `christmas` ("Merry Christmas!" banner), fireworks, end card "Merry Christmas, {name}! — love, Tinselby" with a Play again button. About 60–75 s total.
 
 ## §City (`buildCity(ctx)` → city)
 
@@ -106,7 +106,7 @@ Tasks (quest givers built with `buildCharacter`, with a glowing star marker bobb
 - Short, warm dialog lines (`dialog` event) using the player's name. A hint arrow / compass toward the nearest unfinished task.
 
 UI (DOM in `ctx.uiRoot`, using classes from `src/core/theme.css`; mobile-first, landscape):
-- Entry screen: title "Welcome to Tinselby", subtitle "Christmas & New Year 2027", name input, Enter button, Change style tray (coat / hat / scarf from `STYLE_OPTIONS`, randomise, live rotating preview: render `buildCharacter` into a small separate WebGL canvas or a corner of the main view), saved to localStorage (try/catch).
+- Entry screen: title "Welcome to Tinselby", subtitle "A cosy knitted Christmas town", name input, Enter button, Change style tray (coat / hat / scarf from `STYLE_OPTIONS`, randomise, live rotating preview: render `buildCharacter` into a small separate WebGL canvas or a corner of the main view), saved to localStorage (try/catch).
 - HUD: Festive Spirit meter (4 knitted hearts or stars) top-centre, current task chip, interact button (large, bottom-right), on-screen joystick (bottom-left, touch devices only), camera toggle and mute buttons (top-right), toasts and speech bubbles.
 - Portrait overlay on phones: "Turn your phone sideways".
 - Tap during a skippable cinematic → `cam.skip()`.
@@ -115,15 +115,15 @@ UI (DOM in `ctx.uiRoot`, using classes from `src/core/theme.css`; mobile-first, 
 
 - Knitted Santa (red knit suit, white felt beard and trim, black boots), sleigh (red / gold trim, piled gifts), 4–6 reindeer (felt, red yarn antlers, Rudolph's glowing nose, flying leg cycle), sparkle trail.
 - Teasers during play: every 45–70 s a tiny sleigh crosses the sky far away (bells via `audio.sfx('sleighBells')`).
-- On `tree:starPlaced`: phase 'finale', player not controllable; camera shot up the tree; sleigh swoops in a wide arc and lands at `layout.MARKET.landing`; Santa steps out, waves (`audio.sfx('hohoho')`), hands a gift with a knitted tag "For {name}" (close camera); `life.gatherAt(tree)`; countdown overlay 10→1 (big knitted numbers) with `countdown` events; at 0 → `newyear`, fireworks (`src/core/fx.js` Fireworks, bursts above the market), sleigh lifts off through the fireworks, camera pulls up and back; end card with Play again (reload).
+- On `tree:starPlaced`: phase 'finale', player not controllable; camera shot up the tree; sleigh swoops in a wide arc and lands at `layout.MARKET.landing`; Santa steps out, waves (`audio.sfx('hohoho')`), hands a gift with a knitted tag "For {name}" (close camera); `life.gatherAt(tree)`; Christmas Eve countdown overlay 10→1 (big knitted numbers) with `countdown` events; at 0 → `christmas` ("Merry Christmas!" banner), fireworks (`src/core/fx.js` Fireworks, bursts above the market), sleigh lifts off through the fireworks, camera pulls up and back; end card with Play again (reload).
 - Camera shot library: district reveal (first `district:enter` → short sweep to a high angle and back), cable car ride (follow the cabin, on `cablecar:ride`), tree star moment, Santa landing, gift close-up, finale pull-back. Play them through `cam.playShot`.
 
 ## §Audio (`createAudio(ctx)` → audio)
 
 Procedural Web Audio only (no files). `start()` (on the first gesture), `sfx(name, {x, z, vol})` (positional falloff from the player), `setMusicLevel(n)`, `toggleMute()` → bool, `muted`.
-- Music: a music-box arrangement of public-domain carols (Jingle Bells, Deck the Halls, We Wish You a Merry Christmas), looping. Layers join with spirit: 0 music box, 1 + sleigh bells, 2 + warm bass, 3 + choir pad, 4 + glockenspiel. Finale: full arrangement, then an "Auld Lang Syne" swell at `newyear`.
+- Music: a music-box arrangement of public-domain carols (Jingle Bells, Deck the Halls, We Wish You a Merry Christmas), looping. Layers join with spirit: 0 music box, 1 + sleigh bells, 2 + warm bass, 3 + choir pad, 4 + glockenspiel. Finale: full arrangement, then a public-domain Christmas tune swell (Joy to the World or O Christmas Tree) at `christmas`.
 - SFX names (all must exist, even if simple): `step`, `pop`, `fold`, `bell`, `pickup`, `drop`, `task`, `ui`, `tram`, `car`, `chatter`, `ice`, `cable`, `sleighBells`, `hohoho`, `whoosh`, `countdown`, `firework`, `cheer`, `gift`.
-- Listens itself to `spirit:change`, `task:complete` (chime), `district:revealed` (pops), `newyear`, `audio:toggle`.
+- Listens itself to `spirit:change`, `task:complete` (chime), `district:revealed` (pops), `christmas`, `audio:toggle`.
 
 ## Testing
 

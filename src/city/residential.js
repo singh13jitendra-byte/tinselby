@@ -8,8 +8,8 @@ import {
 } from './kit.js';
 
 const TAU = Math.PI * 2;
-const WALLS = [C.red, C.teal, C.cream, C.mustard, C.red, C.teal, C.cream, C.mustard, '#b6584a', C.sage, C.teal, C.red];
-const TRIMS = [C.cream, C.cream, C.teal, C.cream, C.cream, C.cream, C.red, C.cream, C.cream, C.cream, C.cream, C.cream];
+const WALLS = [C.red, C.teal, '#f6f0e6', C.mustard, C.red, C.teal, C.cream, C.mustard, '#f6f0e6', C.sage, C.teal, C.red];
+const TRIMS = [C.cream, C.cream, '#e2a3a0', C.cream, C.cream, C.cream, C.red, C.cream, C.teal, C.cream, C.cream, C.cream];
 const HEIGHTS = [2.3, 2.75, 2.1, 2.55, 2.9, 2.25];
 
 /** Townhouse in local space (front faces +z). Returns {g, lights(roofline bulbs), wreath(door wreath bulbs), chimney:[x,y,z]} */
@@ -30,6 +30,8 @@ export function townhouse({ w = 1.5, d = 1.3, h = 2.4, wall = C.red, trim = C.cr
     g.push(xf(rbox(L, 0.13, d + 0.24, 0.05, C.snow, KNIT, 1), [mx + ux * 0.08 + nx * 0.065, my + uy * 0.08 + ny * 0.065, 0], [0, 0, -s * ang]));
     // fascia trims on both gables
     for (const sz of [-1, 1]) g.push(xf(box(L - 0.1, 0.06, 0.04, trim), [mx + ux * 0.04 - nx * 0.01, my + uy * 0.04 - ny * 0.01, sz * (d / 2 + 0.03)], [0, 0, -s * ang]));
+    // fluffy cotton lip along the front gable edge of the knitted roof
+    for (let k = 0; k < 6; k++) { const t = (k + 0.5) / 6; g.push(xf(bead(0.062, C.snow), [s * (w / 2 + 0.1) * (1 - t), h - 0.05 + (rh + 0.15) * t, d / 2 + 0.11], [0, 0, -s * ang], [1.5, 0.9, 1])); }
     // snow drips along the eaves
     const ex = s * (w / 2 + 0.13), ey = h - 0.1;
     for (let k = 0; k < 3; k++) g.push(xf(bead(0.05, C.snow), [ex, ey + 0.02, -d / 2 + 0.2 + k * ((d - 0.4) / 2)], null, [0.8, 1.2, 1.6]));
@@ -62,7 +64,7 @@ export function townhouse({ w = 1.5, d = 1.3, h = 2.4, wall = C.red, trim = C.cr
   const upY = h * 0.5 + (h * 0.5) / 2 + 0.02;
   const nUp = 2;
   for (const sz of [1, -1]) {
-    for (let k = 0; k < nUp; k++) win((k - 0.5) * 0.62, upY, 0.32, Math.min(0.5, h * 0.2), sz);
+    for (let k = 0; k < nUp; k++) win((k - 0.5) * 0.62, upY, 0.32, Math.min(0.5, h * 0.2), sz, sz > 0);
     // gable wreath
     g.push(...wreathGeos(0.13).map((q) => xf(q, [0, h + rh * 0.36, sz * (d / 2 + 0.02)], [0, sz > 0 ? 0 : Math.PI, 0])));
   }
@@ -164,8 +166,9 @@ export function buildResidential(K) {
     K.keepCircle(x, z, 0.7);
   }
   // snowmen
-  for (const [x, z, ry] of [[-20.3, 1.45, 1.2], [-13.0, 4.4, 0.3], [-16.2, -4.3, 0.2], [-9.2, -4.2, -0.4]]) {
-    K.prop('residential', [x, 0.03, z], [put('snowman', snowmanGeos, x, 0.03, z, ry)]);
+  const SM = [['#6fa8b4', C.moss, '#f1e4cc'], [C.rose, '#f1e4cc', '#fbf9f4'], [C.red, C.pine, '#f5efe4'], [C.mustard, C.teal, '#f1e4cc']];
+  for (const [i, [x, z, ry]] of [[-20.3, 1.45, 1.2], [-13.0, 4.4, 0.3], [-16.2, -4.3, 0.2], [-9.2, -4.2, -0.4]].entries()) {
+    K.prop('residential', [x, 0.03, z], [put('snowman' + i, () => snowmanGeos(...SM[i]), x, 0.03, z, ry, 1.1)]);
     colliders.addCircle(x, z, 0.16, 'snowman');
     K.keepCircle(x, z, 0.4);
   }

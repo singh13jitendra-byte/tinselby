@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
   C, xf, box, rbox, cyl, cylS, cone, ball, bead, torus, extrude, tube, poly, part, faceColor, angleStripes,
   garland, bulbLine, lampGeos, benchGeos, pineGeos, giftGeos, wreathGeos, snowLump, textGeos, put, prefab, merge,
+  lanternGeos, candyCaneGeos, barrelGeos, basketGeos, litFirGeos, snowmanGeos,
   KNIT, FELT, GLOW, GLOSS, mulberry32,
 } from './kit.js';
 import { spring, squash } from './reveal.js';
@@ -53,12 +54,15 @@ export function buildMarket(K) {
     g.push(xf(torus(0.25, 0.03, C.red, KNIT, TAU, 20), [0, hy, 0]));
     g.push(xf(bead(0.05, C.gold, GLOSS), [0, hy + 0.3, 0]));
     g.push(xf(ball(0.1, C.snow, FELT, 8, 5), [0, hy + 0.26, 0], null, [1.6, 0.4, 0.8]));
-    // "2027" board
-    g.push(xf(rbox(0.56, 0.22, 0.04, 0.02, C.cream, FELT, 1), [0, 1.08, 0.02]));
-    g.push(...textGeos('2027', 0.13, C.red, { r: 0.011 }).map((q) => xf(q, [0, 1.015, 0.05])));
+    // knitted "NOEL" board (both faces)
+    g.push(xf(rbox(0.6, 0.24, 0.05, 0.02, C.cream, FELT, 1), [0, 1.08, 0]));
+    g.push(xf(rbox(0.66, 0.3, 0.03, 0.02, C.red, KNIT, 1), [0, 1.08, 0]));
+    g.push(...textGeos('NOEL', 0.13, C.red, { r: 0.012 }).map((q) => xf(q, [0, 1.015, 0.032])));
+    g.push(...textGeos('NOEL', 0.13, C.pine, { r: 0.012 }).map((q) => xf(q, [0, 1.015, 0.032], [0, Math.PI, 0])));
+    g.push(xf(ball(0.07, C.snow, FELT, 8, 4), [0, 1.235, 0], null, [3.6, 0.35, 0.6]));
     g.push(...wreathGeos(0.08).map((q) => xf(q, [0, 0.65, 0.06])));
     const b = K.prop('market', [x, 0, z], g.map((q) => xf(q, [x, 0, z])));
-    b.add(bulbLine([x - 0.27, 1.21, z + 0.05], [x + 0.27, 1.21, z + 0.05], 7, 0.016).concat(bulbLine([x - 0.27, 0.95, z + 0.05], [x + 0.27, 0.95, z + 0.05], 7, 0.016)));
+    b.add(bulbLine([x - 0.3, 1.215, z + 0.03], [x + 0.3, 1.215, z + 0.03], 8, 0.016).concat(bulbLine([x - 0.3, 0.945, z + 0.03], [x + 0.3, 0.945, z + 0.03], 8, 0.016)));
     colliders.addCircle(x, z, 0.16, 'clock');
   }
 
@@ -90,8 +94,8 @@ export function buildMarket(K) {
       const p = ring[i], q = ring[(i + 1) % ring.length];
       const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
       if (d < 2.6 && Math.abs(p[1]) > 5 && Math.abs(p[0]) < 2) continue; // keep the south entrance open
-      const gl = garland([p[0], 1.33, p[1]], [q[0], 1.33, q[1]], 0.1 + d * 0.035, { n: Math.round(d * 3.2), cord: C.pine, cordR: 0.011, bulbR: 0.027, colors: [C.warm, '#ffe0a0', C.warm, '#ff9a6a'] });
-      cords.push(gl.cord); bulbs.push(...gl.bulbs);
+      const gl = garland([p[0], 1.33, p[1]], [q[0], 1.33, q[1]], 0.1 + d * 0.035, { n: Math.round(d * 4.6), cord: C.pine, cordR: 0.012, bulbR: 0.03, colors: [C.warm, '#ffe0a0', C.warm, '#ff9a6a'], beads: [C.red, '#f5efe4', C.gold] });
+      cords.push(gl.cord, ...gl.beads); bulbs.push(...gl.bulbs);
     }
     K.prop('market', [0, 1.3, 0], cords, { cast: false }).add(bulbs);
   }
@@ -130,6 +134,65 @@ export function buildMarket(K) {
   const lumps = [[-6.2, -5.3], [6.2, -5.3], [-6.25, 5.25], [6.2, 5.25], [-6.3, -0.6], [6.3, 0.6], [-3.0, 5.35], [3.0, 5.35], [0, -5.35], [-5.7, -2.25], [5.7, -2.45], [-5.65, 4.65], [5.65, 4.65], [-3.55, -5.3], [3.75, -5.35], [-4.6, 5.4], [4.7, -5.4], [-6.3, 0.9], [6.3, -1.0], [-1.6, -5.4], [1.9, 5.4]];
   for (const [x, z] of lumps) K.prop('market', [x, 0.05, z], [put('lump', () => snowLump(0.32), x, 0.05, z, rnd() * 3, 0.8 + rnd() * 0.5)], { cast: false });
 
+
+  // ---------------------------------------------------------------- festive dressing: rug, lanterns, candy canes, firs, gifts, snowman
+  {
+    const Lg = M.landing, Y0 = 0.057;
+    const disc = (r, c, y, seg = 40) => xf(part(new THREE.CircleGeometry(r, seg).rotateX(-Math.PI / 2), c, KNIT, [(2 * r) / 0.08, (2 * r) / 0.064]), [Lg.x, y, Lg.z]);
+    const star = (r, ri, n, c, y, rot = 0) => {
+      const pts = [];
+      for (let i = 0; i < n * 2; i++) { const a = rot + (i * Math.PI) / n, rr = i % 2 ? ri : r; pts.push([Math.cos(a) * rr, Math.sin(a) * rr]); }
+      return xf(part(new THREE.ShapeGeometry(poly(pts)).rotateX(-Math.PI / 2), c, KNIT, [1 / 0.08, 1 / 0.064]), [Lg.x, y, Lg.z]);
+    };
+    // big knitted Nordic rug where the square is widest (flat: the sleigh lands on it)
+    const rug = [];
+    for (let k = 0; k < 22; k++) { const a = (k / 22) * TAU; rug.push(xf(part(new THREE.CircleGeometry(0.15, 10).rotateX(-Math.PI / 2), k % 2 ? '#f5efe4' : C.red, KNIT, [3.75, 4.7]), [Lg.x + Math.cos(a) * 1.6, Y0, Lg.z + Math.sin(a) * 1.6])); }
+    rug.push(disc(1.6, C.red, Y0 + 0.002), disc(1.47, '#f5efe4', Y0 + 0.004), disc(1.36, C.pine, Y0 + 0.006), disc(1.27, '#f5efe4', Y0 + 0.008));
+    rug.push(star(1.2, 0.74, 8, C.red, Y0 + 0.01), star(0.86, 0.5, 8, '#f5efe4', Y0 + 0.012, Math.PI / 8), star(0.5, 0.2, 8, C.pine, Y0 + 0.014), disc(0.13, C.gold, Y0 + 0.016, 12));
+    for (let k = 0; k < 8; k++) { const a = (k / 8) * TAU + Math.PI / 8; rug.push(xf(part(new THREE.CircleGeometry(0.06, 8).rotateX(-Math.PI / 2), C.gold, KNIT, [1.5, 1.9]), [Lg.x + Math.cos(a) * 1.02, Y0 + 0.012, Lg.z + Math.sin(a) * 1.02])); }
+    K.prop('market', [Lg.x, 0.055, Lg.z], rug, { cast: false, kind: 'pop' });
+    // knitted skirt rings round the big tree (smooth rings instead of mosaic cells)
+    {
+      const T = M.tree, ring = (r0, r1, c, y) => xf(part(new THREE.RingGeometry(r0, r1, 48, 1).rotateX(-Math.PI / 2), c, KNIT, [(2 * r1) / 0.08, (2 * r1) / 0.064]), [T.x, y, T.z]);
+      const tr = [ring(1.1, 1.36, '#f5efe4', Y0 + 0.002), ring(1.36, 1.62, '#a5493a', Y0 + 0.004), ring(1.62, 1.86, C.pine, Y0 + 0.002), ring(1.86, 1.95, C.gold, Y0 + 0.004)];
+      for (let k = 0; k < 26; k++) { const a = (k / 26) * TAU; tr.push(xf(part(new THREE.CircleGeometry(0.13, 10).rotateX(-Math.PI / 2), k % 2 ? C.red : '#f5efe4', KNIT, [3.2, 4]), [T.x + Math.cos(a) * 2.0, Y0, T.z + Math.sin(a) * 2.0])); }
+      K.prop('market', [T.x, 0.055, T.z], tr, { cast: false, kind: 'pop' });
+    }
+
+    const lantern = (x, z, s = 1) => { K.prop('market', [x, 0.055, z], lanternGeos().map((q) => xf(q, [x, 0.055, z], [0, x, 0], s))); colliders.addCircle(x, z, 0.07 * s, 'lantern'); K.keepCircle(x, z, 0.25); };
+    const cane = (x, z, ry = 0) => { K.prop('market', [x, 0.055, z], candyCaneGeos().map((q) => xf(q, [x, 0.055, z], [0, ry, 0], 1.15))); colliders.addCircle(x, z, 0.05, 'cane'); };
+    const fir = (x, z, s = 1, pot = C.red) => { const f = litFirGeos(pot); const w = (q) => xf(q, [x, 0.055, z], [0, x * 2, 0], s); K.prop('market', [x, 0.055, z], f.g.map(w)).add(f.lights.map(w)); colliders.addCircle(x, z, 0.17 * s, 'fir'); K.keepCircle(x, z, 0.4); };
+    const gifts = (x, z, n, spread = 0.3) => {
+      const g = [];
+      for (let i = 0; i < n; i++) {
+        const [a, b] = giftCols[(i + Math.abs(Math.round(x * 3))) % 6];
+        const w = 0.11 + rnd() * 0.09, h = 0.09 + rnd() * 0.09;
+        const ang = i * 2.4, r = i === 0 ? 0 : spread * (0.5 + 0.5 * rnd());
+        const top = i >= 4;
+        g.push(...giftGeos(w, h, a, b).map((q) => xf(q, [x + Math.cos(ang) * (top ? r * 0.3 : r), 0.055 + (top ? 0.13 : 0), z + Math.sin(ang) * (top ? r * 0.3 : r)], [0, rnd() * 3, 0])));
+      }
+      K.prop('market', [x, 0.055, z], g);
+      colliders.addCircle(x, z, spread * 0.8, 'gifts');
+    };
+    const barrel = (x, z) => { K.prop('market', [x, 0.055, z], barrelGeos().map((q) => xf(q, [x, 0.055, z], [0, z, 0]))); colliders.addCircle(x, z, 0.17, 'barrel'); K.keepCircle(x, z, 0.4); };
+    const basket = (x, z, fill, kind) => K.prop('market', [x, 0.055, z], basketGeos(fill, kind).map((q) => xf(q, [x, 0.055, z])));
+
+    // lantern + candy-cane avenue from the south entrance up to the rug
+    for (const sx of [-1, 1]) {
+      lantern(sx * 1.85, 4.05); lantern(sx * 2.15, 3.05, 1.15); lantern(sx * 2.2, 1.35);
+      cane(sx * 1.62, 5.2, sx > 0 ? Math.PI : 0); cane(sx * 2.42, 2.25, sx > 0 ? Math.PI : 0);
+    }
+    // lanterns round the tree skirt
+    for (let k = 0; k < 6; k++) { const a = (k / 6) * TAU + 0.52; lantern(M.tree.x + Math.cos(a) * 2.32, M.tree.z + Math.sin(a) * 2.32, 0.9); }
+    // clusters
+    fir(-2.75, 3.5, 1.15); gifts(-2.35, 3.2, 6, 0.3); lantern(-3.15, 3.15);
+    barrel(2.6, 0.7); gifts(2.95, 1.05, 4, 0.22); basket(2.3, 1.0, '#7a4f33', FELT); fir(3.05, 0.2, 0.9, C.pine);
+    barrel(-2.3, 0.45); basket(-2.6, 0.75, C.red, GLOSS); gifts(-1.95, 0.2, 3, 0.2); cane(-2.65, 0.15);
+    { const x = 2.5, z = -3.05; K.prop('market', [x, 0.055, z], snowmanGeos('#6fa8b4', C.moss).map((q) => xf(q, [x, 0.055, z], [0, -0.5, 0], 1.25))); colliders.addCircle(x, z, 0.22, 'snowman'); K.keepCircle(x, z, 0.45); gifts(2.95, -2.8, 3, 0.2); }
+    { const x = -3.05, z = -1.9; K.prop('market', [x, 0.055, z], snowmanGeos(C.rose, '#f1e4cc', '#fbf9f4').map((q) => xf(q, [x, 0.055, z], [0, 0.9, 0], 1.0))); colliders.addCircle(x, z, 0.18, 'snowman'); }
+    // south edge (outside the walk loop): firs, lanterns, gift piles
+    for (const sx of [-1, 1]) { fir(sx * 2.45, 5.2, 1.0, sx > 0 ? C.red : C.pine); fir(sx * 4.5, 5.22, 1.2); lantern(sx * 3.5, 5.2, 1.1); gifts(sx * 3.95, 5.15, 4, 0.2); basket(sx * 2.95, 5.25, sx > 0 ? C.gold : C.red, GLOSS); }
+  }
   return { tree };
 }
 
@@ -252,7 +315,30 @@ function stallGeos(i, rnd) {
     const x = -W / 2 - 0.09 + 0.085 + k * ((W + 0.18 - 0.17) / (n - 1));
     g.push(xf(extrude(sc, 0.025, k % 2 ? pal[1] : pal[0], KNIT, 6), [x, yf, zf - 0.012]));
   }
-  for (let k = 0; k < 9; k++) lights.push(xf(bead(0.024, k % 2 ? C.warm : '#ffe2a8', GLOW), [-W / 2 + k * (W / 8), yf - 0.1, zf + 0.01]));
+  // cart-style string of big warm bulbs hanging under the awning edge
+  g.push(xf(cyl(0.008, 0.008, W + 0.16, 4, C.ink, FELT), [0, yf - 0.012, zf + 0.012], [0, 0, Math.PI / 2]));
+  for (let k = 0; k < 6; k++) {
+    const x = -W / 2 + 0.05 + k * ((W - 0.1) / 5), drop = 0.07 + (k % 2) * 0.035;
+    g.push(xf(cyl(0.004, 0.004, drop, 3, C.ink, FELT), [x, yf - 0.012 - drop / 2, zf + 0.012]));
+    g.push(xf(cyl(0.016, 0.016, 0.026, 6, C.ink, FELT), [x, yf - 0.02 - drop, zf + 0.012]));
+    lights.push(xf(bead(0.04, k % 2 ? '#ffd27a' : '#ffbe66', GLOW), [x, yf - 0.065 - drop, zf + 0.012], null, [1, 1.25, 1]));
+  }
+  // fluffy cotton snow: heaps on the roof and a soft lip along the front edge
+  for (let k = 0; k < 4; k++) g.push(xf(ball(0.16, C.snow, FELT, 8, 5), [-0.48 + k * 0.32, 1.085 + (k % 2) * 0.012, -0.2 + (k % 2) * 0.06], null, [1.25, 0.4, 1.5]));
+  for (let k = 0; k < 8; k++) g.push(xf(bead(0.05, C.snow), [-W / 2 - 0.02 + k * ((W + 0.04) / 7), yf + 0.035, zf - 0.03], null, [1.5, 0.75, 1]));
+  // wagon wheel, counter lantern, jars, basket
+  const wx = (i % 2 ? 1 : -1) * 0.68;
+  g.push(xf(torus(0.17, 0.024, C.woodDark, KNIT, TAU, 14), [wx, 0.19, 0.16], [0, Math.PI / 2, 0]));
+  for (let k = 0; k < 3; k++) g.push(xf(box(0.022, 0.32, 0.022, C.wood), [wx, 0.19, 0.16], [(k * Math.PI) / 3, 0, 0]));
+  g.push(xf(bead(0.035, C.woodDark), [wx, 0.19, 0.16]));
+  g.push(...lanternGeos(C.woodDark).map((q) => xf(q, [-wx * 0.76, 0.44, 0.3], null, 0.62)));
+  g.push(xf(box(W - 0.2, 0.03, 0.12, C.woodDark), [0, 0.56, -0.25]));
+  for (let k = 0; k < 4; k++) {
+    const x = -0.36 + k * 0.24, c = ['#e09a3a', '#c8552d', '#e6c06a', '#b8302d'][(k + i) % 4];
+    g.push(xf(cyl(0.032, 0.032, 0.075, 7, c, GLOSS), [x, 0.612, -0.24]));
+    g.push(xf(cyl(0.034, 0.034, 0.016, 7, C.cream, FELT), [x, 0.657, -0.24]));
+  }
+  g.push(...basketGeos(i % 2 ? C.red : '#7a4f33', i % 2 ? GLOSS : FELT).map((q) => xf(q, [-wx * 0.8, 0, 0.56])));
   // sign
   g.push(xf(rbox(0.5, 0.16, 0.03, 0.015, C.cream, FELT, 1), [0, 1.27, -0.3]));
   g.push(xf(bead(0.04, pal[0]), [0, 1.27, -0.28], null, [1, 1, 0.5]));
@@ -268,7 +354,9 @@ function stallGeos(i, rnd) {
   // shelf goods on the back wall
   for (let k = 0; k < 5; k++) g.push(xf(bead(0.035, [C.red, C.gold, C.teal, C.cream, C.red][k], GLOSS), [-0.4 + k * 0.2, 0.8, -0.24]));
   // festive extra: draped bulbs between front posts
-  const gl = garland([-0.62, 0.95, 0.44], [0.62, 0.95, 0.44], 0.12, { n: 9, bulbR: 0.022, bulbsOnly: true });
+  const gl = garland([-0.62, 0.99, 0.43], [0.62, 0.99, 0.43], 0.1, { n: 9, bulbR: 0.022, cord: C.pine, cordR: 0.02 });
+  g.push(gl.cord);
+  for (const sx of [-1, 1]) g.push(xf(bead(0.04, C.red), [sx * 0.62, 0.97, 0.45], null, [1.2, 0.9, 0.7]));
   extra.push(...gl.bulbs);
   return { g, lights, extra };
 }

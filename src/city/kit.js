@@ -107,6 +107,8 @@ export function pineGeos(colour = C.pine, shade = '#285a3e', { bobbles = true, l
   tiers.forEach(([r, h, y], i) => {
     const c = angleStripes(cone(r, h, 10, colour), 10, colour, shade);
     g.push(xf(c, [0, y + h / 2, 0]));
+    // cotton snow settled on the upper part of each tier
+    if (i > 0) g.push(xf(cone(r * 0.56, h * 0.55, 8, C.snow, FELT), [0, y + h - h * 0.275 + 0.012, 0], [0, i, 0], [1.06, 1, 1.06]));
     if (bobbles) {
       const n = i < 2 ? 3 - i : 0;
       for (let k = 0; k < n; k++) {
@@ -124,13 +126,15 @@ export function pomTreeGeos(crown = C.pink, rnd = Math.random) {
   const g = [];
   g.push(xf(cyl(0.035, 0.05, 0.38, 6, C.wood), [0, 0.19, 0]));
   const r = 0.27;
-  g.push(xf(ball(r, crown, FELT, 8, 6), [0, 0.55, 0]));
-  g.push(xf(ball(r * 0.72, crown, FELT, 7, 5), [0.17, 0.46, 0.06]));
-  g.push(xf(ball(r * 0.66, crown, FELT, 7, 5), [-0.15, 0.48, -0.05]));
-  g.push(xf(ball(r * 0.8, C.snow, FELT, 7, 4), [0, 0.68, 0], null, [1, 0.42, 1]));
-  for (let k = 0; k < 3; k++) {
-    const a = k * 2.1 + 0.3, yy = 0.42 + (k % 3) * 0.08;
-    g.push(xf(bead(0.03, C.snow), [Math.cos(a) * r * 0.98, yy, Math.sin(a) * r * 0.98]));
+  g.push(xf(ball(r, crown, FELT, 10, 7), [0, 0.55, 0]));
+  g.push(xf(ball(r * 0.72, crown, FELT, 8, 6), [0.17, 0.46, 0.06]));
+  g.push(xf(ball(r * 0.66, crown, FELT, 8, 6), [-0.15, 0.48, -0.05]));
+  // cotton-wool snow hat + a smaller drift on the side puff
+  g.push(xf(ball(r * 0.86, C.snow, FELT, 9, 5), [0, 0.775, 0], null, [1, 0.42, 1]));
+  g.push(xf(ball(r * 0.5, C.snow, FELT, 7, 4), [0.2, 0.61, 0.07], null, [1, 0.4, 1]));
+  for (let k = 0; k < 7; k++) {
+    const a = k * 2.1 + 0.3, yy = 0.4 + (k % 4) * 0.075, rr = Math.sqrt(Math.max(0.01, r * r - (yy - 0.55) ** 2)) * 1.0;
+    g.push(xf(bead(0.032, C.snow), [Math.cos(a) * rr, yy, Math.sin(a) * rr]));
   }
   return g;
 }
@@ -159,6 +163,8 @@ export function lampGeos(h = 1.25) {
   for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) g.push(xf(box(0.018, 0.16, 0.018, C.lampPost), [x * 0.056, h + 0.115, z * 0.056]));
   g.push(xf(cone(0.1, 0.09, 4, C.lampPost), [0, h + 0.235, 0], [0, Math.PI / 4, 0]));
   g.push(xf(ball(0.075, C.snow, FELT, 8, 5), [0, h + 0.28, 0], null, [1, 0.45, 1]));
+  // fairy lights wound round the post
+  for (let k = 0; k < 8; k++) { const a = k * 1.25, y = h * (0.2 + k * 0.095); g.push(xf(bead(0.017, k % 3 ? C.warm : '#ffe6b0', GLOW), [Math.cos(a) * 0.04, y, Math.sin(a) * 0.04])); }
   // red bow on the post
   g.push(xf(bead(0.03, C.red), [-0.025, h * 0.62, 0.03], null, [1.2, 0.8, 0.6]));
   g.push(xf(bead(0.03, C.red), [0.025, h * 0.62, 0.03], null, [1.2, 0.8, 0.6]));
@@ -179,20 +185,111 @@ export function benchGeos() {
 
 export function snowLump(r = 0.3) { return [xf(ball(r, C.snow, FELT, 12, 7), [0, 0, 0], null, [1, 0.38, 0.8])]; }
 
-export function snowmanGeos() {
+/** Needle-felted snowman: knit beanie with fat brim and pom-pom, striped fringed scarf, wooden buttons, carrot nose, rosy cheeks. */
+export function snowmanGeos(hat = '#6fa8b4', scarf = C.moss, brim = '#f1e4cc') {
+  const g = [], W = '#fbf9f4';
+  g.push(xf(ball(0.185, W, FELT, 12, 8), [0, 0.165, 0], null, [1, 0.95, 1]));
+  g.push(xf(ball(0.135, W, FELT, 12, 8), [0, 0.43, 0]));
+  for (const s of [-1, 1]) g.push(xf(ball(0.055, W, FELT, 8, 6), [s * 0.178, 0.25, 0.035], [0, 0, s * 0.55], [0.72, 1.5, 0.8])); // stubby felted arms
+  // scarf: chunky wrap + hanging striped tail with fringe
+  g.push(xf(torus(0.108, 0.036, scarf, KNIT, TAU, 14), [0, 0.325, 0], [Math.PI / 2, 0, 0]));
+  const tail = box(0.075, 0.18, 0.028, scarf);
+  faceColor(tail, (x, y) => (Math.floor((y + 0.09) / 0.03) % 2 ? null : hat));
+  g.push(xf(tail, [0.065, 0.225, 0.158], [-0.22, 0, -0.1]));
+  [C.pink, hat, C.gold].forEach((c, i) => g.push(xf(bead(0.017, c), [0.05 + i * 0.022, 0.128, 0.175])));
+  // wooden buttons
+  for (const y of [0.1, 0.19]) {
+    const z = Math.sqrt(Math.max(0, 0.185 * 0.185 - (y - 0.165) ** 2)) * 0.98;
+    g.push(xf(cyl(0.024, 0.024, 0.012, 8, '#b98250', FELT), [-0.025, y, z], [Math.PI / 2 - (y - 0.165) * 2.5, 0, 0]));
+    g.push(xf(cyl(0.012, 0.012, 0.014, 6, '#7a4f33', FELT), [-0.025, y, z + 0.002], [Math.PI / 2, 0, 0]));
+  }
+  // face
+  g.push(xf(cone(0.022, 0.085, 7, C.orange, FELT), [0, 0.428, 0.165], [Math.PI / 2, 0, 0]));
+  for (const x of [-0.047, 0.047]) g.push(xf(bead(0.014, C.ink, GLOSS), [x, 0.458, 0.122]));
+  for (const x of [-0.08, 0.08]) g.push(xf(bead(0.026, '#f08f9c'), [x, 0.418, 0.105], [0, x * 4, 0], [1, 0.8, 0.35]));
+  for (const [x, y] of [[-0.03, 0.392], [-0.01, 0.384], [0.01, 0.384], [0.03, 0.392]]) g.push(xf(bead(0.006, C.ink), [x, y, 0.129]));
+  // beanie
+  g.push(xf(ball(0.122, hat, KNIT, 12, 8), [0, 0.535, -0.005], null, [1, 0.82, 1]));
+  g.push(xf(torus(0.118, 0.036, brim, KNIT, TAU, 14), [0, 0.505, 0], [Math.PI / 2, 0, 0]));
+  g.push(xf(ball(0.052, brim, FELT, 8, 6), [0, 0.66, -0.01]));
+  return g;
+}
+
+/** Floor lantern (glowing), ~0.3 tall. */
+export function lanternGeos(c = C.lampPost) {
   const g = [];
-  g.push(xf(ball(0.17, C.snow, FELT), [0, 0.15, 0]));
-  g.push(xf(ball(0.12, C.snow, FELT), [0, 0.38, 0]));
-  g.push(xf(ball(0.085, C.snow, FELT), [0, 0.55, 0]));
-  g.push(xf(torus(0.08, 0.025, C.red, KNIT, TAU, 10), [0, 0.47, 0], [Math.PI / 2, 0, 0]));
-  g.push(xf(box(0.05, 0.14, 0.02, C.red), [0.05, 0.4, 0.09], [0.2, 0, 0.2]));
-  g.push(xf(cone(0.018, 0.09, 6, C.orange, FELT), [0, 0.55, 0.11], [Math.PI / 2, 0, 0]));
-  for (const x of [-0.03, 0.03]) g.push(xf(bead(0.012, C.ink), [x, 0.58, 0.075]));
-  for (const y of [0.33, 0.39]) g.push(xf(bead(0.014, C.ink), [0, y, 0.115]));
-  g.push(xf(cyl(0.06, 0.07, 0.02, 10, C.ink), [0, 0.625, 0]));
-  g.push(xf(cyl(0.045, 0.05, 0.09, 10, C.ink), [0, 0.67, 0]));
-  g.push(xf(cyl(0.05, 0.05, 0.02, 10, C.red), [0, 0.645, 0]));
-  for (const s of [-1, 1]) g.push(xf(cyl(0.008, 0.008, 0.2, 4, C.woodDark), [s * 0.17, 0.42, 0], [0, 0, s * 1.0]));
+  g.push(xf(box(0.13, 0.03, 0.13, c), [0, 0.015, 0]));
+  g.push(xf(box(0.085, 0.13, 0.085, '#ffc474', GLOW), [0, 0.095, 0]));
+  for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) g.push(xf(box(0.016, 0.13, 0.016, c), [x * 0.048, 0.095, z * 0.048]));
+  g.push(xf(cone(0.095, 0.07, 4, c), [0, 0.195, 0], [0, Math.PI / 4, 0]));
+  g.push(xf(torus(0.03, 0.007, c, KNIT, TAU, 8), [0, 0.25, 0]));
+  g.push(xf(ball(0.05, C.snow, FELT, 6, 4), [0, 0.225, 0], null, [1.2, 0.4, 1.2]));
+  return g;
+}
+/** Knitted candy cane post with a red bow, ~0.62 tall. */
+export function candyCaneGeos() {
+  const pts = [[0, 0, 0], [0, 0.3, 0], [0, 0.5, 0], [0.03, 0.58, 0], [0.1, 0.61, 0], [0.16, 0.57, 0], [0.175, 0.49, 0]];
+  const t = tube(pts, 0.032, C.snow, KNIT, 44, 6);
+  faceColor(t, (x, y, z, f) => (Math.floor(f / 12 / 4) % 2 ? C.red : null)); // ring stripes, four tube segments each
+  return [t, xf(bead(0.035, C.red), [-0.03, 0.36, 0.035], null, [1.3, 0.8, 0.6]), xf(bead(0.035, C.red), [0.03, 0.36, 0.035], null, [1.3, 0.8, 0.6]), xf(bead(0.022, C.gold, GLOSS), [0, 0.36, 0.05])];
+}
+/** Wooden barrel table with snow, mugs and a lantern on top. */
+export function barrelGeos() {
+  const g = [];
+  const b = cylS(0.15, 0.13, 0.34, 10, 3, C.wood);
+  faceColor(b, (x, y, z) => (Math.floor((Math.atan2(z, x) / TAU + 1) * 10) % 2 ? '#86593b' : null));
+  g.push(xf(b, [0, 0.17, 0]));
+  for (const y of [0.08, 0.26]) g.push(xf(torus(0.15, 0.012, C.lampPost, KNIT, TAU, 12), [0, y, 0], [Math.PI / 2, 0, 0]));
+  g.push(xf(cyl(0.16, 0.16, 0.02, 10, C.woodDark), [0, 0.35, 0]));
+  g.push(xf(ball(0.1, C.snow, FELT, 8, 5), [-0.04, 0.36, -0.05], null, [1.1, 0.25, 0.9]));
+  for (const [x, z, c] of [[0.07, 0.05, C.red], [-0.05, 0.08, C.cream]]) {
+    g.push(xf(cyl(0.028, 0.024, 0.05, 8, c), [x, 0.385, z]));
+    g.push(xf(cyl(0.022, 0.022, 0.006, 8, '#6b3f2a', FELT), [x, 0.412, z]));
+    g.push(xf(torus(0.014, 0.005, c, KNIT, TAU, 6), [x + 0.03, 0.385, z]));
+  }
+  return g;
+}
+/** Woven basket heaped with pine cones / apples / baubles. */
+export function basketGeos(fill = '#7a4f33', kind = FELT) {
+  const g = [];
+  g.push(xf(cyl(0.105, 0.08, 0.09, 10, '#c49a62'), [0, 0.045, 0]));
+  g.push(xf(torus(0.105, 0.014, '#a87c48', KNIT, TAU, 12), [0, 0.09, 0], [Math.PI / 2, 0, 0]));
+  for (let i = 0; i < 7; i++) { const a = i * 2.4, r = i ? 0.055 : 0; g.push(xf(bead(0.036, i % 3 === 2 && kind === FELT ? '#8f6242' : fill, kind), [Math.cos(a) * r, 0.105 + (i ? 0 : 0.03), Math.sin(a) * r], [0, a, 0], [1, 1.15, 1])); }
+  g.push(xf(bead(0.03, C.snow), [0.03, 0.15, -0.02], null, [1.3, 0.5, 1.2]));
+  return g;
+}
+/** Small fir in a knitted pot, wrapped in fairy lights. Returns {g, lights}. */
+export function litFirGeos(pot = C.red) {
+  const g = [], lights = [];
+  const pl = cyl(0.17, 0.14, 0.18, 10, pot);
+  faceColor(pl, (x, y) => (y > 0.04 ? C.cream : null));
+  g.push(xf(pl, [0, 0.09, 0]));
+  g.push(...pineGeos(C.pine, '#285a3e', { bobbles: false }).map((q) => xf(q, [0, 0.13, 0], null, 0.74)));
+  for (let k = 0; k < 5; k++) { const a = k * 1.9, t = 0.12 + k * 0.17, r = (0.42 - t * 0.33) * 0.74; g.push(xf(bead(0.032, k % 2 ? C.red : C.gold, GLOSS), [Math.cos(a) * r, 0.2 + t * 0.72, Math.sin(a) * r])); }
+  for (let k = 0; k < 16; k++) { const t = k / 16, a = t * TAU * 3, r = (0.44 - t * 0.34) * 0.74; lights.push(xf(bead(0.022, k % 4 === 0 ? '#ff9a6a' : C.warm, GLOW), [Math.cos(a) * r, 0.22 + t * 0.6, Math.sin(a) * r])); }
+  return { g, lights };
+}
+
+/** Low rustic wooden fence with cotton-snow caps along a polyline [[x,z],...]. Posts ~every `step`. */
+export function woodFenceGeos(pts, { step = 0.62, h = 0.3, y = 0.03 } = {}) {
+  const g = [];
+  const post = (x, z, ang) => {
+    g.push(xf(box(0.075, h, 0.075, C.wood, FELT), [x, y + h / 2, z], [0, -ang, 0]));
+    g.push(xf(ball(0.058, C.snow, FELT, 6, 4), [x, y + h + 0.005, z], null, [1.1, 0.55, 1.1]));
+  };
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
+    const L = Math.hypot(bx - ax, bz - az), ang = Math.atan2(bz - az, bx - ax), n = Math.max(1, Math.round(L / step));
+    for (let k = 0; k < n; k++) {
+      const t0 = k / n, t1 = (k + 1) / n;
+      const x0 = ax + (bx - ax) * t0, z0 = az + (bz - az) * t0, x1 = ax + (bx - ax) * t1, z1 = az + (bz - az) * t1;
+      const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, l = L / n;
+      post(x0, z0, ang);
+      for (const ry of [0.38, 0.74]) g.push(xf(box(l, 0.045, 0.03, k % 2 ? '#86593b' : C.wood, FELT), [mx, y + h * ry, mz], [0, -ang, 0]));
+      g.push(xf(box(l * 0.8, 0.028, 0.05, C.snow, FELT), [mx, y + h * 0.74 + 0.032, mz], [0, -ang, 0]));
+    }
+    if (i === pts.length - 2) post(bx, bz, ang);
+  }
   return g;
 }
 
@@ -249,6 +346,9 @@ const GLYPHS = {
   S: [[[0.92, 0.82], [0.65, 1], [0.3, 0.98], [0.06, 0.78], [0.2, 0.56], [0.5, 0.5], [0.82, 0.42], [0.96, 0.2], [0.72, 0.01], [0.32, 0], [0.04, 0.18]]],
   B: [[[0, 0], [0, 1], [0.58, 1], [0.84, 0.9], [0.86, 0.66], [0.6, 0.52], [0, 0.52]], [[0.6, 0.52], [0.92, 0.4], [0.94, 0.13], [0.65, 0], [0, 0]]],
   Y: [[[0, 1], [0.5, 0.48], [1, 1]], [[0.5, 0.48], [0.5, 0]]],
+  R: [[[0, 0], [0, 1], [0.6, 1], [0.88, 0.86], [0.88, 0.62], [0.6, 0.5], [0, 0.5]], [[0.45, 0.5], [0.95, 0]]],
+  H: [[[0, 1], [0, 0]], [[1, 1], [1, 0]], [[0, 0.52], [1, 0.52]]],
+  A: [[[0, 0], [0.5, 1], [1, 0]], [[0.2, 0.38], [0.8, 0.38]]],
   2: [[[0.06, 0.74], [0.25, 0.97], [0.62, 1], [0.9, 0.8], [0.82, 0.52], [0.06, 0], [0.96, 0]]],
   0: [arc(0.5, 0.5, 0.45, 0.5, 0, TAU, 14)],
   7: [[[0.02, 1], [0.98, 1], [0.38, 0]]],

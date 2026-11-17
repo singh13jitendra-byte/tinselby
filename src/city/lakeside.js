@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import {
   C, xf, box, rbox, cyl, cone, ball, bead, torus, tube, part, flatShapeE, garland, lampGeos, benchGeos, pineGeos,
-  pomTreeGeos, snowLump, put, merge, KNIT, FELT, GLOW, GLOSS, mulberry32,
+  pomTreeGeos, snowLump, put, merge, woodFenceGeos, snowmanGeos, lanternGeos, KNIT, FELT, GLOW, GLOSS, mulberry32,
 } from './kit.js';
 import { pathGeos, forest } from './park.js';
 import { townhouse } from './residential.js';
@@ -71,6 +71,28 @@ export function buildLakeside(K) {
       }
       P(rg, [x, 0.04, z], { cast: false });
     }
+  }
+
+  // ---------------------------------------------------------------- low snow-capped wooden fence round part of the shore
+  // (open on the west side by the pier / promenade and on the east side, so the ice and the scarf stay easy to reach)
+  {
+    const arcs = [[-158, -24], [22, 112]];
+    for (const [d0, d1] of arcs) {
+      const n = Math.round((d1 - d0) / 11.5);
+      let prev = null;
+      for (let i = 0; i <= n; i++) {
+        const t = ((d0 + ((d1 - d0) * i) / n) * Math.PI) / 180;
+        const p = [cx + Math.cos(t) * (rx + 0.36), cz + Math.sin(t) * (rz + 0.36)];
+        if (prev) {
+          P(woodFenceGeos([prev, p], { step: 0.5 }), [(prev[0] + p[0]) / 2, 0.03, (prev[1] + p[1]) / 2], { delay: 0.45 + i * 0.02 });
+          colliders.addSegment(prev[0], prev[1], p[0], p[1], 0.05, 'fence');
+        }
+        prev = p;
+      }
+    }
+    // a felted snowman waving from the east bank, lanterns at the fence ends
+    { const x = cx + rx + 0.75, z = cz - 0.4; P(snowmanGeos('#e7a1a3', '#f1e4cc', '#fbf9f4').map((q) => xf(q, [x, 0.03, z], [0, -1.3, 0], 1.3)), [x, 0.03, z]); colliders.addCircle(x, z, 0.22, 'snowman'); K.keepCircle(x, z, 0.5); }
+    for (const d of [-158, -24, 22, 112]) { const t = (d * Math.PI) / 180, x = cx + Math.cos(t) * (rx + 0.62), z = cz + Math.sin(t) * (rz + 0.62); P(lanternGeos().map((q) => xf(q, [x, 0.03, z], null, 1.2)), [x, 0.03, z]); colliders.addCircle(x, z, 0.08, 'lantern'); }
   }
 
   // ---------------------------------------------------------------- pier

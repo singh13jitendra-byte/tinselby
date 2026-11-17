@@ -35,8 +35,8 @@ export const P = {
 };
 
 export const KNIT = 1, FELT = 0, GLOW = 2, GLOSS = 3;
-export const SW = 0.072; // stitch width (world units) — chunky knit
-export const SH = 0.058; // stitch row height
+export const SW = 0.08; // stitch width (world units) — chunky knit
+export const SH = 0.064; // stitch row height
 
 // ------------------------------------------------------------------ textures
 /** One knit "V" stitch cell (height map; tiles in u and v). Used for bump + shading. */
@@ -185,7 +185,8 @@ vec3 yarnShade() {
     float far = knitFar();
     float h = texture2D(bumpMap, vBumpMapUv).x;
     // chunky stitches up close; contrast eases off with distance so far knit reads as soft wool, not noise
-    return vec3(mix(0.5 + 0.66 * h, 0.78 + 0.22 * h, far));
+    // white wool (snowy roofs, pavements) keeps its stitches but stays bright
+    return vec3(mix(mix(0.44 + 0.74 * h, 0.78 + 0.22 * h, far), mix(0.7 + 0.42 * h, 0.9 + 0.14 * h, far), snowW()));
   }
   return vec3(1.0);
 }
@@ -251,9 +252,14 @@ export function makeYarnMaterial(knitTex, feltTex) {
       .replace(
         '#include <emissivemap_fragment>',
         '#include <emissivemap_fragment>\nif (vMat > 1.5 && vMat < 2.5) totalEmissiveRadiance += vColor.rgb * uGlow * (0.72 + 0.28 * sin(uTime * 2.4 + vTw * 6.283));\ntotalEmissiveRadiance += vec3(0.9, 0.95, 1.0) * snowGlitter() * 0.55;'
+      )
+      // cotton-wool snow: keep the warm/cool light contrast but pull the chroma back so it reads white, not pink or grey
+      .replace(
+        '#include <opaque_fragment>',
+        'if (vMat < 1.5) { float sw = snowW(); float sl = dot(outgoingLight, vec3(0.3, 0.59, 0.11)); outgoingLight = mix(outgoingLight, vec3(sl) * vec3(1.0, 1.015, 1.05) * 1.1, 0.62 * sw); }\n#include <opaque_fragment>'
       );
   };
-  m.customProgramCacheKey = () => 'yarn-v2';
+  m.customProgramCacheKey = () => 'yarn-v4';
   return m;
 }
 

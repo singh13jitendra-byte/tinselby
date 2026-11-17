@@ -158,7 +158,7 @@ export function buildCity(ctx) {
     cg.fillStyle = grd;
     cg.fillRect(0, 0, 64, 64);
     const tex = new THREE.CanvasTexture(cv);
-    const pmat = new THREE.MeshBasicMaterial({ map: tex, color: '#ff9a45', transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const pmat = new THREE.MeshBasicMaterial({ map: tex, color: '#ffae5c', transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     const spots = {}; // gid → [x, y, z, radius, strength]
     const add = (x, y, z, r, k = 1) => { const gid = K.groupAt(x, z); (spots[gid] ||= []).push([x, Math.max(y, 0.07) + 0.022, z, r, k]); };
     for (const [x, y, z, sc] of lampSpots) add(x, y, z, 1.55 * sc, 1);
@@ -232,7 +232,7 @@ export function buildCity(ctx) {
     for (const id of GROUP_IDS) G[id].group.update(t);
     for (const fn of K.updates) fn(dt, t);
     for (const p of pools.list) p.im.visible = p.group.state === 'shown';
-    pools.mat.opacity = 0.42 + 0.4 * engine._evening;
+    pools.mat.opacity = 0.3 + 0.26 * engine._evening;
   }, 5);
 
   return {

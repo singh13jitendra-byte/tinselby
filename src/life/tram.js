@@ -18,7 +18,10 @@ export function buildTramMesh(engine) {
   p.push(xf(box(Wd + 0.012, 0.03, L + 0.01, P.deepRed, FELT), [0, 0.33, 0]));
   // roof + cotton snow
   p.push(xf(rbox(Wd + 0.03, 0.05, L + 0.03, 0.02, P.deepRed, KNIT, 1), [0, 0.592, 0]));
-  p.push(xf(rbox(Wd - 0.08, 0.035, L - 0.24, 0.016, P.snow, FELT, 1), [0, 0.628, 0]));
+  p.push(xf(rbox(Wd - 0.03, 0.07, L - 0.1, 0.033, '#fbf9f4', FELT, 1), [0, 0.635, 0]));
+  // grey wool skirt + cream window posts (chunky knit, like the felted bus)
+  p.push(xf(rbox(Wd + 0.014, 0.07, L + 0.014, 0.03, '#b4b1ad', KNIT, 1), [0, 0.105, 0]));
+  for (const sx of [-1, 1]) for (let i = 0; i < 6; i++) p.push(xf(box(0.016, 0.16, 0.05, '#f3ead8', KNIT), [sx * (Wd / 2 - 0.004), 0.455, -0.675 + i * 0.27]));
   // side windows (warm glow) with cream mullions implied by gaps
   for (const sx of [-1, 1]) {
     for (let i = 0; i < 5; i++) {
@@ -42,7 +45,7 @@ export function buildTramMesh(engine) {
     for (const sx of [-1, 1]) for (const wz of [-0.09, 0.09]) p.push(xf(cyl(0.045, 0.045, 0.03, 7, P.woodDark, FELT), [sx * 0.19, 0.045, sz * 0.48 + wz], [0, 0, Math.PI / 2]));
   }
   // pantograph: base, diamond arms, collector bar
-  p.push(xf(box(0.16, 0.025, 0.12, P.ink, FELT), [0, 0.655, -0.05]));
+  p.push(xf(box(0.16, 0.025, 0.12, P.ink, FELT), [0, 0.675, -0.05]));
   p.push(tube([[0, 0.66, -0.1], [0, 0.77, 0.03], [0, 0.88, -0.06]], 0.007, P.ink, FELT, 8, 4));
   p.push(tube([[0, 0.66, 0.0], [0, 0.77, -0.12], [0, 0.88, -0.06]], 0.007, P.ink, FELT, 8, 4));
   p.push(xf(box(0.32, 0.014, 0.024, P.ink, FELT), [0, 0.885, -0.06]));
