@@ -16,7 +16,7 @@ export function createCameraDirector(engine, game) {
     follow: { dist: 6.7, pitch: 36, fov: 32, tilt: 1.0, lead: 0.35 },
     high: { dist: 21, pitch: 60, fov: 32, tilt: 0.7, lead: 0.2 },
     close: { dist: 3.3, pitch: 16, fov: 36, tilt: 1.6, lead: 0.1 },
-    attract: { dist: 24, pitch: 48, fov: 32, tilt: 0.8, lead: 0 },
+    attract: { dist: 26, pitch: 13, fov: 32, tilt: 0.6, lead: 0, lookUp: 2.4 }, // low enough to show sky, moon and hills
   };
   const BASE_YAW = 0.28; // camera sits south-south-east, looking north
   const cur = { ...MODES.follow, yaw: BASE_YAW };
@@ -66,7 +66,7 @@ export function createCameraDirector(engine, game) {
       }
       const pr = THREE.MathUtils.degToRad(cur.pitch), hd = Math.cos(pr) * cur.dist;
       basePos.set(target.x + Math.sin(cur.yaw) * hd, target.y + Math.sin(pr) * cur.dist, target.z + Math.cos(cur.yaw) * hd);
-      baseTarget.set(target.x, target.y + (mode === 'close' ? 0.25 : 0.15), target.z);
+      baseTarget.set(target.x, target.y + (mode === 'close' ? 0.25 : mode === 'attract' ? m.lookUp : 0.15), target.z);
       let w = 0, tilt = cur.tilt;
       if (shot) {
         shot.t += dt;

@@ -4,6 +4,7 @@
 import { Path, clamp } from './paths.js';
 import { buildTramMesh, TRAM_LEN, TRAM_HALF_W } from './tram.js';
 import { buildCarMesh, CAR_LEN, CAR_HALF_W } from './cars.js';
+import { buildCarriage, CARRIAGE_LEN, CARRIAGE_HALF_W } from './carriage.js';
 
 const LOOK = 1.2;
 
@@ -53,12 +54,17 @@ export function createTraffic(W) {
   const west = layout.CAR_LANES.find((l) => l.id === 'westStreet');
   const ringPath = new Path(ring.pts, { closed: true, radius: 1.2 });
   const carDefs = [['#c8433a', 'tree'], ['#4f9590', 'wreath'], ['#e0b54a', 'gifts'], ['#bfd8c6', '']];
-  for (let i = 0; i < 3; i++) {
-    addVehicle({ kind: 'car', mesh: buildCarMesh(engine, carDefs[i][0], carDefs[i][1]), path: ringPath, s: (i / 3) * ringPath.length + 2, len: CAR_LEN, half: CAR_HALF_W, vmax: 0.95 + i * 0.08, offsets: [-0.17, 0.17], r: 0.2, district: 'market' });
+  // the cars (and the little bus) share the ring; Holly Lane belongs to the horse-drawn carriage
+  const NCAR = carDefs.length;
+  for (let i = 0; i < NCAR; i++) {
+    addVehicle({ kind: 'car', mesh: buildCarMesh(engine, carDefs[i][0], carDefs[i][1]), path: ringPath, s: (i / NCAR) * ringPath.length + 2, len: CAR_LEN, half: CAR_HALF_W, vmax: 0.92 + (i % 3) * 0.07, offsets: [-0.17, 0.17], r: 0.2, district: 'market' });
   }
+  let carriage = null;
   if (west) {
     const westPath = new Path(west.pts, { closed: true, radius: 0.36 });
-    addVehicle({ kind: 'car', mesh: buildCarMesh(engine, carDefs[3][0], carDefs[3][1]), path: westPath, s: 3, len: CAR_LEN, half: CAR_HALF_W, vmax: 0.8, offsets: [-0.17, 0.17], r: 0.2, district: 'residential' });
+    const hoof = (x, z, vol) => { try { ctx.audio?.sfx?.('step', { x, z, vol }); } catch (e) { /* audio optional */ } };
+    const rig = buildCarriage(engine, hoof);
+    carriage = addVehicle({ kind: 'carriage', mesh: rig.mesh, anim: rig.animate, path: westPath, s: 3, len: CARRIAGE_LEN, half: CARRIAGE_HALF_W, vmax: 0.46, offsets: [-0.45, -0.1, 0.38], r: 0.21, district: 'residential' });
   }
 
   const CROSS = layout.CROSSINGS;
@@ -146,7 +152,7 @@ export function createTraffic(W) {
       // honk / ding if the player stands in the way
       if (v.blocker === 'player' && v.v < 0.05) {
         v.blockT += dt;
-        if (v.blockT > 2.5) { v.blockT = -4; W.sfx(v.kind === 'tram' ? 'tram' : 'car', v.x, v.z); }
+        if (v.blockT > 2.5) { v.blockT = -4; if (v.kind !== 'carriage') W.sfx(v.kind === 'tram' ? 'tram' : 'car', v.x, v.z); }
       } else if (v.blockT > 0) v.blockT = 0;
       else if (v.blockT < 0) v.blockT = Math.min(0, v.blockT + dt);
       const m = v.mesh;
@@ -155,6 +161,7 @@ export function createTraffic(W) {
       m.scale.set(k * ov, k * (k < 1 ? 1.25 - 0.25 * k : 1), k * ov);
       m.position.set(v.x, W.groundAt(v.x, v.z), v.z);
       m.rotation.y = v.yaw;
+      if (v.anim) v.anim(dt, v);
     }
   }
 
@@ -166,5 +173,5 @@ export function createTraffic(W) {
     return false;
   }
 
-  return { vehicles, tram, update, vehicleNear };
+  return { vehicles, tram, carriage, update, vehicleNear };
 }

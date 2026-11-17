@@ -1,5 +1,5 @@
 // Tinselby city life (CONTRACTS.md §Life): instanced knitted dolls (pedestrians, market, park kids,
-// skaters, sledders) plus the festive tram and cars. buildLife(ctx) → { gatherAt, release, cheer, setFestive }.
+// skaters, sledders) plus the festive tram, cars and the horse-drawn carriage (carriage.js, driven by traffic.js). buildLife(ctx) → { gatherAt, release, cheer, setFestive }.
 import { mulberry32 } from '../core/yarn.js';
 import { createDollPool } from './dolls.js';
 import { createCrowd } from './crowd.js';

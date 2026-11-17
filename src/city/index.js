@@ -10,6 +10,7 @@ import { buildPark } from './park.js';
 import { buildLakeside } from './lakeside.js';
 import { buildHill } from './hill.js';
 import { buildCableCar } from './cablecar.js';
+import { buildFestive } from './festive.js';
 
 const GROUP_IDS = ['market', 'residential', 'park', 'lakeside', 'hill', 'streets'];
 const CELL = 9;
@@ -136,6 +137,7 @@ export function buildCity(ctx) {
   const lakeside = buildLakeside(K);
   buildHill(K);
   const cableCar = buildCableCar(K);
+  buildFestive(K);
 
   for (const id of GROUP_IDS) G[id].group.finalize(engine.mat, engine.scene);
   lights.capture();
@@ -232,7 +234,9 @@ export function buildCity(ctx) {
     for (const id of GROUP_IDS) G[id].group.update(t);
     for (const fn of K.updates) fn(dt, t);
     for (const p of pools.list) p.im.visible = p.group.state === 'shown';
-    pools.mat.opacity = 0.3 + 0.26 * engine._evening;
+    // light pools only read once it gets dark (time of day); festive progress makes them a little stronger
+    pools.mat.opacity = (0.3 + 0.26 * engine._evening) * engine.env.lamp;
+    for (const p of pools.list) if (engine.env.lamp < 0.02) p.im.visible = false;
   }, 5);
 
   return {

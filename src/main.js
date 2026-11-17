@@ -48,6 +48,9 @@ ctx.ui = createUI(ctx);
 ctx.calendar = createCalendar(ctx);
 ctx.net = createNet(ctx);
 ctx.finale = createFinale(ctx);
+// the wave-end card asks for a sky teaser: use the world's moon fly-by
+ctx.teasers = ctx.teasers || {};
+if (!ctx.teasers.sky) ctx.teasers.sky = () => ctx.world?.flyby?.();
 window.__ctx = ctx; // handy for debugging
 
 // ---------------------------------------------------------------- core loop wiring

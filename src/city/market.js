@@ -9,6 +9,8 @@ import {
 import { spring, squash } from './reveal.js';
 
 const TAU = Math.PI * 2;
+/** Stall index of the bakery ("Warm Cookies"): the stall next to layout.DOOR_SPOTS[8] / ARENAS.cookies. */
+const BAKERY = 4;
 
 export function buildMarket(K) {
   const { layout: L, colliders, engine } = K;
@@ -215,10 +217,30 @@ function buildTree(K, T) {
     g.push(xf(part(new THREE.CircleGeometry(r, 22), '#285a3e', KNIT), [0, y + 0.002, 0], [Math.PI / 2, 0, 0]));
     for (let k = 0; k < 7; k++) { const a = (k / 7) * TAU + y; g.push(xf(bead(0.045, C.snow), [Math.cos(a) * r * 0.95, y + 0.04, Math.sin(a) * r * 0.95], null, [1.4, 0.6, 1.4])); }
   }
-  // gold yarn garland spiral
-  const gp = [];
-  for (let i = 0; i <= 90; i++) { const t = i / 90, y = 0.55 + t * 2.4, a = t * TAU * 4.5 + 1.5; const r = radiusAt(y) + 0.035; gp.push([Math.cos(a) * r, y, Math.sin(a) * r]); }
-  g.push(tube(gp, 0.02, C.gold, KNIT, 120, 4));
+  // cream rope lattice draped over the tree (two families of spirals crossing in diamonds) with pom-pom knots
+  {
+    const env = (y) => Math.max(0.06, 1.0 - 0.345 * (y - 0.4)) + 0.035; // outer envelope of the tiers
+    const NSTR = 6, Y0 = 0.52, Y1 = 2.72, TURN = 0.62;
+    const at = (k, dir, t) => { const y = Y0 + (Y1 - Y0) * t, a = (k / NSTR) * TAU + dir * t * TURN * TAU, r = env(y); return [Math.cos(a) * r, y, Math.sin(a) * r]; };
+    for (const dir of [-1, 1]) for (let k = 0; k < NSTR; k++) {
+      const pts = [];
+      for (let i = 0; i <= 12; i++) pts.push(at(k, dir, i / 12));
+      g.push(tube(pts, 0.017, '#f3e6cc', KNIT, 22, 4));
+    }
+    // the two families cross every 1 / (2 · TURN · NSTR) of the height, at alternating angles
+    const stepT = 1 / (2 * TURN * NSTR);
+    for (let j = 0; j * stepT <= 1.001; j++) for (let k = 0; k < NSTR; k++) {
+      const t = Math.min(1, j * stepT), y = Y0 + (Y1 - Y0) * t, r = env(y) + 0.012;
+      const ang = (k / NSTR) * TAU + t * TURN * TAU;
+      g.push(xf(bead(0.052 - t * 0.014, j % 3 === 1 ? C.red : '#fbf7ee'), [Math.cos(ang) * r, y, Math.sin(ang) * r]));
+    }
+    // knitted base cuff: red drum with a cream cable band and gold edging (the gifts lean against it)
+    const cuff = cylS(0.5, 0.54, 0.3, 20, 3, C.red);
+    faceColor(cuff, (px, py, pz) => (Math.abs(py) < 0.05 && Math.floor((Math.atan2(pz, px) / TAU + 1) * 20) % 2 ? '#f3e6cc' : null));
+    g.push(xf(cuff, [0, 0.235, 0]));
+    for (const yy of [0.1, 0.375]) g.push(xf(torus(0.53, 0.026, yy > 0.2 ? '#f3e6cc' : C.gold, KNIT, TAU, 24), [0, yy, 0], [Math.PI / 2, 0, 0]));
+    for (let k = 0; k < 10; k++) { const a = (k / 10) * TAU + 0.2; g.push(xf(bead(0.034, '#f3e6cc'), [Math.cos(a) * 0.545, 0.235, Math.sin(a) * 0.545], null, [1, 1.5, 1])); }
+  }
   // baubles
   for (let i = 0; i < 40; i++) {
     const y = 0.5 + rnd() * 2.35, a = rnd() * TAU, r = radiusAt(y) + 0.03;
@@ -340,8 +362,41 @@ function stallGeos(i, rnd) {
   }
   g.push(...basketGeos(i % 2 ? C.red : '#7a4f33', i % 2 ? GLOSS : FELT).map((q) => xf(q, [-wx * 0.8, 0, 0.56])));
   // sign
-  g.push(xf(rbox(0.5, 0.16, 0.03, 0.015, C.cream, FELT, 1), [0, 1.27, -0.3]));
-  g.push(xf(bead(0.04, pal[0]), [0, 1.27, -0.28], null, [1, 1, 0.5]));
+  if (i !== BAKERY) {
+    g.push(xf(rbox(0.5, 0.16, 0.03, 0.015, C.cream, FELT, 1), [0, 1.27, -0.3]));
+    g.push(xf(bead(0.04, pal[0]), [0, 1.27, -0.28], null, [1, 1, 0.5]));
+  }
+  if (i === BAKERY) {
+    // "WARM COOKIES" shopfront: dark board with cream knitted letters above the awning, gingerbread hearts, cookie trays
+    const by = 1.5, bz = 0.34;
+    g.push(xf(rbox(1.42, 0.3, 0.05, 0.02, '#4a2e22', FELT, 1), [0, by, bz]));
+    g.push(xf(rbox(1.48, 0.36, 0.03, 0.02, C.red, KNIT, 1), [0, by, bz - 0.012]));
+    g.push(...textGeos('WARM COOKIES', 0.125, '#f6ecd8', { r: 0.0115, gap: 0.3 }).map((q) => xf(q, [0, by - 0.062, bz + 0.03])));
+    for (const sx of [-1, 1]) {
+      g.push(xf(box(0.035, 0.42, 0.035, C.woodDark), [sx * 0.6, by - 0.3, bz - 0.02]));
+      // gingerbread heart with icing dots hanging at each end of the board
+      g.push(xf(bead(0.07, '#a86a3c'), [sx * 0.82, by - 0.02, bz + 0.01], [0, 0, sx * 0.5], [1, 1.1, 0.4]));
+      g.push(xf(bead(0.022, '#fbf7ee'), [sx * 0.82, by - 0.02, bz + 0.045]));
+    }
+    g.push(xf(ball(0.09, C.snow, FELT, 8, 4), [0, by + 0.17, bz], null, [6.5, 0.4, 0.6]));
+    lights.push(...bulbLine([-0.64, by - 0.2, bz + 0.035], [0.64, by - 0.2, bz + 0.035], 9, 0.022, [C.warm, '#ffe0a0']));
+    // trays of round cookies with icing on the counter
+    for (let k = 0; k < 2; k++) {
+      const tx = -0.3 + k * 0.6;
+      g.push(xf(box(0.34, 0.012, 0.2, '#c9bfb2', FELT), [tx, 0.447, 0.26]));
+      for (let c = 0; c < 6; c++) {
+        const cx = tx - 0.11 + (c % 3) * 0.11, cz = 0.215 + Math.floor(c / 3) * 0.09;
+        g.push(xf(cyl(0.04, 0.04, 0.016, 8, c % 2 ? '#b9773f' : '#d39a55', FELT), [cx, 0.461, cz]));
+        g.push(xf(bead(0.014, c % 3 ? '#fbf7ee' : C.red), [cx, 0.472, cz], null, [1, 0.5, 1]));
+      }
+    }
+    for (let k = 0; k < 5; k++) g.push(xf(bead(0.035, [C.red, C.gold, C.teal, C.cream, C.red][k], GLOSS), [-0.4 + k * 0.2, 0.8, -0.24]));
+    const glb = garland([-0.62, 0.99, 0.43], [0.62, 0.99, 0.43], 0.1, { n: 9, bulbR: 0.022, cord: C.pine, cordR: 0.02 });
+    g.push(glb.cord);
+    for (const sx of [-1, 1]) g.push(xf(bead(0.04, C.red), [sx * 0.62, 0.97, 0.45], null, [1.2, 0.9, 0.7]));
+    extra.push(...glb.bulbs);
+    return { g, lights, extra };
+  }
   // goods on the counter
   for (let k = 0; k < 6; k++) {
     const x = -0.5 + k * 0.2, z = 0.25 + (k % 2) * 0.08;

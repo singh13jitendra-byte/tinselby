@@ -32,7 +32,7 @@ void main(){
 }`;
 
 const FINAL = /* glsl */ `
-uniform sampler2D tDiffuse; uniform sampler2D tBloom; uniform float bloom; uniform vec2 res; uniform float time;
+uniform sampler2D tDiffuse; uniform sampler2D tBloom; uniform float bloom; uniform vec2 res; uniform float time; uniform float vig;
 varying vec2 vUv;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void main(){
@@ -41,8 +41,8 @@ void main(){
   col = max(mix(vec3(lum), col, 1.22), 0.0);            // richer yarn colours
   col *= vec3(1.02, 1.0, 0.975);                       // warm lantern grade
   float v = smoothstep(1.0, 0.32, length((vUv - 0.5) * vec2(1.0, 1.25)));
-  col *= mix(0.66, 1.0, v);                            // soft warm vignette
-  col = mix(col, col * vec3(0.95, 0.975, 1.045), 1.0 - v);  // cool twilight at the edges
+  col *= mix(vig, 1.0, v);                            // soft warm vignette
+  col = mix(col, col * vec3(0.95, 0.975, 1.045), (1.0 - v) * clamp((0.9 - vig) * 4.0, 0.0, 1.0));  // cool twilight at the edges
   col += (hash(vUv * res + fract(time) * 91.0) - 0.5) * 0.012; // film grain
   gl_FragColor = vec4(max(col, 0.0), 1.0);
   #include <tonemapping_fragment>
@@ -71,7 +71,7 @@ export class TiltShift {
     this.final = new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FINAL,
-      uniforms: { tDiffuse: { value: null }, tBloom: { value: null }, bloom: { value: 1.45 }, res: { value: new THREE.Vector2(1, 1) }, time: { value: 0 } },
+      uniforms: { tDiffuse: { value: null }, tBloom: { value: null }, bloom: { value: 1.45 }, res: { value: new THREE.Vector2(1, 1) }, time: { value: 0 }, vig: { value: 0.66 } },
       depthTest: false, depthWrite: false,
     });
     this.bright = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: BRIGHT, uniforms: { tDiffuse: { value: null }, thr: { value: 1.02 } }, depthTest: false, depthWrite: false, toneMapped: false });
@@ -83,6 +83,10 @@ export class TiltShift {
     this.rtQ2 = new THREE.WebGLRenderTarget(1, 1, opts);
     this.focus = 0.45;
     this.strength = 1;
+    /** Driven by time of day (engine.env): bloom strength, bright-pass threshold, vignette floor (lower = darker edges). */
+    this.bloom = 1.45;
+    this.threshold = 1.02;
+    this.vignette = 0.66;
   }
   setSize(w, h) {
     this.rtScene.setSize(w, h);
@@ -140,6 +144,9 @@ export class TiltShift {
     this.final.uniforms.tBloom.value = this.rtQ2.texture;
     this.final.uniforms.tDiffuse.value = this.rtB.texture;
     this.final.uniforms.time.value = time;
+    this.final.uniforms.bloom.value = this.bloom;
+    this.final.uniforms.vig.value = this.vignette;
+    this.bright.uniforms.thr.value = this.threshold;
     this.pass(this.final, null);
   }
 }

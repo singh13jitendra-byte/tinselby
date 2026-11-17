@@ -5,7 +5,7 @@ import { Snow } from './fx.js';
 
 const params = new URLSearchParams(location.search);
 
-/** Renderer, scene, twilight lighting, shared yarn material, post-processing, update loop and quality scaling. */
+/** Renderer, scene, lighting (look driven by time of day, see engine.env), shared yarn material, post-processing, update loop and quality scaling. */
 export function createEngine(canvas) {
   const isMobile = matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const capture = params.has('capture');
@@ -40,7 +40,6 @@ export function createEngine(canvas) {
   key.shadow.radius = 2.2;
   const fill = new THREE.DirectionalLight('#9db4ff', 0.45);
   scene.add(hemi, key, key.target, fill, fill.target);
-  const KEY_DIR = new THREE.Vector3(-0.5, 0.84, 0.46).normalize();
   const FILL_DIR = new THREE.Vector3(0.6, 0.45, -0.66).normalize();
 
   const snow = new Snow(scene, isMobile ? 500 : 900); // soft falling flakes around the camera focus (1 draw call)
@@ -61,10 +60,26 @@ export function createEngine(canvas) {
       engine.updates.sort((a, b) => a.order - b.order);
       return () => { const i = engine.updates.indexOf(u); if (i >= 0) engine.updates.splice(i, 1); };
     },
-    /** 0 = early evening, 1 = festive night. Driven by spirit progress. */
+    /**
+     * Festive progress 0..1 (driven by spirit). It no longer darkens the sky (time of day does that, see src/world):
+     * it scales how strongly decorations, garlands and fairy lights glow.
+     */
     setEvening(k) { engine._eveningTarget = Math.max(0, Math.min(1, k)); },
     _evening: 0,
     _eveningTarget: 0,
+    get festive() { return engine._evening; },
+    /**
+     * The current look, written by the time-of-day module (src/world) every frame and applied here.
+     * Defaults = the classic blue-hour look, so the engine still works without a world module.
+     * lamp: 0 (broad day) .. 1 (night) = how much lamps / windows / light pools read as "on".
+     */
+    env: {
+      hemiSky: new THREE.Color('#c3d3fb'), hemiGround: new THREE.Color('#eeeae6'), hemiI: 1.55,
+      keyCol: new THREE.Color('#fff0e0'), keyI: 1.9, fillCol: new THREE.Color('#9db4ff'), fillI: 0.45,
+      exposure: 0.92, bg: new THREE.Color('#46567a'), fogNear: 30, fogFar: 84,
+      glow: 7.0, bloom: 1.45, bloomThr: 1.02, vignette: 0.66, lamp: 1, shadowRadius: 2.2,
+      keyDir: new THREE.Vector3(-0.5, 0.84, 0.46).normalize(),
+    },
     resize,
     step,
     start,
@@ -84,28 +99,33 @@ export function createEngine(canvas) {
   window.addEventListener('resize', resize);
   resize();
 
-  const cA = new THREE.Color(), cB = new THREE.Color();
-  function applyEvening(dt) {
+  function applyLook(dt) {
     engine._evening += (engine._eveningTarget - engine._evening) * (1 - Math.exp(-dt * 0.8));
-    const k = engine._evening;
-    hemi.intensity = 1.55 - 0.42 * k;
-    key.intensity = 1.9 - 0.85 * k;
-    key.color.copy(cA.set('#fff0e0').lerp(cB.set('#ffe6cc'), k));
-    renderer.toneMappingExposure = 0.92 - 0.06 * k;
-    bg.copy(cA.set('#46567a').lerp(cB.set('#1b2444'), k));
-    scene.fog.color.copy(bg);
-    mat.userData.uniforms.uGlow.value = 7.0 + 2.5 * k;
+    const k = engine._evening, e = engine.env;
+    hemi.color.copy(e.hemiSky); hemi.groundColor.copy(e.hemiGround); hemi.intensity = e.hemiI;
+    key.color.copy(e.keyCol); key.intensity = e.keyI;
+    fill.color.copy(e.fillCol); fill.intensity = e.fillI;
+    key.shadow.radius = e.shadowRadius;
+    renderer.toneMappingExposure = e.exposure;
+    bg.copy(e.bg);
+    scene.fog.color.copy(bg); scene.fog.near = e.fogNear; scene.fog.far = e.fogFar;
+    // festive progress makes every decoration glow a little stronger (garlands, fairy lights, lanterns)
+    mat.userData.uniforms.uGlow.value = e.glow * (0.8 + 0.34 * k);
+    post.bloom = e.bloom * (0.92 + 0.14 * k);
+    post.threshold = e.bloomThr;
+    post.vignette = e.vignette;
   }
 
   function step(dt) {
     engine.time += dt;
     for (const u of engine.updates) u.fn(dt, engine.time);
-    applyEvening(dt);
+    applyLook(dt);
     mat.userData.uniforms.uTime.value = engine.time;
     // shadow box follows the camera focus (snapped to avoid shimmer)
     const fx = Math.round(engine.focus.x / 0.25) * 0.25, fz = Math.round(engine.focus.z / 0.25) * 0.25;
     key.target.position.set(fx, 0, fz);
-    key.position.set(fx + KEY_DIR.x * 20, KEY_DIR.y * 20, fz + KEY_DIR.z * 20);
+    const kd = engine.env.keyDir;
+    key.position.set(fx + kd.x * 20, kd.y * 20, fz + kd.z * 20);
     fill.target.position.set(fx, 0, fz);
     fill.position.set(fx + FILL_DIR.x * 12, FILL_DIR.y * 12, fz + FILL_DIR.z * 12);
     snow.update(engine.time, engine.focus, renderer.domElement.height / 540);

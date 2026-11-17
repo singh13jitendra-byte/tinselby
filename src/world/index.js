@@ -109,7 +109,7 @@ export function createWorld(ctx) {
       setPhase();
     },
     /** Santa's sleigh crosses the moon (only when the moon is up). */
-    flyby: () => sky.flyby(look.moon),
+    flyby: () => sky.flyby(phaseAt(tod) === 'night' ? 1 : look.moon),
     sky,
   };
   function setPhase() {
