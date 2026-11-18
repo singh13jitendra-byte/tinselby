@@ -128,7 +128,8 @@ function normalize(d, target) {
 
 // ------------------------------------------------------------------ graph
 
-export function createGraph(ac) {
+/** `lite` (phones): a shorter reverb tail, so the convolver costs ~40 % less on the audio thread. */
+export function createGraph(ac, { lite = false } = {}) {
   const master = ac.createGain(); master.gain.value = 1;
   const comp = ac.createDynamicsCompressor();
   comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 3.5;
@@ -137,7 +138,7 @@ export function createGraph(ac) {
   const out = ac.createGain(); out.gain.value = 0.9;
   master.connect(comp); comp.connect(clip); clip.connect(out); out.connect(ac.destination);
 
-  const reverb = ac.createConvolver(); reverb.buffer = makeImpulse(ac);
+  const reverb = ac.createConvolver(); reverb.buffer = lite ? makeImpulse(ac, 1.5, 2.6) : makeImpulse(ac);
   const reverbReturn = ac.createGain(); reverbReturn.gain.value = 0.55;
   reverb.connect(reverbReturn); reverbReturn.connect(master);
 
@@ -162,7 +163,7 @@ export function createGraph(ac) {
     crackle: makeCrackle(ac),
   };
 
-  return { ac, master, comp, out, reverb, reverbReturn, musicBus, musicSend, sfxBus, sfxSend, buffers };
+  return { ac, lite, master, comp, out, reverb, reverbReturn, musicBus, musicSend, sfxBus, sfxSend, buffers };
 }
 
 /** iOS / Safari unlock: play a one-sample silent buffer inside the user gesture. */

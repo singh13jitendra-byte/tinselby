@@ -2,6 +2,7 @@
 // `out` is a per-call gain/panner chain that ends in graph.sfxBus.
 import { midiToHz } from './engine.js';
 import { glock, fmBell, musicBox } from './instruments.js';
+import { track, isLite } from './voices.js';
 
 export const SFX_NAMES = ['step', 'pop', 'fold', 'bell', 'pickup', 'drop', 'task', 'ui', 'tram', 'car', 'chatter',
   'ice', 'cable', 'sleighBells', 'hohoho', 'whoosh', 'countdown', 'firework', 'cheer', 'gift'];
@@ -29,7 +30,8 @@ export function createSfx(ac, graph) {
     if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + glide);
     const g = ac.createGain(); env(g, t, a, peak, tau, hold);
     o.connect(g); g.connect(out);
-    o.start(t); o.stop(t + (dur ?? a + hold + tau * 7));
+    const end = t + (dur ?? a + hold + tau * 6);
+    o.start(t); o.stop(end); track(ac, t, end);
     return { o, g };
   }
   /** Filtered noise burst with optional filter sweep. */
@@ -41,8 +43,8 @@ export function createSfx(ac, graph) {
     if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + sweep);
     const g = ac.createGain(); env(g, t, a, peak, tau, hold);
     s.connect(fl); fl.connect(g); g.connect(out);
-    const d = dur ?? a + hold + tau * 7;
-    s.start(t, Math.random() * 1.5); s.stop(t + d);
+    const d = dur ?? a + hold + tau * 6;
+    s.start(t, Math.random() * 1.5); s.stop(t + d); track(ac, t, t + d);
     return { s, fl, g };
   }
   function sample(out, t, buf, { vel = 1, rate = 1, filter = null, f = 2000, q = 0.7 } = {}) {
@@ -52,7 +54,7 @@ export function createSfx(ac, graph) {
       const fl = ac.createBiquadFilter(); fl.type = filter; fl.frequency.value = f; fl.Q.value = q;
       s.connect(fl); fl.connect(g);
     } else s.connect(g);
-    g.connect(out); s.start(t);
+    g.connect(out); s.start(t); track(ac, t, t + buf.duration / rate);
     return s;
   }
   const rnd = (a, b) => a + Math.random() * (b - a);
@@ -93,8 +95,9 @@ export function createSfx(ac, graph) {
     },
     task(t, out, v) {
       // happy arpeggio G B D G B + shimmer
+      const lite = isLite(ac); // phones: music-box doubling on every other note only (fewer voices at once)
       [79, 83, 86, 91, 95].forEach((m, i) => {
-        musicBox(ac, out, m - 12, t + i * 0.075, 1.0 * v);
+        if (!lite || i % 2 === 0) musicBox(ac, out, m - 12, t + i * 0.075, 1.0 * v);
         glock(ac, out, m, t + i * 0.075 + 0.01, 0.6 * v, 1.1);
       });
       noise(out, t + 0.1, { type: 'highpass', f: 6000, q: 0.5, a: 0.25, peak: 0.05 * v, tau: 0.3 });
@@ -157,7 +160,7 @@ export function createSfx(ac, graph) {
         const o = ac.createOscillator(); o.type = 'sawtooth';
         o.frequency.setValueAtTime(f * 1.08, tt); o.frequency.exponentialRampToValueAtTime(f * 0.88, tt + 0.26);
         const g = ac.createGain(); env(g, tt, 0.035, 0.5 * v, 0.07, i === 2 ? 0.2 : 0.12);
-        o.connect(g); g.connect(src); o.start(tt); o.stop(tt + 0.8);
+        o.connect(g); g.connect(src); o.start(tt); o.stop(tt + 0.8); track(ac, tt, tt + 0.8);
         noise(lp, tt, { type: 'bandpass', f: 700, q: 1, a: 0.02, peak: 0.03 * v, tau: 0.05 }); // breath "h"
       });
     },
@@ -189,7 +192,7 @@ export function createSfx(ac, graph) {
         const vg = ac.createGain(); vg.gain.value = f * 0.02; vib.connect(vg); vg.connect(o.frequency);
         const g = ac.createGain(); env(g, tt, 0.15, 0.04 * v, 0.35, 0.35);
         o.connect(g); g.connect(fa); g.connect(fb);
-        o.start(tt); o.stop(tt + 2.6); vib.start(tt); vib.stop(tt + 2.6);
+        o.start(tt); o.stop(tt + 2.6); vib.start(tt); vib.stop(tt + 2.6); track(ac, tt, tt + 2.6, 2);
       }
       noise(out, t, { type: 'bandpass', f: 1200, q: 0.6, a: 0.25, hold: 0.4, peak: 0.12 * v, tau: 0.45, dur: 3 });
     },
