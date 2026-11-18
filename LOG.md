@@ -60,3 +60,4 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - 22:15 IST: WAVE 2 RELEASED. Release playthrough on clean 4c5a1fb: selfTest 197/0, all 9 mini-games start/quit clean, portrait + rotate checks, 0 fails, 0 console errors. Pushed 4c5a1fb to main.
 - 23:00 IST: Lake cocoa hut + ticket booth fold (Sonnet) committed; desktop playthrough green; pushed.
 - 22:30 IST check-in: spawned Sonnet camera follow-ups (lens hook, drop shots.js cablecar listener, HUD hidden during ride, market roof fold) and Opus WAVE3.md planner (doors 17–24 + Christmas Eve finale).
+- 22:45 IST: USER (phone test): music/sfx chirp/crackle on mobile; own name not shown overhead. Spawned Opus audio fix (src/audio/**) and Sonnet own name tag (src/net/tags.js, selftag.js, net/index.js).
