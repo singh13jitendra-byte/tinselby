@@ -190,7 +190,9 @@ export const dmaxAt = (w) => Math.max(0.06, w / 2 - 0.15);
  * Lay out gates, stars, snow lumps, extra pines and gnome riders along a course, avoiding world obstacles.
  * Returns { hazards:[{s,d,x,z,r,kind,R?}], gates:[{s,d,hw,x,z}], stars:[{s,d,x,z}], gnomes:[{s0,d0,v}] }.
  */
-export function layoutRun(C, obstacles, seed = 7) {
+export function layoutRun(C, obstacles, seed = 7, opts = {}) {
+  const minGap = opts.minGap || 2.35; // night race packs the gates closer
+  const thinStars = opts.thinStars || 0; // night race: drop every n-th collectible (0 = keep all)
   const rnd = rng(seed);
   const hazards = [];
   // existing world obstacles near the track become hazards (pines bump at ~70% of their branch radius)
@@ -214,7 +216,7 @@ export function layoutRun(C, obstacles, seed = 7) {
   const gates = [];
   let side = rnd() < 0.5 ? -1 : 1;
   for (let s = 2.4; s < endS - 0.4; s += 0.1) {
-    if (gates.length && s - gates[gates.length - 1].s < 2.35) continue;
+    if (gates.length && s - gates[gates.length - 1].s < minGap) continue;
     if (sharp(s) || sharp(s - 0.3) || sharp(s + 0.3) || inPad(s)) continue;
     const f = frameAt(C, s), dm = dmaxAt(f.w);
     if (dm < 0.28) continue;
@@ -259,6 +261,7 @@ export function layoutRun(C, obstacles, seed = 7) {
 
   // stars: little arcs leading from each gate toward the next one (follow them = pass the gates)
   const stars = [];
+  let cand = 0;
   const pts = [{ s: 0.9, d: 0 }, ...gates.map((g) => ({ s: g.s, d: g.d })), { s: endS, d: 0 }];
   for (let i = 0; i < pts.length - 1; i++) {
     const a = pts[i], b = pts[i + 1], gap = b.s - a.s;
@@ -274,6 +277,7 @@ export function layoutRun(C, obstacles, seed = 7) {
       let ok = clear(s, d, 0.14);
       for (const off of [0.15, -0.15, 0.3, -0.3]) { if (ok) break; const dd = Math.max(-dm, Math.min(dm, d + off)); if (clear(s, dd, 0.14)) { d = dd; ok = true; } }
       if (!ok) continue;
+      if (thinStars && ++cand % thinStars === 0) continue;
       const p = pointAt(C, s, d);
       stars.push({ s, d, x: p.x, z: p.z });
     }

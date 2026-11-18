@@ -1,7 +1,7 @@
 // Sledge Hill Race — knitted / felted props. Every builder returns geometry ready for ONE mesh (merge) or for
 // an InstancedMesh, using the shared yarn material's per-vertex colour + surface kind.
 import * as THREE from 'three';
-import { cone, cyl, sph, dot, box, rbox, torus, extrude, tube, xf, merge, poly, starPts, part, recolor, KNIT, FELT, GLOW } from '../../core/prims.js';
+import { cone, cyl, sph, dot, box, rbox, torus, extrude, tube, xf, merge, poly, starPts, part, recolor, KNIT, FELT, GLOW, GLOSS } from '../../core/prims.js';
 import { P, SW, SH } from '../../core/yarn.js';
 import { buildCharacter } from '../../core/player.js';
 import { DS, FINISH, frameAt } from './course.js';
@@ -245,6 +245,43 @@ export function gateGeo(hw = 0.32) {
   g.push(...bunting([-hw, 0.65, 0], [hw, 0.65, 0], 0.035, 5, [RED, CREAM, GOLD, CREAM, GREEN], 0.06));
   g.push(xf(dot(0.022, '#ffcf7a', GLOW), [0, 0.63, 0]));
   return merge(g);
+}
+
+// ------------------------------------------------------------------ night variant (Sledge Hill Race II)
+/** One hanging felt lantern (origin = top ring): warm glowing body, gold cap and base. ~110 tris. */
+function lanternParts() {
+  return [
+    xf(sph(0.05, '#ffd886', GLOW, 6, 5), [0, -0.075, 0], null, [1, 1.15, 1]),
+    xf(cyl(0.028, 0.048, 0.02, 6, GOLD, FELT), [0, -0.012, 0]),
+    xf(cyl(0.03, 0.022, 0.014, 6, GOLD, FELT), [0, -0.146, 0]),
+  ];
+}
+/** Night slalom gate (~450 tris): two candy-coloured posts with glowing lanterns on hooks, a felt rope and a gold bell between them. */
+export function lanternGateGeo(hw = 0.32) {
+  const g = [];
+  for (const sd of [-1, 1]) {
+    const c = sd < 0 ? RED : GREEN;
+    g.push(xf(cyl(0.017, 0.02, 0.7, 6, c, FELT), [sd * hw, 0.35, 0]));
+    g.push(xf(cyl(0.021, 0.021, 0.05, 6, CREAM, FELT), [sd * hw, 0.5, 0]));
+    // hook arm curling inwards, lantern hanging from it
+    g.push(tube([[sd * hw, 0.66, 0], [sd * hw, 0.74, 0], [sd * (hw - 0.07), 0.74, 0]], 0.006, GOLD, FELT, 4, 3));
+    for (const q of lanternParts()) g.push(xf(q, [sd * (hw - 0.07), 0.72, 0]));
+  }
+  const pts = [];
+  for (let i = 0; i <= 6; i++) { const t = i / 6; pts.push([-hw + 2 * hw * t, 0.56 - Math.sin(Math.PI * t) * 0.05, 0]); }
+  g.push(tube(pts, 0.007, '#f6ead2', KNIT, 8, 3));
+  g.push(xf(cyl(0.012, 0.034, 0.05, 6, GOLD, GLOSS), [0, 0.475, 0]));
+  g.push(xf(dot(0.013, '#fff0b0', GLOW), [0, 0.445, 0]));
+  return merge(g);
+}
+/** Jingle bell collectible (upright, centred, ~110 tris): gold dome + flared body, glowing lip and clapper. */
+export function bellGeo() {
+  return merge([
+    xf(sph(0.036, '#ffd04a', GLOW, 6, 4), [0, 0.04, 0]),
+    xf(cyl(0.034, 0.078, 0.085, 6, '#ffcf55', GLOW), [0, -0.005, 0]),
+    xf(cyl(0.08, 0.084, 0.014, 6, '#fff1b8', GLOW), [0, -0.054, 0]),
+    xf(sph(0.019, '#ff9a3c', GLOW, 4, 3), [0, -0.07, 0]),
+  ]);
 }
 
 /** Gold felt star with a glowing heart (stands upright, centred at the origin). */

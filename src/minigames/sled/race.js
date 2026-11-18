@@ -192,3 +192,13 @@ export function scoreRace(race, tFast) {
   const score = Math.max(0, Math.round(500 + nS * 30 + nG * 20 + Math.max(0, 75 - T) * 15));
   return { score, stars, fast, most, T, nS, NS, nG, NG };
 }
+
+/** Night race (door 16): 1★ both heats finished, 2★ ≥ 70 % of the lantern gates, 3★ ≥ 90 % of the gates and clock ≤ tClean + 3.5 s. */
+export function scoreNight(race, tClean) {
+  const T = race.clock, nS = race.starCount, NS = race.totalStars, nG = race.gateCount, NG = race.totalGates;
+  const gf = NG ? nG / NG : 1, tTarget = tClean + 3.5;
+  const good = gf >= 0.7, great = gf >= 0.9 && T <= tTarget;
+  const stars = 1 + (good ? 1 : 0) + (good && great ? 1 : 0);
+  const score = Math.max(0, Math.round(500 + nS * 35 + nG * 30 + Math.max(0, 75 - T) * 15));
+  return { score, stars, good, great, T, nS, NS, nG, NG, tTarget };
+}

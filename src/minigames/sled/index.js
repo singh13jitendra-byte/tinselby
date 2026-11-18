@@ -6,11 +6,25 @@ import { aspectK } from '../view.js';
 import * as THREE from 'three';
 import { buildCharacter } from '../../core/player.js';
 import { RUN_DEFS, FINISH, sampleRun, frameAt, pointAt, project, probeObstacles, layoutRun } from './course.js';
-import { createRace, scoreRace } from './race.js';
+import { createRace, scoreRace, scoreNight } from './race.js';
 import * as PR from './props.js';
 import './sled.css';
 
+const T_CLEAN_NIGHT = 38.2; // autopilot clock of the night race (14/15 gates, 1 penalty; measured with __sled2.auto); 3★ needs this + 3.5 s
 const T_FAST = 40.5; // seconds (both runs + penalties) for the "fast" star; a clean autopilot run is ~37 s
+/** Per-variant options: door 7 ('day') is the original race; door 16 ('night', see night.js) reuses everything else. */
+export const VARIANTS = {
+  day: {
+    variant: 'day', hook: '__sled', seeds: [11, 23], layout: {}, gateGeo: () => PR.gateGeo(0.32), itemGeo: () => PR.starGeo(), itemScale: 1,
+    itemY: 0.25, itemName: 'Stars', gateName: 'flag', banner1: ['Run 1 · Pine Run', 'Steer ◀ ▶ through the flag gates'], banner2: ['Run 2 · Cable Car Run', 'Ready…'],
+    okTint: [1.18, 1.08, 0.78], missTint: [0.55, 0.55, 0.6], sparkle: 'pickup', gateSfx: ['whoosh', 0.6],
+  },
+  night: {
+    variant: 'night', hook: '__sled2', seeds: [23, 41], layout: { minGap: 1.9, thinStars: 4 }, gateGeo: () => PR.lanternGateGeo(0.32), itemGeo: () => PR.bellGeo(), itemScale: 1.2,
+    itemY: 0.2, itemName: 'Bells', gateName: 'lantern', banner1: ['Night Race', 'Run 1 · Pine Run · steer ◀ ▶ through the lantern gates'], banner2: ['Night Race', 'Run 2 · Cable Car Run · Ready…'],
+    okTint: [1.5, 1.3, 0.85], missTint: [0.28, 0.28, 0.36], sparkle: 'bell', gateSfx: ['bell', 0.55], hour: 21.5,
+  },
+};
 const PLAYER_SCALE = 1.15; // createPlayer's doll scale
 const params = new URLSearchParams(location.search);
 let obstacleCache = null; // { colliders, list } — the hill's colliders don't change between replays
@@ -21,15 +35,24 @@ export default {
   district: 'hill',
   icon: '🛷',
   intro: 'Two runs down Sledge Hill! Steer with ← → (or A / D), or hold the left or right side of the screen. Zip through the flag gates, grab the gold stars, and dodge gnomes, pines and snow lumps.',
-  start(ctx, mg) { return startSled(ctx, mg); },
+  start(ctx, mg) { return startSled(ctx, mg, { variant: 'day' }); },
 };
 
-async function startSled(ctx, mg) {
+export async function startSled(ctx, mg, opts = {}) {
+  const V = VARIANTS[opts.variant || 'day'];
+  const night = V.variant === 'night';
   const { engine, player, cam, colliders, game, layout } = ctx;
   const mat = engine.mat;
   const disposables = [];
   const keep = (g) => { disposables.push(g); return g; };
   mg.setPlayerControl(false);
+  // night race: the town goes dark for the run (the sky eases in during the intro) and the hour is handed back on dispose
+  const world = ctx.world;
+  const h0 = night && world?.setTimeOfDay ? world.timeOfDay : null, t0 = engine.time;
+  if (h0 != null) {
+    world.setTimeOfDay(V.hour);
+    mg.onDispose(() => world.setTimeOfDay(h0 + Math.max(0, engine.time - t0) / 3600));
+  }
 
   // ---------------------------------------------------------------- course + race
   const ground = (x, z) => colliders.heightAt(x, z);
@@ -39,7 +62,7 @@ async function startSled(ctx, mg) {
     obstacleCache = { colliders, list: probeObstacles(courses, probe) };
   }
   const obstacles = obstacleCache.list;
-  const runs = courses.map((C, i) => ({ C, L: layoutRun(C, obstacles, i ? 23 : 11) }));
+  const runs = courses.map((C, i) => ({ C, L: layoutRun(C, obstacles, V.seeds[i], V.layout) }));
   const race = createRace(runs);
 
   // ---------------------------------------------------------------- static course props (2 merged meshes)
@@ -74,13 +97,13 @@ async function startSled(ctx, mg) {
   // gates (both runs)
   const gateList = [];
   runs.forEach((r, ri) => r.L.gates.forEach((g, gi) => gateList.push({ ri, gi, g })));
-  const gates = inst(PR.gateGeo(0.32), gateList.length, 'sled-gates', { dynamic: true });
+  const gates = inst(V.gateGeo(), gateList.length, 'sled-gates', { dynamic: true });
   const gateFx = gateList.map(() => ({ pop: 0 }));
   gateList.forEach((q, k) => gates.setColorAt(k, col.setRGB(1, 1, 1))); // allocate instance colours up front (no shader swap mid-run)
   // stars (only the active run's are shown)
   const starList = [];
-  runs.forEach((r, ri) => r.L.stars.forEach((st, si) => starList.push({ ri, si, st, y: ground(st.x, st.z) + 0.25, pop: 0 })));
-  const stars = inst(PR.starGeo(), starList.length, 'sled-stars', { dynamic: true });
+  runs.forEach((r, ri) => r.L.stars.forEach((st, si) => starList.push({ ri, si, st, y: ground(st.x, st.z) + V.itemY, pop: 0 })));
+  const stars = inst(V.itemGeo(), starList.length, 'sled-stars', { dynamic: true });
   // hazards: snow lumps + small pines (both runs, static scenery)
   const own = runs.flatMap((r) => r.L.own);
   const lumpsL = own.filter((h) => h.kind === 'lump'), pinesL = own.filter((h) => h.kind === 'pine');
@@ -205,8 +228,25 @@ async function startSled(ctx, mg) {
   const projectTo = (o) => { const p = project(race.run.C, o.x, o.z); return { s: p.s, d: p.d }; };
 
   // ---------------------------------------------------------------- debug / test hook
-  const dbg = window.__sled = Object.assign(window.__sled || {}, { auto: params.has('mgauto') || params.has('sledauto') || !!(window.__sled && window.__sled.auto) });
+  const dbg = window[V.hook] = Object.assign(window[V.hook] || {}, { variant: V.variant, auto: params.has('mgauto') || params.has('sledauto') || !!(window[V.hook] && window[V.hook].auto) });
+  if (night) window.__sled = dbg; // WAVE2: window.__sled.variant === 'night' while Sled II runs (door 7 never runs at the same time)
   dbg.race = race;
+  /** Draw calls / triangles of everything this game keeps in the scene (shadow casters count twice, like __snowball.budget()). */
+  dbg.budget = () => {
+    let calls = 0, tris = 0;
+    for (const root of engine.scene.children) {
+      if (!root.name || !root.name.startsWith('sled-')) continue;
+      root.traverseVisible((o) => {
+        if (!o.isMesh) return;
+        const n = o.isInstancedMesh ? o.count : 1;
+        if (!n) return;
+        const passes = o.castShadow ? 2 : 1, g = o.geometry;
+        calls += passes;
+        tris += ((g.index ? g.index.count : g.attributes.position.count) / 3) * n * passes;
+      });
+    }
+    return { calls, tris: Math.round(tris) };
+  };
   dbg.runs = runs;
   dbg.obstacles = obstacles;
 
@@ -292,11 +332,11 @@ async function startSled(ctx, mg) {
     if (key === lastHud) return;
     lastHud = key;
     mg.hud.setTimer(timer);
-    mg.hud.setScore(`${race.starCount}/${totalStars}`, 'Stars');
-    mg.hud.setGoal(`Run ${race.heat + 1} of 2 · ${race.run.C.name}`);
+    mg.hud.setScore(`${race.starCount}/${totalStars}`, V.itemName);
+    mg.hud.setGoal(`${night ? 'Night race · ' : ''}Run ${race.heat + 1} of 2 · ${race.run.C.name}`);
   }
   hud();
-  showBanner('Run 1 · Pine Run', 'Steer ◀ ▶ through the flag gates');
+  showBanner(V.banner1[0], V.banner1[1], night ? 2400 : 1600);
 
   function showBanner(title, sub = '', ms = 1600) {
     banner.innerHTML = `<div class="knit-title">${title}</div>${sub ? `<div class="knit-sub">${sub}</div>` : ''}`;
@@ -311,13 +351,14 @@ async function startSled(ctx, mg) {
       if (e.type === 'star') {
         const k = starList.findIndex((q) => q.ri === race.heat && q.si === e.i);
         if (k >= 0) starList[k].pop = 0.001;
-        sparkle(e.x, ground(e.x, e.z) + 0.25, e.z, 9);
-        ctx.audio?.sfx?.('pickup', { vol: 0.75 });
+        sparkle(e.x, ground(e.x, e.z) + V.itemY, e.z, 9);
+        if (night) { ctx.audio?.sfx?.('sleighBells', { vol: 0.3 }); ctx.audio?.sfx?.('pickup', { vol: 0.55 }); }
+        else ctx.audio?.sfx?.('pickup', { vol: 0.75 });
       } else if (e.type === 'gate') {
         const k = gateList.findIndex((q) => q.ri === race.heat && q.gi === e.i);
-        if (k >= 0) { gateFx[k].pop = 0.001; gates.setColorAt(k, e.ok ? col.setRGB(1.18, 1.08, 0.78) : col.setRGB(0.55, 0.55, 0.6)); gates.instanceColor.needsUpdate = true; }
-        if (e.ok) { sparkle(e.x, ground(e.x, e.z) + 0.6, e.z, 6); ctx.audio?.sfx?.('whoosh', { vol: 0.6 }); }
-        else { pop('Missed gate +2s', 'miss'); ctx.audio?.sfx?.('fold', { vol: 0.6 }); }
+        if (k >= 0) { gateFx[k].pop = 0.001; gates.setColorAt(k, e.ok ? col.setRGB(...V.okTint) : col.setRGB(...V.missTint)); gates.instanceColor.needsUpdate = true; }
+        if (e.ok) { sparkle(e.x, ground(e.x, e.z) + 0.6, e.z, 6); ctx.audio?.sfx?.(V.gateSfx[0], { vol: V.gateSfx[1] }); }
+        else { pop(night ? 'Lantern missed +2s' : 'Missed gate +2s', 'miss'); ctx.audio?.sfx?.('fold', { vol: 0.6 }); }
       } else if (e.type === 'bump') {
         wob = 1;
         const y = ground(e.x, e.z);
@@ -346,7 +387,7 @@ async function startSled(ctx, mg) {
     edgeSfxT -= dt;
     if (phase === 'run' || phase === 'runout') {
       const extra = townies();
-      const steer = dbg.auto ? race.autoSteer(extra.map((o) => ({ ...projectTo(o), r: o.r }))) : humanSteer();
+      const steer = (dbg.steerFn || window.__sledBot) ? (dbg.steerFn || window.__sledBot)(dt, race) : dbg.auto ? race.autoSteer(extra.map((o) => ({ ...projectTo(o), r: o.r }))) : humanSteer(); // steerFn: test hook (sloppy bots)
       handle(race.step(dt, steer, extra));
       if (race.phase === 'runout' && phase === 'run') setPhase('runout');
       if (phase === 'runout' && (race.v === 0 || phaseT > 2.2)) {
@@ -362,7 +403,7 @@ async function startSled(ctx, mg) {
         rig.dir.set(0, 0, 0); { const f = frameAt(race.run.C, 0.6); rig.dir.set(f.tx, 0, f.tz); }
         aimRig(0, true);
         setPhase('fadeIn');
-        showBanner('Run 2 · Cable Car Run', 'Ready…', 1500);
+        showBanner(V.banner2[0], V.banner2[1], 1500);
       }
     } else if (phase === 'fadeIn') {
       fade.style.opacity = String(Math.max(0, 1 - phaseT / 0.45));
@@ -376,10 +417,12 @@ async function startSled(ctx, mg) {
     } else if (phase === 'celebrate') {
       if (phaseT >= 2.2) {
         setPhase('done');
-        const sc = scoreRace(race, T_FAST);
+        const sc = night ? scoreNight(race, T_CLEAN_NIGHT) : scoreRace(race, T_FAST);
         const missed = race.totalGates - race.gateCount;
-        const lines = [`Time ${fmt(race.clock)}${missed ? ` (incl. +${missed * 2}s for ${missed} missed gate${missed > 1 ? 's' : ''})` : ''}`, `Stars ${sc.nS}/${sc.NS} · Gates ${sc.nG}/${sc.NG}`];
-        if (sc.stars < 3) lines.push(`For ★★★: finish under ${fmt(T_FAST)} and collect ${Math.ceil(sc.NS * 0.7)}+ stars.`);
+        const lines = [`Time ${fmt(race.clock)}${missed ? ` (incl. +${missed * 2}s for ${missed} missed gate${missed > 1 ? 's' : ''})` : ''}`,
+          night ? `Lantern gates ${sc.nG}/${sc.NG} · Bells ${sc.nS}/${sc.NS}` : `Stars ${sc.nS}/${sc.NS} · Gates ${sc.nG}/${sc.NG}`];
+        if (night) { if (sc.stars < 3) lines.push(sc.stars < 2 ? `For ★★: light ${Math.ceil(sc.NG * 0.7)}+ of the ${sc.NG} lanterns.` : `For ★★★: light ${Math.ceil(sc.NG * 0.9)}+ lanterns and finish under ${fmt(sc.tTarget)}.`); }
+        else if (sc.stars < 3) lines.push(`For ★★★: finish under ${fmt(T_FAST)} and collect ${Math.ceil(sc.NS * 0.7)}+ stars.`);
         mg.finish({ score: sc.score, stars: sc.stars, text: lines.join(' — ') });
       }
     }
@@ -435,7 +478,7 @@ async function startSled(ctx, mg) {
       let s = q.ri === race.heat ? 1 : 0;
       if (q.pop > 0) { q.pop += dt; s = q.pop < 0.12 ? 1 + q.pop * 4 : Math.max(0, 1.5 - (q.pop - 0.12) * 6); if (q.pop > 0.5) { q.pop = -1; } }
       if (q.pop < 0 || race.stars[q.ri].has(q.si) && q.pop === 0) s = 0;
-      setM(stars, k, q.st.x, q.y + Math.sin(t * 2.4 + k) * 0.03, q.st.z, t * 2.2 + k, s);
+      setM(stars, k, q.st.x, q.y + Math.sin(t * 2.4 + k) * 0.03, q.st.z, night ? Math.sin(t * 1.7 + k) * 0.5 + k : t * 2.2 + k, s * V.itemScale, 0, night ? Math.sin(t * 5 + k * 2) * 0.12 : 0);
     });
     stars.instanceMatrix.needsUpdate = true;
     // own pines / lumps shake when bumped
@@ -521,7 +564,8 @@ async function startSled(ctx, mg) {
     // hand the camera back smoothly from where the rig is
     const hold = { pos: rig.pos.clone(), target: rig.target.clone() };
     cam.playShot({ name: 'sled-out', portrait: false, duration: 0.7, blendIn: 0.001, blendOut: 0.7, skippable: false, update: (u, out) => { out.pos.copy(hold.pos); out.target.copy(hold.target); } });
-    if (window.__sled === dbg) { dbg.race = dbg.runs = null; dbg.cleaned = true; }
+    if (night) { if (window.__sled === dbg) delete window.__sled; if (window.__sled2 === dbg) delete window.__sled2; }
+    else if (window.__sled === dbg) { dbg.race = dbg.runs = null; dbg.cleaned = true; }
   });
 
   // ---------------------------------------------------------------- go
@@ -530,6 +574,7 @@ async function startSled(ctx, mg) {
   if (mg.finished) return;
   race.phase = 'run';
   setPhase('run');
+  if (night) showBanner('Night Race', 'Light the lantern gates, ring the bells', 2000);
   ctx.audio?.sfx?.('sleighBells', { vol: 0.6 });
 }
 
