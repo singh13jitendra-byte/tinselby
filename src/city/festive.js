@@ -12,7 +12,7 @@ const PAPER = new THREE.Color('#ffd08a').multiplyScalar(0.5); // warm paper glow
 export function knitLanternGeos(r = 0.11, drop = 0.08, bands = [C.red, C.pine]) {
   const g = [];
   const ROWS = 8;
-  const body = part(new THREE.SphereGeometry(r, 12, ROWS), PAPER, GLOW, [(TAU * r) / 0.08, (Math.PI * r) / 0.064]);
+  const body = part(new THREE.SphereGeometry(r, 10, ROWS), PAPER, GLOW, [(TAU * r) / 0.08, (Math.PI * r) / 0.064]);
   const kind = body.attributes.aMat;
   // zigzag bands: in a sphere row every quad is two triangles; colouring the lower triangles of one row and the
   // upper triangles of the next gives a knitted diamond chain for free
@@ -82,7 +82,7 @@ export function buildFestive(K) {
   const NS = [[-5.6, -3.9], [-3.0, -1.3], [1.3, 3.0], [3.9, 5.6]], WE = [[-4.6, -3.0], [-2.3, -1.2], [1.2, 2.3], [3.0, 4.6]];
   const fence = (ax, az, bx, bz) => {
     const mx = (ax + bx) / 2, mz = (az + bz) / 2;
-    K.prop(K.groupAt(mx, mz), [mx, 0.05, mz], ironFenceGeos(ax, az, bx, bz));
+    K.prop(K.groupAt(mx, mz), [mx, 0.05, mz], ironFenceGeos(ax, az, bx, bz), { cast: false }); // 3 cm bars: their shadow is a 2-texel sliver
     colliders.addSegment(ax, az, bx, bz, 0.04, 'fence');
   };
   for (const sz of [-5.69, 5.69]) for (const [x0, x1] of NS) fence(x0, sz, x1, sz);

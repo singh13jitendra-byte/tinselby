@@ -16,81 +16,92 @@ const HX = Math.PI / 2;
 const fin = (parts) => { const m = merge(parts); m.scale(K, K, K); return m; };
 
 // Chibi knitted doll in instanced pieces. Everything tinted per instance is modelled white / grey.
-function buildGeos() {
+// lod 0 = near (follow / close views), lod 1 = far (high view, entry orbit: a doll is ~15–20 px tall there, so tiny
+// details like cheeks, the smile, fringes and pom bobbles are sub-pixel). Same parts, same pivots, same colours.
+const oct = (r, c, k = FELT) => g(new THREE.OctahedronGeometry(r, 0), c, k, [(TAU * r) / SW, (Math.PI * r) / SH]);
+function buildGeos(lod = 0) {
+  const far = lod > 0;
   const coat = fin([ // tint: coat
-    xf(cy(0.052, 0.083, 0.125, 10, W), [0, 0.128, 0]),
-    xf(cy(0.088, 0.088, 0.022, 10, '#d6d6d6', KNIT, true), [0, 0.074, 0]), // rolled hem
-    xf(bx(0.016, 0.112, 0.006, '#cfcfcf'), [0, 0.128, 0.0685], [-0.24, 0, 0]), // button placket
+    xf(cy(0.052, 0.083, 0.125, far ? 8 : 10, W), [0, 0.128, 0]),
+    xf(cy(0.088, 0.088, 0.022, far ? 8 : 10, '#d6d6d6', KNIT, true), [0, 0.074, 0]), // rolled hem
+    ...(far ? [] : [xf(bx(0.016, 0.112, 0.006, '#cfcfcf'), [0, 0.128, 0.0685], [-0.24, 0, 0])]), // button placket
   ]);
   const head = fin([ // untinted: big felt head, bead eyes, rosy cheeks, smile, hair peeking out at the back
-    xf(sp(0.085, 12, 8, P.skin), [0, 0.265, 0]),
-    xf(sp(0.0098, 5, 4, P.ink, GLOSS), [-0.03, 0.268, 0.0795]),
-    xf(sp(0.0098, 5, 4, P.ink, GLOSS), [0.03, 0.268, 0.0795]),
-    xf(sp(0.016, 5, 3, '#e9938f'), [-0.052, 0.246, 0.0625], [0, -0.65, 0], [1, 0.7, 0.35]),
-    xf(sp(0.016, 5, 3, '#e9938f'), [0.052, 0.246, 0.0625], [0, 0.65, 0], [1, 0.7, 0.35]),
-    xf(to(0.015, 0.003, 3, 4, P.ink, FELT, 2.1), [0, 0.256, 0.084], [0, 0, -HX - 1.05]),
-    xf(sp(0.089, 8, 5, '#7a4a2c', KNIT), [0, 0.268, -0.013]),
+    xf(sp(0.085, far ? 7 : 10, far ? 5 : 7, P.skin), [0, 0.265, 0]),
+    xf(far ? oct(0.0098, P.ink, GLOSS) : sp(0.0098, 4, 3, P.ink, GLOSS), [-0.03, 0.268, 0.0795]),
+    xf(far ? oct(0.0098, P.ink, GLOSS) : sp(0.0098, 4, 3, P.ink, GLOSS), [0.03, 0.268, 0.0795]),
+    ...(far ? [] : [
+      xf(sp(0.016, 4, 3, '#e9938f'), [-0.052, 0.246, 0.0625], [0, -0.65, 0], [1, 0.7, 0.35]),
+      xf(sp(0.016, 4, 3, '#e9938f'), [0.052, 0.246, 0.0625], [0, 0.65, 0], [1, 0.7, 0.35]),
+      xf(to(0.015, 0.003, 3, 3, P.ink, FELT, 2.1), [0, 0.256, 0.084], [0, 0, -HX - 1.05]),
+    ]),
+    xf(sp(0.089, far ? 6 : 7, far ? 4 : 4, '#7a4a2c', KNIT), [0, 0.268, -0.013]),
   ]);
   const hat = fin([ // tint: hat — tall ribbed beanie dome
-    xf(g(new THREE.SphereGeometry(0.093, 10, 4, 0, TAU, 0, HX), W, KNIT, [8, 2.5]), [0, 0.3, -0.006], [-0.1, 0, 0], [1, 1.1, 1]),
+    xf(g(new THREE.SphereGeometry(0.093, far ? 7 : 10, far ? 3 : 4, 0, TAU, 0, HX), W, KNIT, [8, 2.5]), [0, 0.3, -0.006], [-0.1, 0, 0], [1, 1.1, 1]),
   ]);
   const pom = fin([ // tint: accent — chunky rolled brim + big pom-pom
-    xf(to(0.09, 0.019, 5, 11, W), [0, 0.306, -0.005], [HX - 0.1, 0, 0]),
-    xf(sp(0.045, 7, 5, W), [0, 0.434, -0.02]),
-    xf(sp(0.024, 4, 3, '#ececec'), [0.032, 0.447, -0.02]),
-    xf(sp(0.024, 4, 3, '#ececec'), [-0.028, 0.453, -0.006]),
-    xf(sp(0.024, 4, 3, '#ececec'), [-0.006, 0.447, -0.052]),
+    xf(to(0.09, 0.019, far ? 3 : 4, far ? 8 : 10, W), [0, 0.306, -0.005], [HX - 0.1, 0, 0]),
+    xf(sp(0.045, far ? 5 : 6, far ? 3 : 4, W), [0, 0.434, -0.02]),
+    ...(far ? [] : [
+      xf(sp(0.024, 4, 3, '#ececec'), [0.032, 0.447, -0.02]),
+      xf(sp(0.024, 4, 3, '#ececec'), [-0.028, 0.453, -0.006]),
+      xf(sp(0.024, 4, 3, '#ececec'), [-0.006, 0.447, -0.052]),
+    ]),
   ]);
   const ghat = fin([ // tint: gnome hat — tall floppy knit cone pulled down over the eyes, striped band, pom on the tip
-    xf(to(0.091, 0.019, 5, 11, '#d2d2d2'), [0, 0.27, 0], [HX, 0, 0]),
-    xf(cy(0.046, 0.095, 0.13, 10, W, KNIT, true), [0, 0.335, 0]),
-    xf(cy(0.07, 0.083, 0.03, 10, '#b9b9b9', KNIT, true), [0, 0.317, 0]),
-    xf(cy(0.053, 0.064, 0.024, 10, '#b9b9b9', KNIT, true), [0, 0.366, 0]),
-    xf(g(new THREE.ConeGeometry(0.052, 0.17, 9, 1, true), W, KNIT, [4, 3]), [0, 0.375 + 0.085 * Math.cos(0.4), -0.085 * Math.sin(0.4)], [-0.4, 0, 0]),
-    xf(sp(0.026, 6, 4, '#e6e6e6', FELT), [0, 0.375 + 0.172 * Math.cos(0.4), -0.172 * Math.sin(0.4)]),
+    xf(to(0.091, 0.019, far ? 3 : 4, far ? 8 : 10, '#d2d2d2'), [0, 0.27, 0], [HX, 0, 0]),
+    xf(cy(0.046, 0.095, 0.13, far ? 7 : 10, W, KNIT, true), [0, 0.335, 0]),
+    xf(cy(0.07, 0.083, 0.03, far ? 7 : 10, '#b9b9b9', KNIT, true), [0, 0.317, 0]),
+    xf(cy(0.053, 0.064, 0.024, far ? 7 : 10, '#b9b9b9', KNIT, true), [0, 0.366, 0]),
+    xf(g(new THREE.ConeGeometry(0.052, 0.17, far ? 6 : 9, 1, true), W, KNIT, [4, 3]), [0, 0.375 + 0.085 * Math.cos(0.4), -0.085 * Math.sin(0.4)], [-0.4, 0, 0]),
+    xf(sp(0.026, far ? 4 : 6, far ? 3 : 4, '#e6e6e6', FELT), [0, 0.375 + 0.172 * Math.cos(0.4), -0.172 * Math.sin(0.4)]),
   ]);
   const beard = fin([ // untinted
-    xf(sp(0.07, 8, 6, P.snow), [0, 0.2, 0.04], null, [1.05, 1.2, 0.72]),
-    xf(sp(0.03, 5, 4, P.snow), [-0.04, 0.236, 0.07]),
-    xf(sp(0.03, 5, 4, P.snow), [0.04, 0.236, 0.07]),
-    xf(sp(0.025, 6, 4, '#e9a290'), [0, 0.248, 0.094]),
+    xf(sp(0.07, far ? 6 : 8, far ? 4 : 6, P.snow), [0, 0.2, 0.04], null, [1.05, 1.2, 0.72]),
+    xf(sp(0.03, far ? 4 : 5, far ? 3 : 4, P.snow), [-0.04, 0.236, 0.07]),
+    xf(sp(0.03, far ? 4 : 5, far ? 3 : 4, P.snow), [0.04, 0.236, 0.07]),
+    xf(sp(0.025, far ? 4 : 6, far ? 3 : 4, '#e9a290'), [0, 0.248, 0.094]),
   ]);
-  const tail = (pos, rot, len) => [bx(0.038, len, 0.016, W), xf(bx(0.012, 0.024, 0.012, '#c8c8c8'), [-0.012, -len / 2 - 0.01, 0]), xf(bx(0.012, 0.024, 0.012, '#c8c8c8'), [0.012, -len / 2 - 0.01, 0])]
+  const tail = (pos, rot, len) => [bx(0.038, len, 0.016, W), ...(far ? [] : [xf(bx(0.012, 0.024, 0.012, '#c8c8c8'), [-0.012, -len / 2 - 0.01, 0]), xf(bx(0.012, 0.024, 0.012, '#c8c8c8'), [0.012, -len / 2 - 0.01, 0])])]
     .map((p) => xf(xf(p, [0, -len / 2, 0]), pos, rot));
   const scarf = fin([ // tint: scarf — chunky ring, fringed tails front and back, plus the coat buttons
-    xf(to(0.058, 0.024, 5, 10, W), [0, 0.193, 0], [HX, 0, 0]),
-    xf(sp(0.024, 5, 3, W, KNIT), [0.046, 0.186, 0.052]),
+    xf(to(0.058, 0.024, far ? 3 : 4, far ? 6 : 8, W), [0, 0.193, 0], [HX, 0, 0]),
+    xf(sp(0.024, 4, 3, W, KNIT), [0.046, 0.186, 0.052]),
     ...tail([0.045, 0.186, 0.066], [-0.22, 0, 0.14], 0.085),
     ...tail([-0.03, 0.2, -0.062], [1.05, 0, -0.25], 0.1),
-    xf(sp(0.0098, 4, 3, W, GLOSS), [0, 0.104, 0.079]),
-    xf(sp(0.0098, 4, 3, W, GLOSS), [0, 0.146, 0.069]),
+    ...(far ? [] : [xf(oct(0.0098, W, GLOSS), [0, 0.104, 0.079]), xf(oct(0.0098, W, GLOSS), [0, 0.146, 0.069])]),
   ]);
   const arm = fin([ // tint: coat
     sp(0.022, 5, 3, W, KNIT),
-    xf(cy(0.02, 0.025, 0.072, 6, W, KNIT, true), [0, -0.036, 0]),
+    xf(cy(0.02, 0.025, 0.072, far ? 5 : 6, W, KNIT, true), [0, -0.036, 0]),
   ]);
   const mitt = fin([ // tint: mittens
-    xf(cy(0.028, 0.028, 0.016, 6, '#d8d8d8', KNIT, true), [0, -0.072, 0]),
-    xf(sp(0.028, 6, 4, W, KNIT), [0, -0.094, 0], null, [1, 1.12, 1]),
-    xf(sp(0.012, 4, 2, W, KNIT), [0, -0.088, 0.024]),
+    ...(far ? [] : [xf(cy(0.028, 0.028, 0.016, 6, '#d8d8d8', KNIT, true), [0, -0.072, 0])]),
+    xf(sp(0.028, far ? 4 : 6, far ? 3 : 4, W, KNIT), [0, -0.094, 0], null, [1, 1.12, 1]),
+    ...(far ? [] : [xf(sp(0.012, 4, 2, W, KNIT), [0, -0.088, 0.024])]),
   ]);
   const leg = fin([ // tint: trousers; the chunky boot is a darker shade with a pale cuff
-    xf(cy(0.023, 0.023, 0.05, 6, W, KNIT, true), [0, -0.022, 0]),
-    xf(cy(0.03, 0.03, 0.014, 6, '#f2f2f2', FELT, true), [0, -0.036, 0.003]),
-    xf(sp(0.031, 7, 4, '#8f7466'), [0, -0.05, 0.012], null, [1, 0.8, 1.38]),
+    xf(cy(0.023, 0.023, 0.05, far ? 5 : 6, W, KNIT, true), [0, -0.022, 0]),
+    ...(far ? [] : [xf(cy(0.03, 0.03, 0.014, 6, '#f2f2f2', FELT, true), [0, -0.036, 0.003])]),
+    xf(sp(0.031, far ? 4 : 6, far ? 3 : 4, '#8f7466'), [0, -0.05, 0.012], null, [1, 0.8, 1.38]),
   ]);
   const skate = fin([ // untinted: little steel blades under the boots (skaters only), curled up at the toe
     xf(bx(0.007, 0.012, 0.1, '#dfe7ec', GLOSS), [0, -0.089, 0.012]),
     xf(bx(0.007, 0.012, 0.03, '#dfe7ec', GLOSS), [0, -0.08, 0.072], [-0.9, 0, 0]),
-    xf(bx(0.01, 0.014, 0.012, '#9aa4ab', GLOSS), [0, -0.078, -0.014]),
-    xf(bx(0.01, 0.014, 0.012, '#9aa4ab', GLOSS), [0, -0.078, 0.04]),
+    ...(far ? [] : [
+      xf(bx(0.01, 0.014, 0.012, '#9aa4ab', GLOSS), [0, -0.078, -0.014]),
+      xf(bx(0.01, 0.014, 0.012, '#9aa4ab', GLOSS), [0, -0.078, 0.04]),
+    ]),
   ]);
   const gift = merge([
     g(new THREE.BoxGeometry(0.08, 0.074, 0.064), W),
     g(new THREE.BoxGeometry(0.084, 0.078, 0.016), '#fff2b0', FELT),
     g(new THREE.BoxGeometry(0.016, 0.078, 0.068), '#fff2b0', FELT),
-    xf(g(new THREE.SphereGeometry(0.015, 5, 3), '#fff2b0', FELT), [-0.013, 0.045, 0], null, [1.3, 0.8, 0.8]),
-    xf(g(new THREE.SphereGeometry(0.015, 5, 3), '#fff2b0', FELT), [0.013, 0.045, 0], null, [1.3, 0.8, 0.8]),
+    ...(far ? [] : [
+      xf(g(new THREE.SphereGeometry(0.015, 4, 3), '#fff2b0', FELT), [-0.013, 0.045, 0], null, [1.3, 0.8, 0.8]),
+      xf(g(new THREE.SphereGeometry(0.015, 4, 3), '#fff2b0', FELT), [0.013, 0.045, 0], null, [1.3, 0.8, 0.8]),
+    ]),
   ]);
   return { coat, head, hat, pom, ghat, beard, scarf, arm, mitt, leg, skate, gift };
 }
@@ -115,7 +126,9 @@ const cp = (src, so, dst, to, n) => { for (let i = 0; i < n; i++) dst[to + i] = 
 
 /** Doll pool. create(opts) → doll; update(dt, t, focus, radius) packs visible dolls into the instanced meshes. */
 export function createDollPool(engine, max = 110) {
-  const geos = buildGeos();
+  const geos = buildGeos(0);
+  const farGeos = buildGeos(1); // swapped in for every doll when the camera is far away (high view, entry orbit)
+  let lod = 0;
   const meshes = {};
   const mk = (name, geo, count, tint, shadow) => {
     const m = new THREE.InstancedMesh(geo, engine.mat, count);
@@ -255,6 +268,10 @@ export function createDollPool(engine, max = 110) {
     update(dt, t, focus, radius) {
       const r2 = radius * radius;
       const M = meshes;
+      // distance LOD (geometry only): hysteresis so blends between follow (6.7) and high (21) swap once
+      const cd = engine.camera.position.distanceTo(focus);
+      const want = lod ? (cd > 12.5 ? 1 : 0) : (cd > 14.5 ? 1 : 0);
+      if (want !== lod) { lod = want; const src = lod ? farGeos : geos; for (const k in M) M[k].geometry = src[k]; }
       let n = 0, nh = 0, ng = 0, nf = 0, nk = 0;
       let sigChanged = false;
       const sig = prevSig;

@@ -38,6 +38,7 @@ export function createEngine(canvas) {
   key.shadow.bias = -0.0004;
   key.shadow.normalBias = 0.02;
   key.shadow.radius = 2.2;
+  const SHADOW_SHIFT = 2.5; // world units the shadow box centre moves from the focus towards the camera (see step)
   const fill = new THREE.DirectionalLight('#9db4ff', 0.45);
   scene.add(hemi, key, key.target, fill, fill.target);
   const FILL_DIR = new THREE.Vector3(0.6, 0.45, -0.66).normalize();
@@ -130,8 +131,11 @@ export function createEngine(canvas) {
     for (const u of engine.updates) u.fn(dt, engine.time);
     applyLook(dt);
     mat.userData.uniforms.uTime.value = engine.time;
-    // shadow box follows the camera focus (snapped to avoid shimmer)
-    const fx = Math.round(engine.focus.x / 0.25) * 0.25, fz = Math.round(engine.focus.z / 0.25) * 0.25;
+    // shadow box follows the camera focus (snapped to avoid shimmer), nudged towards the camera: casters beyond the
+    // far edge of the view only throw shadows further away, while the near side needs a margin for incoming shadows
+    const cdx = camera.position.x - engine.focus.x, cdz = camera.position.z - engine.focus.z, cdl = Math.hypot(cdx, cdz) || 1;
+    const shift = Math.min(SHADOW_SHIFT, cdl * 0.2);
+    const fx = Math.round((engine.focus.x + (cdx / cdl) * shift) / 0.25) * 0.25, fz = Math.round((engine.focus.z + (cdz / cdl) * shift) / 0.25) * 0.25;
     key.target.position.set(fx, 0, fz);
     const kd = engine.env.keyDir;
     key.position.set(fx + kd.x * 20, kd.y * 20, fz + kd.z * 20);

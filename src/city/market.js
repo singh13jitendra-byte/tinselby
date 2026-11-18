@@ -1,7 +1,7 @@
 // Market Square: the big tree (star socket), stalls with striped awnings, carousel, countdown clock, bead garlands.
 import * as THREE from 'three';
 import {
-  C, xf, box, rbox, cyl, cylS, cone, ball, bead, torus, extrude, tube, poly, part, faceColor, angleStripes,
+  C, xf, box, rbox, cyl, cylS, cone, ball, bead, torus, extrude, tube, poly, part, faceColor, angleStripes, noCast,
   garland, bulbLine, lampGeos, benchGeos, pineGeos, giftGeos, wreathGeos, snowLump, textGeos, put, prefab, merge,
   lanternGeos, candyCaneGeos, barrelGeos, basketGeos, litFirGeos, snowmanGeos,
   KNIT, FELT, GLOW, GLOSS, mulberry32,
@@ -203,11 +203,11 @@ function buildTree(K, T) {
   const { colliders, engine } = K;
   const rnd = mulberry32(5);
   const B = K.G.market.group.batch({ cast: true, name: 'tree' });
-  const g = [];
+  const g = [], d = []; // g: shadow casters (cones, trunk, cuff, gifts); d: details on the cones, main pass only
   const x = T.x, z = T.z, H = T.height;
   // felt skirt + little picket ring
-  g.push(xf(cyl(1.08, 1.12, 0.03, 28, C.red, FELT), [0, 0.07, 0]));
-  g.push(xf(torus(1.1, 0.04, C.cream, KNIT, TAU, 32), [0, 0.085, 0], [Math.PI / 2, 0, 0]));
+  d.push(xf(cyl(1.08, 1.12, 0.03, 28, C.red, FELT), [0, 0.07, 0]));
+  d.push(xf(torus(1.1, 0.04, C.cream, KNIT, TAU, 32), [0, 0.085, 0], [Math.PI / 2, 0, 0]));
   g.push(xf(cyl(0.11, 0.14, 0.5, 10, C.woodDark), [0, 0.3, 0]));
   const tiers = [[1.0, 0.95, 0.4], [0.86, 0.85, 0.82], [0.72, 0.8, 1.24], [0.58, 0.72, 1.65], [0.44, 0.64, 2.04], [0.29, 0.62, 2.43]];
   const radiusAt = (y) => { let r = 0; for (const [tr, th, ty] of tiers) if (y >= ty && y <= ty + th) r = Math.max(r, tr * (1 - (y - ty) / th)); return r; };
@@ -215,7 +215,7 @@ function buildTree(K, T) {
     const c = angleStripes(cone(r, h, 22, C.pine), 22, C.pine, '#3a7a52');
     g.push(xf(c, [0, y + h / 2, 0]));
     g.push(xf(part(new THREE.CircleGeometry(r, 22), '#285a3e', KNIT), [0, y + 0.002, 0], [Math.PI / 2, 0, 0]));
-    for (let k = 0; k < 7; k++) { const a = (k / 7) * TAU + y; g.push(xf(bead(0.045, C.snow), [Math.cos(a) * r * 0.95, y + 0.04, Math.sin(a) * r * 0.95], null, [1.4, 0.6, 1.4])); }
+    for (let k = 0; k < 7; k++) { const a = (k / 7) * TAU + y; d.push(xf(bead(0.045, C.snow), [Math.cos(a) * r * 0.95, y + 0.04, Math.sin(a) * r * 0.95], null, [1.4, 0.6, 1.4])); }
   }
   // cream rope lattice draped over the tree (two families of spirals crossing in diamonds) with pom-pom knots
   {
@@ -225,30 +225,30 @@ function buildTree(K, T) {
     for (const dir of [-1, 1]) for (let k = 0; k < NSTR; k++) {
       const pts = [];
       for (let i = 0; i <= 12; i++) pts.push(at(k, dir, i / 12));
-      g.push(tube(pts, 0.017, '#f3e6cc', KNIT, 22, 4));
+      d.push(tube(pts, 0.017, '#f3e6cc', KNIT, 16, 4));
     }
     // the two families cross every 1 / (2 · TURN · NSTR) of the height, at alternating angles
     const stepT = 1 / (2 * TURN * NSTR);
     for (let j = 0; j * stepT <= 1.001; j++) for (let k = 0; k < NSTR; k++) {
       const t = Math.min(1, j * stepT), y = Y0 + (Y1 - Y0) * t, r = env(y) + 0.012;
       const ang = (k / NSTR) * TAU + t * TURN * TAU;
-      g.push(xf(bead(0.052 - t * 0.014, j % 3 === 1 ? C.red : '#fbf7ee'), [Math.cos(ang) * r, y, Math.sin(ang) * r]));
+      d.push(xf(bead(0.052 - t * 0.014, j % 3 === 1 ? C.red : '#fbf7ee'), [Math.cos(ang) * r, y, Math.sin(ang) * r]));
     }
     // knitted base cuff: red drum with a cream cable band and gold edging (the gifts lean against it)
     const cuff = cylS(0.5, 0.54, 0.3, 20, 3, C.red);
     faceColor(cuff, (px, py, pz) => (Math.abs(py) < 0.05 && Math.floor((Math.atan2(pz, px) / TAU + 1) * 20) % 2 ? '#f3e6cc' : null));
     g.push(xf(cuff, [0, 0.235, 0]));
-    for (const yy of [0.1, 0.375]) g.push(xf(torus(0.53, 0.026, yy > 0.2 ? '#f3e6cc' : C.gold, KNIT, TAU, 24), [0, yy, 0], [Math.PI / 2, 0, 0]));
-    for (let k = 0; k < 10; k++) { const a = (k / 10) * TAU + 0.2; g.push(xf(bead(0.034, '#f3e6cc'), [Math.cos(a) * 0.545, 0.235, Math.sin(a) * 0.545], null, [1, 1.5, 1])); }
+    for (const yy of [0.1, 0.375]) d.push(xf(torus(0.53, 0.026, yy > 0.2 ? '#f3e6cc' : C.gold, KNIT, TAU, 24), [0, yy, 0], [Math.PI / 2, 0, 0]));
+    for (let k = 0; k < 10; k++) { const a = (k / 10) * TAU + 0.2; d.push(xf(bead(0.034, '#f3e6cc'), [Math.cos(a) * 0.545, 0.235, Math.sin(a) * 0.545], null, [1, 1.5, 1])); }
   }
   // baubles
   for (let i = 0; i < 40; i++) {
     const y = 0.5 + rnd() * 2.35, a = rnd() * TAU, r = radiusAt(y) + 0.03;
     const c = [C.red, C.gold, C.red, '#efe1c6', C.deepRed][i % 5];
-    g.push(xf(sph8(0.06 - y * 0.008, c), [Math.cos(a) * r, y - 0.04, Math.sin(a) * r]));
+    d.push(xf(sph8(0.06 - y * 0.008, c), [Math.cos(a) * r, y - 0.04, Math.sin(a) * r]));
   }
   // socket on top
-  g.push(xf(cyl(0.055, 0.04, 0.12, 10, C.gold, GLOSS), [0, H - 0.06, 0]));
+  d.push(xf(cyl(0.055, 0.04, 0.12, 10, C.gold, GLOSS), [0, H - 0.06, 0]));
   // gifts under the tree
   const gc = [[C.red, C.gold], [C.cream, C.red], [C.teal, C.gold], [C.gold, C.red], [C.pine, C.cream]];
   for (let i = 0; i < 9; i++) {
@@ -257,6 +257,8 @@ function buildTree(K, T) {
   }
   B.begin([x, 0, z], { delay: 0.25, dur: 0.7 });
   B.add(g.map((q) => xf(q, [x, 0, z])));
+  B.shadowEnd = B.count; // baubles, rope lattice, knots and fairy lights hug the cones: no visible shadow of their own
+  B.add(d.map((q) => xf(q, [x, 0, z])));
   // fairy lights spiral (light group 'tree', dimmer → brighter with spirit)
   const lg = [];
   for (let i = 0; i < 130; i++) {
@@ -346,8 +348,9 @@ function stallGeos(i, rnd) {
     lights.push(xf(bead(0.04, k % 2 ? '#ffd27a' : '#ffbe66', GLOW), [x, yf - 0.065 - drop, zf + 0.012], null, [1, 1.25, 1]));
   }
   // fluffy cotton snow: heaps on the roof and a soft lip along the front edge
-  for (let k = 0; k < 4; k++) g.push(xf(ball(0.16, C.snow, FELT, 8, 5), [-0.48 + k * 0.32, 1.085 + (k % 2) * 0.012, -0.2 + (k % 2) * 0.06], null, [1.25, 0.4, 1.5]));
-  for (let k = 0; k < 8; k++) g.push(xf(bead(0.05, C.snow), [-W / 2 - 0.02 + k * ((W + 0.04) / 7), yf + 0.035, zf - 0.03], null, [1.5, 0.75, 1]));
+  // (both sit on the awning, inside its shadow: main pass only)
+  for (let k = 0; k < 4; k++) g.push(noCast(xf(ball(0.16, C.snow, FELT, 8, 5), [-0.48 + k * 0.32, 1.085 + (k % 2) * 0.012, -0.2 + (k % 2) * 0.06], null, [1.25, 0.4, 1.5])));
+  for (let k = 0; k < 8; k++) g.push(noCast(xf(bead(0.05, C.snow), [-W / 2 - 0.02 + k * ((W + 0.04) / 7), yf + 0.035, zf - 0.03], null, [1.5, 0.75, 1])));
   // wagon wheel, counter lantern, jars, basket
   const wx = (i % 2 ? 1 : -1) * 0.68;
   g.push(xf(torus(0.17, 0.024, C.woodDark, KNIT, TAU, 14), [wx, 0.19, 0.16], [0, Math.PI / 2, 0]));
@@ -433,14 +436,14 @@ function buildCarousel(K, pos) {
   colliders.addCircle(x, z, R + 0.12, 'carousel');
   K.keepCircle(x, z, R + 0.4);
 
-  // rotor
-  const g = [];
+  // rotor (g: shadow casters; det: beads, crown wreaths and lights that sit inside the canopy's shadow)
+  const g = [], det = [];
   g.push(xf(cyl(R, R, 0.04, 28, C.cream, FELT), [0, 0.19, 0]));
   const col = cyl(0.26, 0.26, 1.05, 12, C.red);
   faceColor(col, (px, py, pz) => (Math.floor((Math.atan2(pz, px) / TAU + 1) * 12) % 3 === 0 ? C.gold : null));
   g.push(xf(col, [0, 0.72, 0]));
   for (const y of [0.3, 0.75, 1.2]) g.push(xf(torus(0.27, 0.025, C.pine, KNIT, TAU, 14), [0, y, 0], [Math.PI / 2, 0, 0]));
-  for (let k = 0; k < 12; k++) { const a = (k / 12) * TAU; g.push(xf(bead(0.025, C.red), [Math.cos(a) * 0.29, 0.75, Math.sin(a) * 0.29])); }
+  for (let k = 0; k < 12; k++) { const a = (k / 12) * TAU; det.push(xf(bead(0.025, C.red), [Math.cos(a) * 0.29, 0.75, Math.sin(a) * 0.29])); }
   const NH = 6, RH = 0.7;
   for (let k = 0; k < NH; k++) {
     const a = (k / NH) * TAU;
@@ -462,7 +465,7 @@ function buildCarousel(K, pos) {
     const px = Math.sin(a) * rr, pz = Math.cos(a) * rr;
     g.push(xf(extrude(sc, 0.02, k % 2 ? C.cream : C.red, KNIT, 6), [px, 1.36, pz], [0, a, 0]));
     // crown wreaths with red bows
-    g.push(...wreathGeos(0.075).map((q) => xf(xf(q, [0, 0, 0.015]), [px, 1.47, pz], [0, a, 0])));
+    det.push(...wreathGeos(0.075).map((q) => xf(xf(q, [0, 0, 0.015]), [px, 1.47, pz], [0, a, 0])));
   }
   // cupola + flag
   g.push(xf(cyl(0.16, 0.18, 0.14, 12, C.cream), [0, 1.95, 0]));
@@ -476,8 +479,11 @@ function buildCarousel(K, pos) {
   for (let k = 0; k < 12; k++) { const a = (k / 12) * TAU + 0.26; lights.push(xf(bead(0.016, C.warm, GLOW), [Math.cos(a) * 0.272, 1.05, Math.sin(a) * 0.272])); }
   const rotor = new THREE.Group();
   rotor.position.set(x, 0, z);
-  const mesh = new THREE.Mesh(merge([...g, ...lights]), engine.mat);
+  const nCast = g.reduce((n, q) => n + q.attributes.position.count, 0);
+  const mesh = new THREE.Mesh(merge([...g, ...det, ...lights]), engine.mat);
   mesh.castShadow = true; mesh.receiveShadow = true;
+  mesh.onBeforeShadow = () => { mesh.geometry.drawRange.count = nCast; };
+  mesh.onAfterShadow = () => { mesh.geometry.drawRange.count = Infinity; };
   rotor.add(mesh);
   // horses: instanced, bobbing on their poles
   const hg = horseGeo();

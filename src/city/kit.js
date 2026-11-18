@@ -1,10 +1,10 @@
 // Shared modelling kit for the city: colours, prefab cache, and reusable knitted / felted props.
 // All builders return arrays of geometries in LOCAL space (origin at the base centre, front facing +z).
 import * as THREE from 'three';
-import { cone, cyl, sph, box, rbox, torus, extrude, tube, xf, merge, poly, part, boxUV, KNIT, FELT, GLOW, GLOSS } from '../core/prims.js';
+import { cone, cyl, sph, box, rbox, torus as primTorus, extrude, tube, xf, merge, poly, part, boxUV, KNIT, FELT, GLOW, GLOSS } from '../core/prims.js';
 import { P, mulberry32 } from '../core/yarn.js';
 
-export { KNIT, FELT, GLOW, GLOSS, xf, merge, poly, part, cone, cyl, sph, box, rbox, torus, extrude, tube, mulberry32 };
+export { KNIT, FELT, GLOW, GLOSS, xf, merge, poly, part, cone, cyl, sph, box, rbox, extrude, tube, mulberry32 };
 
 export const C = {
   ...P,
@@ -30,22 +30,47 @@ export const flatShapeE = (shape, depth, c, k = FELT, segs = 24) => {
 };
 
 /** Low-poly bead (6×4) for lights, baubles, pom-poms. */
-export const bead = (r, c, k = FELT) => (k === GLOW ? part(r > 0.027 ? new THREE.IcosahedronGeometry(r, 0) : new THREE.OctahedronGeometry(r, 0), c, GLOW) : sph(r, c, k, 5, 3));
+// Perf: beads are the most numerous parts in the city. Glowing bulbs up to r 0.034 are octahedra (8 tris; they read as a
+// bloom dot at every play distance), bigger ones icosahedra. Felt / gloss beads: 4×2 (8 tris) below r 0.026, 4×3 (16)
+// below r 0.034, 5×3 (20) above, where their silhouette starts to show in the follow view.
+export const bead = (r, c, k = FELT) => (k === GLOW
+  ? part(r > 0.034 ? new THREE.IcosahedronGeometry(r, 0) : new THREE.OctahedronGeometry(r, 0), c, GLOW)
+  : r < 0.026 ? sph(r, c, k, 4, 2) : r < 0.034 ? sph(r, c, k, 4, 3) : sph(r, c, k, 5, 3));
 export const ball = (r, c, k = FELT, ws = 8, hs = 6) => sph(r, c, k, ws, hs);
+/** City torus: 6-sided tube cross-section by default (rings, wreaths and rims read the same as 8 at play distance). */
+export const torus = (R, r, c, k = KNIT, arc = TAU, ts = 24, rs = 6) => primTorus(R, r, c, k, arc, ts, rs);
+
+/** Mark a part as main-pass only (no shadow): wall-mounted trims, details sitting inside a bigger caster's shadow. */
+export const noCast = (g) => { if (g) g.userData.noCast = true; return g; };
 
 // ------------------------------------------------------------------ prefab cache
+// A prefab is cached as up to two merged geometries: the body, and its tiny / glowing details (bobbles, bows, fairy
+// lights; flagged noCast so the city puts them in the non-shadow batch). put() returns that array (K.prop flattens it).
 const cache = new Map();
+const tinyPart = (g) => {
+  if (g.attributes.aMat.array[0] === GLOW || g.userData.noCast) return true;
+  if (!g.boundingBox) g.computeBoundingBox();
+  const b = g.boundingBox;
+  return Math.max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z) < 0.1;
+};
 export function prefab(key, build) {
-  let g = cache.get(key);
-  if (!g) { const parts = build().filter(Boolean); g = merge(parts); cache.set(key, g); }
-  return g;
+  let e = cache.get(key);
+  if (!e) {
+    const body = [], det = [];
+    for (const p of build().filter(Boolean)) (tinyPart(p) ? det : body).push(p);
+    e = [];
+    if (body.length) e.push(merge(body));
+    if (det.length) e.push(noCast(merge(det)));
+    cache.set(key, e);
+  }
+  return e;
 }
 /** Cached prefab cloned into world space. */
 /** Where lamps were placed ([x, y, z, scale]); the city lays warm light pools on the snow under them. */
 export const lampSpots = [];
 export function put(key, build, x, y, z, ry = 0, s = 1) {
   if (key === 'lamp') lampSpots.push([x, y, z, s]);
-  return xf(prefab(key, build).clone(), [x, y, z], [0, ry, 0], s);
+  return prefab(key, build).map((g) => xf(g.clone(), [x, y, z], [0, ry, 0], s));
 }
 /** Transform an array of local geos into world space (in place) and return them. */
 export function place(geos, x, y, z, ry = 0, s = 1) {
@@ -80,7 +105,8 @@ export function garland(a, b, sag, { n = 10, cord = C.pine, cordR = 0.016, bulbR
   const at = (t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t - sag * 4 * t * (1 - t), a[2] + (b[2] - a[2]) * t];
   const pts = [];
   for (let i = 0; i <= 8; i++) pts.push(at(i / 8));
-  const out = { cord: bulbsOnly ? null : tube(pts, cordR, cord, KNIT, 14, 4), bulbs: [], beads: [] };
+  const span = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+  const out = { cord: bulbsOnly ? null : tube(pts, cordR, cord, KNIT, Math.max(6, Math.min(14, Math.round(span * 2.4))), 4), bulbs: [], beads: [] };
   for (let i = 0; i < n; i++) {
     const t = (i + 0.5) / n, p = at(t);
     out.bulbs.push(xf(bead(bulbR, colors[i % colors.length], kind), [p[0], p[1] - bulbR * 0.9, p[2]]));
@@ -127,11 +153,11 @@ export function pomTreeGeos(crown = C.pink, rnd = Math.random) {
   g.push(xf(cyl(0.035, 0.05, 0.38, 6, C.wood), [0, 0.19, 0]));
   const r = 0.27;
   g.push(xf(ball(r, crown, FELT, 10, 7), [0, 0.55, 0]));
-  g.push(xf(ball(r * 0.72, crown, FELT, 8, 6), [0.17, 0.46, 0.06]));
-  g.push(xf(ball(r * 0.66, crown, FELT, 8, 6), [-0.15, 0.48, -0.05]));
+  g.push(xf(ball(r * 0.72, crown, FELT, 7, 5), [0.17, 0.46, 0.06]));
+  g.push(xf(ball(r * 0.66, crown, FELT, 7, 5), [-0.15, 0.48, -0.05]));
   // cotton-wool snow hat + a smaller drift on the side puff
-  g.push(xf(ball(r * 0.86, C.snow, FELT, 9, 5), [0, 0.775, 0], null, [1, 0.42, 1]));
-  g.push(xf(ball(r * 0.5, C.snow, FELT, 7, 4), [0.2, 0.61, 0.07], null, [1, 0.4, 1]));
+  g.push(xf(ball(r * 0.86, C.snow, FELT, 8, 4), [0, 0.775, 0], null, [1, 0.42, 1]));
+  g.push(xf(ball(r * 0.5, C.snow, FELT, 6, 3), [0.2, 0.61, 0.07], null, [1, 0.4, 1]));
   for (let k = 0; k < 7; k++) {
     const a = k * 2.1 + 0.3, yy = 0.4 + (k % 4) * 0.075, rr = Math.sqrt(Math.max(0.01, r * r - (yy - 0.55) ** 2)) * 1.0;
     g.push(xf(bead(0.032, C.snow), [Math.cos(a) * rr, yy, Math.sin(a) * rr]));
@@ -162,7 +188,7 @@ export function lampGeos(h = 1.25) {
   g.push(xf(box(0.125, 0.16, 0.125, C.warm, GLOW), [0, h + 0.115, 0]));
   for (const [x, z] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) g.push(xf(box(0.018, 0.16, 0.018, C.lampPost), [x * 0.056, h + 0.115, z * 0.056]));
   g.push(xf(cone(0.1, 0.09, 4, C.lampPost), [0, h + 0.235, 0], [0, Math.PI / 4, 0]));
-  g.push(xf(ball(0.075, C.snow, FELT, 8, 5), [0, h + 0.28, 0], null, [1, 0.45, 1]));
+  g.push(xf(ball(0.075, C.snow, FELT, 7, 4), [0, h + 0.28, 0], null, [1, 0.45, 1]));
   // fairy lights wound round the post
   for (let k = 0; k < 8; k++) { const a = k * 1.25, y = h * (0.2 + k * 0.095); g.push(xf(bead(0.017, k % 3 ? C.warm : '#ffe6b0', GLOW), [Math.cos(a) * 0.04, y, Math.sin(a) * 0.04])); }
   // red bow on the post
@@ -183,7 +209,8 @@ export function benchGeos() {
   return g;
 }
 
-export function snowLump(r = 0.3) { return [xf(ball(r, C.snow, FELT, 12, 7), [0, 0, 0], null, [1, 0.38, 0.8])]; }
+// top half only: the lower half sits under the snow (deco, no shadow), so a 10×4 dome keeps the same outline
+export function snowLump(r = 0.3) { return [xf(part(new THREE.SphereGeometry(r, 10, 4, 0, TAU, 0, Math.PI / 2), C.snow, FELT, [(TAU * r) / 0.08, (Math.PI * r) / 2 / 0.064]), [0, 0, 0], null, [1, 0.38, 0.8])]; }
 
 /** Needle-felted snowman: knit beanie with fat brim and pom-pom, striped fringed scarf, wooden buttons, carrot nose, rosy cheeks. */
 export function snowmanGeos(hat = '#6fa8b4', scarf = C.moss, brim = '#f1e4cc') {
@@ -229,8 +256,8 @@ export function lanternGeos(c = C.lampPost) {
 /** Knitted candy cane post with a red bow, ~0.62 tall. */
 export function candyCaneGeos() {
   const pts = [[0, 0, 0], [0, 0.3, 0], [0, 0.5, 0], [0.03, 0.58, 0], [0.1, 0.61, 0], [0.16, 0.57, 0], [0.175, 0.49, 0]];
-  const t = tube(pts, 0.032, C.snow, KNIT, 44, 6);
-  faceColor(t, (x, y, z, f) => (Math.floor(f / 12 / 4) % 2 ? C.red : null)); // ring stripes, four tube segments each
+  const t = tube(pts, 0.032, C.snow, KNIT, 33, 5);
+  faceColor(t, (x, y, z, f) => (Math.floor(f / 10 / 3) % 2 ? C.red : null)); // ring stripes, three tube segments each
   return [t, xf(bead(0.035, C.red), [-0.03, 0.36, 0.035], null, [1.3, 0.8, 0.6]), xf(bead(0.035, C.red), [0.03, 0.36, 0.035], null, [1.3, 0.8, 0.6]), xf(bead(0.022, C.gold, GLOSS), [0, 0.36, 0.05])];
 }
 /** Wooden barrel table with snow, mugs and a lantern on top. */
@@ -366,7 +393,7 @@ export function textGeos(str, h, c, { r = h * 0.075, gap = 0.28 } = {}) {
     const cw = ch === 'I' ? w * 0.6 : w;
     for (const stroke of GLYPHS[ch] || []) {
       const pts = stroke.map(([u, v]) => [x + u * cw, v * h, 0]);
-      g.push(tube(pts, r, c, KNIT, Math.max(6, stroke.length * 3), 5));
+      g.push(tube(pts, r, c, KNIT, Math.max(6, stroke.length * 3), 4));
     }
     x += cw + sp;
   }

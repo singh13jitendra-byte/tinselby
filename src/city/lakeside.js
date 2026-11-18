@@ -41,13 +41,13 @@ export function buildLakeside(K) {
     for (const [ox, oz, a, b] of [[0.6, 0.2, 2.2, 1.3], [-1.0, -0.3, 1.5, 0.9], [1.4, -0.6, 1.0, 0.7]]) {
       const pts = [];
       for (let i = 0; i <= 24; i++) { const t = (i / 24) * TAU; pts.push([cx + ox + Math.cos(t) * a, 0.056, cz + oz + Math.sin(t) * b]); }
-      g.push(tube(pts, 0.008, '#e6f0f5', FELT, 48, 3, false));
+      g.push(tube(pts, 0.008, '#e6f0f5', FELT, 32, 3, false));
     }
     const ice = P(g, [cx, 0, cz], { cast: false, delay: 0.2, kind: 'pop' });
     // chunky cable-knit rim
     const rim = [];
     for (let i = 0; i <= 64; i++) { const t = (i / 64) * TAU; rim.push([cx + Math.cos(t) * (rx + 0.04), 0.07, cz + Math.sin(t) * (rz + 0.04)]); }
-    P([tube(rim, 0.075, C.snow, KNIT, 128, 6, false)], [cx, 0, cz], { cast: false, delay: 0.35 });
+    P([tube(rim, 0.075, C.snow, KNIT, 96, 5, false)], [cx, 0, cz], { cast: false, delay: 0.35 });
     // pebbles + reeds
     const pg = [];
     const pcol = [C.pebble, C.pebbleDark, C.stone, '#a9a39b'];

@@ -98,6 +98,12 @@ export class Batch {
     this.base = this.pos.slice();
     const m = new THREE.Mesh(g, mat);
     m.castShadow = this.cast; m.receiveShadow = this.receive;
+    // optional shadow prefix: vertices [0, shadowEnd) cast, the rest (e.g. fairy lights added last) draw in the main pass only
+    if (this.cast && this.shadowEnd != null && this.shadowEnd < this.count) {
+      const n = this.shadowEnd;
+      m.onBeforeShadow = () => { g.drawRange.count = n; };
+      m.onAfterShadow = () => { g.drawRange.count = Infinity; };
+    }
     m.matrixAutoUpdate = false; m.updateMatrix();
     m.name = 'city-' + this.group.id + '-' + this.name;
     parent.add(m);

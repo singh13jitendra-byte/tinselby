@@ -17,7 +17,8 @@ export const sph = (r, c, k = FELT, ws = 14, hs = 10) => part(new THREE.SphereGe
 export const dot = (r, c, k = FELT) => sph(r, c, k, 8, 6);
 export const box = (w, h, d, c, k = KNIT) => part(boxUV(new THREE.BoxGeometry(w, h, d)), c, k);
 export const rbox = (w, h, d, r, c, k = KNIT, seg = 2) => part(boxUV(new RoundedBoxGeometry(w, h, d, seg, r)), c, k);
-export const torus = (R, r, c, k = KNIT, arc = TAU, ts = 24) => part(new THREE.TorusGeometry(R, r, 8, ts, arc), c, k, [(R * arc) / SW, (TAU * r) / SH]);
+/** Torus; rs = radial (tube cross-section) segments, optional (default 8). */
+export const torus = (R, r, c, k = KNIT, arc = TAU, ts = 24, rs = 8) => part(new THREE.TorusGeometry(R, r, rs, ts, arc), c, k, [(R * arc) / SW, (TAU * r) / SH]);
 /** Extrude a THREE.Shape along +z by depth. */
 export const extrude = (shape, depth, c, k = KNIT, curveSegments = 8) => part(boxUV(new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments })), c, k);
 /** Tube along points [[x,y,z],...]. */

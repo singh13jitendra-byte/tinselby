@@ -36,10 +36,12 @@ export function buildCity(ctx) {
     Object.defineProperty(G[id], 'props', { get() { const d = layout.DISTRICTS.find((x) => x.id === id); const c = d ? d.center : [0, 0]; return G[id].cell(c[0], c[1]).props; } });
   }
 
-  // tiny parts (beads, trims, berries) don't need to cast shadows: keeps the shadow pass cheap
+  // tiny parts (beads, trims, berries) don't need to cast shadows: keeps the shadow pass cheap. Same for flat parts
+  // lying on the ground (mats, trays, plinth slabs): their shadow falls under themselves.
   const small = (g) => {
     if (!g.boundingBox) g.computeBoundingBox();
     const b = g.boundingBox;
+    if (b.max.y - b.min.y < 0.05 && b.max.y < 0.12) return true;
     return Math.max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z) < 0.14;
   };
   // ---------------------------------------------------------------- shared build context
@@ -69,9 +71,9 @@ export function buildCity(ctx) {
       const ref = {
         props: [],
         add(gs, light) {
-          for (const g of [].concat(gs)) {
+          for (const g of [gs].flat(3)) {
             if (!g) continue;
-            const b = g.attributes.aMat.array[0] === GLOW || small(g) ? glowB : castB;
+            const b = g.attributes.aMat.array[0] === GLOW || g.userData.noCast || small(g) ? glowB : castB;
             if (!begun.has(b)) { b.begin(anchor, opts); begun.add(b); ref.props.push(b.cur); }
             b.add(g, light);
           }

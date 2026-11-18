@@ -51,7 +51,7 @@ export function createPreview(ctx) {
 
   function size() {
     const w = canvas.clientWidth || 140, h = canvas.clientHeight || 180;
-    const pr = Math.min(window.devicePixelRatio || 1, 2);
+    const pr = Math.min(window.devicePixelRatio || 1, 1.5); // small MSAA canvas: 1.5 is plenty (phones report 3)
     if (canvas.width !== Math.round(w * pr) || canvas.height !== Math.round(h * pr)) {
       renderer.setPixelRatio(pr);
       renderer.setSize(w, h, false);

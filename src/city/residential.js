@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { squashProps } from './reveal.js';
 import {
   C, xf, box, rbox, cyl, cone, ball, bead, torus, extrude, poly, part, faceColor, garland, bulbLine, lampGeos,
-  giftGeos, wreathGeos, wreathLights, snowmanGeos, pineGeos, pomTreeGeos, shrubGeos, fenceGeos, snowLump, put,
+  giftGeos, wreathGeos, wreathLights, snowmanGeos, pineGeos, pomTreeGeos, shrubGeos, fenceGeos, snowLump, put, noCast,
   KNIT, FELT, GLOW, GLOSS, mulberry32,
 } from './kit.js';
 
@@ -16,11 +16,14 @@ const HEIGHTS = [2.3, 2.75, 2.1, 2.55, 2.9, 2.25];
 export function townhouse({ w = 1.5, d = 1.3, h = 2.4, wall = C.red, trim = C.cream, door = C.pine, seed = 1 }) {
   const rnd = mulberry32(seed);
   const g = [], lights = [], wreath = [];
+  // shadow casters are the body: plinth, walls, gable, roof slabs, ridge, chimney. Everything mounted on the walls or
+  // tucked under the roof overhang (trims, windows, door, wreaths, snow lips, drips) only shades itself: noCast.
+  const gc = { push: (...q) => g.push(...q.map(noCast)) };
   const rh = 0.56 * w;
   g.push(xf(box(w + 0.06, 0.12, d + 0.06, C.stone), [0, 0.06, 0]));
   g.push(xf(box(w, h, d, wall), [0, h / 2, 0]));
-  g.push(xf(box(w + 0.03, 0.05, d + 0.03, trim), [0, h * 0.5, 0]));
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.push(xf(box(0.06, h, 0.06, trim), [sx * (w / 2 - 0.01), h / 2, sz * (d / 2 - 0.01)]));
+  gc.push(xf(box(w + 0.03, 0.05, d + 0.03, trim), [0, h * 0.5, 0]));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) gc.push(xf(box(0.06, h, 0.06, trim), [sx * (w / 2 - 0.01), h / 2, sz * (d / 2 - 0.01)]));
   g.push(xf(extrude(poly([[-w / 2, 0], [w / 2, 0], [0, rh]]), d, wall), [0, h, -d / 2]));
   // knitted snow roof
   const ang = Math.atan2(rh, w / 2), L = Math.hypot(w / 2, rh) + 0.16;
@@ -29,12 +32,12 @@ export function townhouse({ w = 1.5, d = 1.3, h = 2.4, wall = C.red, trim = C.cr
     const ux = s * Math.cos(ang), uy = -Math.sin(ang), nx = s * Math.sin(ang), ny = Math.cos(ang);
     g.push(xf(rbox(L, 0.13, d + 0.24, 0.05, C.snow, KNIT, 1), [mx + ux * 0.08 + nx * 0.065, my + uy * 0.08 + ny * 0.065, 0], [0, 0, -s * ang]));
     // fascia trims on both gables
-    for (const sz of [-1, 1]) g.push(xf(box(L - 0.1, 0.06, 0.04, trim), [mx + ux * 0.04 - nx * 0.01, my + uy * 0.04 - ny * 0.01, sz * (d / 2 + 0.03)], [0, 0, -s * ang]));
+    for (const sz of [-1, 1]) gc.push(xf(box(L - 0.1, 0.06, 0.04, trim), [mx + ux * 0.04 - nx * 0.01, my + uy * 0.04 - ny * 0.01, sz * (d / 2 + 0.03)], [0, 0, -s * ang]));
     // fluffy cotton lip along the front gable edge of the knitted roof
-    for (let k = 0; k < 6; k++) { const t = (k + 0.5) / 6; g.push(xf(bead(0.062, C.snow), [s * (w / 2 + 0.1) * (1 - t), h - 0.05 + (rh + 0.15) * t, d / 2 + 0.11], [0, 0, -s * ang], [1.5, 0.9, 1])); }
+    for (let k = 0; k < 6; k++) { const t = (k + 0.5) / 6; gc.push(xf(bead(0.062, C.snow), [s * (w / 2 + 0.1) * (1 - t), h - 0.05 + (rh + 0.15) * t, d / 2 + 0.11], [0, 0, -s * ang], [1.5, 0.9, 1])); }
     // snow drips along the eaves
     const ex = s * (w / 2 + 0.13), ey = h - 0.1;
-    for (let k = 0; k < 3; k++) g.push(xf(bead(0.05, C.snow), [ex, ey + 0.02, -d / 2 + 0.2 + k * ((d - 0.4) / 2)], null, [0.8, 1.2, 1.6]));
+    for (let k = 0; k < 3; k++) gc.push(xf(bead(0.05, C.snow), [ex, ey + 0.02, -d / 2 + 0.2 + k * ((d - 0.4) / 2)], null, [0.8, 1.2, 1.6]));
     // roofline bulbs: under both gable edges + along the eave
     for (const sz of [-1, 1]) lights.push(...bulbLine([s * (w / 2 + 0.06), h - 0.03, sz * (d / 2 + 0.1)], [s * 0.06, h + rh - 0.06, sz * (d / 2 + 0.1)], 7, 0.03));
     lights.push(...bulbLine([ex - s * 0.02, ey - 0.06, -d / 2 + 0.05], [ex - s * 0.02, ey - 0.06, d / 2 - 0.05], 7, 0.028));
@@ -45,20 +48,20 @@ export function townhouse({ w = 1.5, d = 1.3, h = 2.4, wall = C.red, trim = C.cr
   const cy0 = h + rh * (1 - Math.abs(cx) / (w / 2));
   g.push(xf(box(0.22, 0.55, 0.22, C.brick), [cx, cy0 + 0.17, cz]));
   g.push(xf(box(0.27, 0.06, 0.27, C.stone), [cx, cy0 + 0.47, cz]));
-  g.push(xf(rbox(0.25, 0.08, 0.25, 0.035, C.snow, FELT, 1), [cx, cy0 + 0.53, cz]));
+  gc.push(xf(rbox(0.25, 0.08, 0.25, 0.035, C.snow, FELT, 1), [cx, cy0 + 0.53, cz]));
   // windows (front + back)
   const win = (x, y, ww, wh, sz, candle = false) => {
     const z = sz * (d / 2 + 0.012);
-    g.push(xf(box(ww, wh, 0.02, '#ffc070', GLOW), [x, y, z]));
-    g.push(xf(box(ww + 0.09, 0.05, 0.05, trim), [x, y + wh / 2 + 0.02, z]));
-    g.push(xf(box(ww + 0.12, 0.04, 0.08, trim), [x, y - wh / 2 - 0.02, z + sz * 0.015]));
-    g.push(xf(box(ww + 0.1, 0.035, 0.07, C.snow, FELT), [x, y - wh / 2 + 0.015, z + sz * 0.03]));
-    for (const sx of [-1, 1]) g.push(xf(box(0.045, wh + 0.06, 0.05, trim), [x + (sx * (ww + 0.045)) / 2, y, z]));
-    g.push(xf(box(0.025, wh, 0.03, trim), [x, y, z + sz * 0.005]));
-    g.push(xf(box(ww, 0.025, 0.03, trim), [x, y + wh * 0.12, z + sz * 0.005]));
+    gc.push(xf(box(ww, wh, 0.02, '#ffc070', GLOW), [x, y, z]));
+    gc.push(xf(box(ww + 0.09, 0.05, 0.05, trim), [x, y + wh / 2 + 0.02, z]));
+    gc.push(xf(box(ww + 0.12, 0.04, 0.08, trim), [x, y - wh / 2 - 0.02, z + sz * 0.015]));
+    gc.push(xf(box(ww + 0.1, 0.035, 0.07, C.snow, FELT), [x, y - wh / 2 + 0.015, z + sz * 0.03]));
+    for (const sx of [-1, 1]) gc.push(xf(box(0.045, wh + 0.06, 0.05, trim), [x + (sx * (ww + 0.045)) / 2, y, z]));
+    gc.push(xf(box(0.025, wh, 0.03, trim), [x, y, z + sz * 0.005]));
+    gc.push(xf(box(ww, 0.025, 0.03, trim), [x, y + wh * 0.12, z + sz * 0.005]));
     if (candle) {
-      g.push(xf(cyl(0.018, 0.018, 0.08, 6, C.cream, FELT), [x - ww * 0.25, y - wh / 2 + 0.07, z + sz * 0.04]));
-      g.push(xf(bead(0.018, '#ffe6a0', GLOW), [x - ww * 0.25, y - wh / 2 + 0.13, z + sz * 0.04], null, [1, 1.5, 1]));
+      gc.push(xf(cyl(0.018, 0.018, 0.08, 6, C.cream, FELT), [x - ww * 0.25, y - wh / 2 + 0.07, z + sz * 0.04]));
+      gc.push(xf(bead(0.018, '#ffe6a0', GLOW), [x - ww * 0.25, y - wh / 2 + 0.13, z + sz * 0.04], null, [1, 1.5, 1]));
     }
   };
   const upY = h * 0.5 + (h * 0.5) / 2 + 0.02;
@@ -66,7 +69,7 @@ export function townhouse({ w = 1.5, d = 1.3, h = 2.4, wall = C.red, trim = C.cr
   for (const sz of [1, -1]) {
     for (let k = 0; k < nUp; k++) win((k - 0.5) * 0.62, upY, 0.32, Math.min(0.5, h * 0.2), sz, sz > 0);
     // gable wreath
-    g.push(...wreathGeos(0.13).map((q) => xf(q, [0, h + rh * 0.36, sz * (d / 2 + 0.02)], [0, sz > 0 ? 0 : Math.PI, 0])));
+    gc.push(...wreathGeos(0.13).map((q) => xf(q, [0, h + rh * 0.36, sz * (d / 2 + 0.02)], [0, sz > 0 ? 0 : Math.PI, 0])));
   }
   // ground floor: front = window + door, back = two windows
   const doorX = 0.3;
@@ -75,18 +78,18 @@ export function townhouse({ w = 1.5, d = 1.3, h = 2.4, wall = C.red, trim = C.cr
   win(0.32, h * 0.25 + 0.06, 0.34, 0.42, -1);
   // door with arch, wreath, step, lantern
   const dz = d / 2 + 0.015;
-  g.push(xf(box(0.36, 0.56, 0.03, door), [doorX, 0.4, dz]));
-  g.push(xf(cyl(0.18, 0.18, 0.03, 10, door), [doorX, 0.68, dz], [Math.PI / 2, 0, 0]));
-  g.push(xf(box(0.44, 0.05, 0.05, trim), [doorX, 0.12 + 0.01, dz + 0.01]));
-  for (const sx of [-1, 1]) g.push(xf(box(0.045, 0.62, 0.05, trim), [doorX + sx * 0.2, 0.43, dz]));
-  g.push(xf(torus(0.2, 0.025, trim, KNIT, Math.PI, 10), [doorX, 0.68, dz]));
-  g.push(xf(bead(0.022, C.gold, GLOSS), [doorX + 0.11, 0.4, dz + 0.03]));
-  g.push(xf(box(0.5, 0.06, 0.2, C.stone), [doorX, 0.03, dz + 0.1]));
-  g.push(...wreathGeos(0.1).map((q) => xf(q, [doorX, 0.55, dz + 0.035])));
+  gc.push(xf(box(0.36, 0.56, 0.03, door), [doorX, 0.4, dz]));
+  gc.push(xf(cyl(0.18, 0.18, 0.03, 10, door), [doorX, 0.68, dz], [Math.PI / 2, 0, 0]));
+  gc.push(xf(box(0.44, 0.05, 0.05, trim), [doorX, 0.12 + 0.01, dz + 0.01]));
+  for (const sx of [-1, 1]) gc.push(xf(box(0.045, 0.62, 0.05, trim), [doorX + sx * 0.2, 0.43, dz]));
+  gc.push(xf(torus(0.2, 0.025, trim, KNIT, Math.PI, 10), [doorX, 0.68, dz]));
+  gc.push(xf(bead(0.022, C.gold, GLOSS), [doorX + 0.11, 0.4, dz + 0.03]));
+  gc.push(xf(box(0.5, 0.06, 0.2, C.stone), [doorX, 0.03, dz + 0.1]));
+  gc.push(...wreathGeos(0.1).map((q) => xf(q, [doorX, 0.55, dz + 0.035])));
   wreath.push(...wreathLights(0.1).map((q) => xf(q, [doorX, 0.55, dz + 0.035])));
   // window box with red berries
-  g.push(xf(box(0.44, 0.08, 0.1, C.wood), [-0.32, h * 0.25 - 0.2, d / 2 + 0.06]));
-  for (let k = 0; k < 5; k++) g.push(xf(bead(0.035, k % 2 ? C.pine : C.red), [-0.5 + k * 0.09, h * 0.25 - 0.14, d / 2 + 0.07]));
+  gc.push(xf(box(0.44, 0.08, 0.1, C.wood), [-0.32, h * 0.25 - 0.2, d / 2 + 0.06]));
+  for (let k = 0; k < 5; k++) gc.push(xf(bead(0.035, k % 2 ? C.pine : C.red), [-0.5 + k * 0.09, h * 0.25 - 0.14, d / 2 + 0.07]));
   // gifts stacked by the door
   g.push(...giftGeos(0.12, 0.1, C.red, C.gold).map((q) => xf(q, [doorX + 0.36, 0.0, d / 2 + 0.12], [0, 0.4, 0])));
   g.push(...giftGeos(0.09, 0.08, C.gold, C.red).map((q) => xf(q, [doorX + 0.38, 0.1, d / 2 + 0.12], [0, 1.1, 0])));

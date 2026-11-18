@@ -63,7 +63,7 @@ export function buildCableCar(K) {
   for (let i = 0; i < 2; i++) {
     const pts = [];
     for (let k = 0; k <= 60; k++) { at(i, k / 60, tmp); pts.push([tmp.x, tmp.y + 0.02, tmp.z]); }
-    K.prop('hill', [lineX[i], gb, bz], [tube(pts, 0.013, '#3b3633', GLOSS, 120, 4)], { delay: 0.9 });
+    K.prop('hill', [lineX[i], gb, bz], [tube(pts, 0.013, '#3b3633', GLOSS, 64, 4)], { delay: 0.9 });
   }
 
   // ---------------------------------------------------------------- cabins
