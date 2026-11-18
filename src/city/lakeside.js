@@ -6,6 +6,7 @@ import {
 } from './kit.js';
 import { pathGeos, forest } from './park.js';
 import { townhouse } from './residential.js';
+import { squashProps } from './reveal.js';
 
 const TAU = Math.PI * 2;
 
@@ -134,13 +135,15 @@ export function buildLakeside(K) {
   }
 
   // ---------------------------------------------------------------- Ferris wheel (cream cable-knit, pom-pom cabins)
-  buildFerris(K, 18.3, -3.7);
+  const ferris = buildFerris(K, 18.3, -3.7);
 
   // ---------------------------------------------------------------- cocoa hut
+  let hutProps = null;
   {
     const x = 12.8, z = -5.4;
     const th = townhouse({ w: 1.3, d: 1.05, h: 1.2, wall: C.wood, trim: C.cream, door: C.red, seed: 9 });
     const b = P(th.g.map((q) => xf(q, [x, 0.03, z])), [x, 0, z]);
+    hutProps = b.props;
     b.add(th.lights.map((q) => xf(q, [x, 0.03, z]))).add(th.wreath.map((q) => xf(q, [x, 0.03, z])));
     // striped awning over the front
     const aw = box(1.2, 0.03, 0.4, C.red);
@@ -148,6 +151,41 @@ export function buildLakeside(K) {
     b.add(xf(rbox(1.1, 0.05, 0.35, 0.02, C.snow, FELT, 1), [x, 0.99, z + 0.72], [0.35, 0, 0]));
     colliders.addRect(x - 0.7, z - 0.56, x + 0.7, z + 0.56, 'hut');
     K.keepCircle(x, z, 1.3);
+  }
+
+  // ---------------------------------------------------------------- cut-away: tall props fold down when the player is behind them
+  // The follow camera sits south-south-east (yaw 0.28, 36 deg down), so a prop hides whatever stands within about
+  // height / tan(36 deg) beyond it, along the view direction. Same idea as Holly Lane: while the player is in that
+  // shadow the prop squashes towards the ground (squashProps), eased in and out; eye view fades it out (stands tall).
+  {
+    const player = K.ctx.player, cam = K.ctx.cam;
+    const VX = -Math.sin(0.28), VZ = -Math.cos(0.28); // ground direction of the view, camera -> scene
+    const folds = [
+      // hut: 1.2 tall -> shadow ~1.65 beyond its front face; fold to 7 % (like Holly Lane's near houses: lower than the doll, so the folded roof can't hide it)
+      { props: hutProps, x: 12.8, z: -5.4, near: 0.1, far: 2.6, half: 0.95, min: 0.07 },
+      // ticket booth: 0.62 tall incl. roof
+      { props: ferris.booth, x: 19.55, z: -3.45, near: 0.0, far: 1.4, half: 0.55, min: 0.25 },
+    ].filter((f) => f.props?.length).map((f) => ({ ...f, s: 1, applied: 1 }));
+    K.updates.push((dt) => {
+      const shown = K.G.lakeside.group.state === 'shown';
+      if (!shown) { for (const f of folds) { f.s = 1; f.applied = -1; } return; }
+      const p = player?.pos, eye = cam?.eye || 0, kd = 1 - Math.exp(-dt * 6);
+      for (const f of folds) {
+        let cut = 0;
+        if (p) {
+          const dx = p.x - f.x, dz = p.z - f.z;
+          const along = dx * VX + dz * VZ, lat = Math.abs(dx * -VZ + dz * VX);
+          const a = Math.min(1, Math.max(0, (along + 0.35 - f.near) / 0.5)) * Math.min(1, Math.max(0, (f.far - along) / 0.7));
+          const l = Math.min(1, Math.max(0, (f.half + 0.35 - lat) / 0.5));
+          cut = a * l * (1 - eye);
+        }
+        const goal = 1 - cut * (1 - f.min);
+        f.s += (goal - f.s) * kd;
+        if (Math.abs(f.s - goal) < 0.003) f.s = goal;
+        const q = Math.round(f.s * 200) / 200;
+        if (q !== f.applied) { f.applied = q; squashProps(f.props, q); }
+      }
+    });
   }
 
   // ---------------------------------------------------------------- trees around
@@ -169,10 +207,12 @@ function buildFerris(K, x, z) {
   }
   stand.push(xf(cyl(0.05, 0.05, 0.4, 8, '#e9dcc3'), [0, HUB, 0], [Math.PI / 2, 0, 0]));
   // little ticket booth
-  stand.push(xf(box(0.36, 0.42, 0.3, C.red), [1.25, 0.21, 0.25]));
-  stand.push(xf(box(0.22, 0.14, 0.02, C.warm, GLOW), [1.25, 0.3, 0.405]));
-  stand.push(xf(cone(0.3, 0.2, 4, C.cream), [1.25, 0.52, 0.25], [0, Math.PI / 4, 0]));
+  const booth = [];
+  booth.push(xf(box(0.36, 0.42, 0.3, C.red), [1.25, 0.21, 0.25]));
+  booth.push(xf(box(0.22, 0.14, 0.02, C.warm, GLOW), [1.25, 0.3, 0.405]));
+  booth.push(xf(cone(0.3, 0.2, 4, C.cream), [1.25, 0.52, 0.25], [0, Math.PI / 4, 0]));
   K.prop('lakeside', [x, 0, z], stand.map((q) => xf(q, [x, 0.03, z])));
+  const boothRef = K.prop('lakeside', [x + 1.25, 0, z + 0.25], booth.map((q) => xf(q, [x, 0.03, z])));
   colliders.addRect(x - 1.05, z - 0.5, x + 1.45, z + 0.5, 'ferris');
   K.keepCircle(x, z, 1.9);
 
@@ -219,4 +259,5 @@ function buildFerris(K, x, z) {
     }
     cabs.instanceMatrix.needsUpdate = true;
   });
+  return { booth: boothRef.props };
 }
