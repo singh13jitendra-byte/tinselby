@@ -84,7 +84,7 @@ export function createHUD(ctx, root, data, ui) {
     if (!show) return;
     // interact button
     const cur = interact.current;
-    const can = cur && player.controllable && !cam.shotActive && cur.enabled();
+    const can = cur && player.controllable && (!cam.shotActive || cam.shotName === 'advent-frame') && cur.enabled();
     const label = can ? cur.label : null;
     if (label !== lastLabel || (can && cur.icon !== lastIcon)) {
       lastLabel = label;

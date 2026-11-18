@@ -116,3 +116,16 @@
   .cal-go { padding: 8px 14px; font-size: 15px; min-height: 48px; }
 }
 @media (max-height: 470px) and (max-width: 760px) { .cal-stats .cal-chip:nth-child(3) { display: none; } }
+
+/* very small landscape phones (667x375): the panel must fit the viewport */
+@media (max-height: 380px) and (max-width: 720px) {
+  .cal-wrap { padding: calc(6px + var(--safe-t)) calc(10px + var(--safe-r)) calc(6px + var(--safe-b)) calc(10px + var(--safe-l)); }
+  .cal-panel { gap: 5px; padding: 7px 10px; }
+  .cal-close { width: 40px; height: 40px; }
+  .cal-close svg { width: 20px; height: 20px; }
+  .cal-grid { gap: 5px; }
+  .cal-door { min-height: 38px; }
+  .cal-detail { min-height: 42px; padding: 4px 6px 4px 10px; font-size: 12.5px; }
+  .cal-dtitle { font-size: 13px; }
+  .cal-go { min-height: 40px; padding: 6px 12px; font-size: 14px; }
+}

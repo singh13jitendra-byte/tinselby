@@ -103,7 +103,7 @@ export function createOverlays(ctx, root) {
         let x = (v.x * 0.5 + 0.5) * W, y = (-v.y * 0.5 + 0.5) * H;
         const bw = b.el.offsetWidth || 220, bh = b.el.offsetHeight || 60;
         x = Math.max(bw / 2 + 10, Math.min(W - bw / 2 - 10, behind ? W / 2 : x));
-        y = Math.max(bh + 70, Math.min(H - 20, behind ? H * 0.4 : y));
+        y = Math.max(bh + (H <= 380 ? 112 : 70), Math.min(H - 20, behind ? H * 0.4 : y));
         b.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
       }
     }

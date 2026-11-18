@@ -92,8 +92,18 @@ export function createPanel(ctx, data, { onHint, rewardTint }) {
     showDetail(selected);
   }
 
+  let detailSig = null;
+  // Re-render only when the content changes: the board poll refreshes every ~1.5 s, and rebuilding the strip mid-tap lost the button press.
+  function setDetail(html, n) {
+    const sg = n + '|' + html;
+    if (sg === detailSig) return;
+    detailSig = sg;
+    detail.innerHTML = html;
+    detail.querySelector('.cal-go')?.addEventListener('click', (e) => { e.stopPropagation(); point(n); });
+  }
+
   function showDetail(n) {
-    if (!n) { detail.innerHTML = ''; return; }
+    if (!n) { setDetail('', 0); return; }
     const d = data.door(n) || {};
     const st = data.state(n);
     let line = '', btn = '';
@@ -106,8 +116,7 @@ export function createPanel(ctx, data, { onHint, rewardTint }) {
     } else if (st === 'locked') line = n === 24 ? 'Christmas Eve opens when doors 1–23 are done.' : `Opens after door ${n - 1}. ${esc(d.blurb || '')}`;
     else line = 'This door is stitched shut for now — new doors are coming soon!';
     const daily = data.dailyAvailable ? `<span class="cal-daily">${ICONS.gift} A daily gift is waiting by the board!</span>` : '';
-    detail.innerHTML = `<div class="cal-dtxt"><b class="cal-dtitle">Door ${n} · ${esc(d.title || '')}</b><span>${line}</span>${daily}</div>${btn}`;
-    detail.querySelector('.cal-go')?.addEventListener('click', (e) => { e.stopPropagation(); point(n); });
+    setDetail(`<div class="cal-dtxt"><b class="cal-dtitle">Door ${n} · ${esc(d.title || '')}</b><span>${line}</span>${daily}</div>${btn}`, n);
   }
 
   function point(n) {
@@ -163,7 +172,7 @@ export function createPanel(ctx, data, { onHint, rewardTint }) {
       if (!isOpen) return;
       isOpen = false;
       wrap.hidden = true;
-      if (restore && game.state.phase === 'play' && !ctx.cam.shotActive) {
+      if (restore && game.state.phase === 'play' && (!ctx.cam.shotActive || ctx.cam.shotName === 'advent-frame')) {
         ctx.player.controllable = true;
         ctx.input.enabled = restore.input !== false;
       }

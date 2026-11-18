@@ -50,6 +50,10 @@ export function createCameraDirector(engine, game) {
         game.emit('camera:shot', { name: spec.name || '', skippable: spec.skippable !== false });
       });
     },
+    /** Name of the running shot ('' if unnamed or none). */
+    get shotName() { return shot ? shot.name || '' : ''; },
+    /** Ends the running shot (optionally only if it has this name) with its normal blend-out, even if not skippable. */
+    release(name) { if (shot && (name == null || shot.name === name)) shot.duration = Math.min(shot.duration, shot.t + shot.blendOut); },
     skip() { if (shot && shot.skippable && !shot.skipping) { shot.skipping = true; shot.skipT = shot.t; } },
     update(dt) {
       const m = MODES[mode];
