@@ -66,3 +66,4 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - 23:30 IST: mobile audio fix (Opus) committed — needs a real-phone listen (?alat=interactive to A/B).
 - 23:40 IST: WAVE3.md draft committed (8 open decisions, defaults recommended). Holding wave-3 builders: the user asked to discuss the next direction first.
 - 23:10 IST: USER decisions: audience = friends, family and strangers; next = photo mode + postcards (first), play together with friends via invite links (second), wave 3 in parallel; chat = ready-made phrases only, no free typing, for everyone. WAVE3 defaults accepted.
+- 23:50 IST: own name tag (Sonnet) committed (cba05a3). Release check (full playthrough, clean worktree) running for: camera follow-ups + mobile audio + name tag.
