@@ -22,6 +22,7 @@ import { createRides } from './rides/index.js';
 import { createCalendar } from './calendar/index.js';
 import { createNet } from './net/index.js';
 import { createWorld } from './world/index.js';
+import { createPhoto } from './photo/index.js';
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
@@ -48,6 +49,7 @@ for (const def of MINIGAMES) ctx.minigames.register(def);
 ctx.house = createHouse(ctx); // wave 2: the player's own cottage (door 10)
 ctx.tasks = createTasks(ctx);
 ctx.ui = createUI(ctx);
+ctx.photo = createPhoto(ctx); // photo mode + shareable postcards (camera button / P key)
 ctx.calendar = createCalendar(ctx);
 ctx.net = createNet(ctx);
 ctx.finale = createFinale(ctx);

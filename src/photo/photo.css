@@ -1,0 +1,191 @@
+/* Photo mode + postcards (src/photo). Own file: ui.css / hud.js are untouched; the button is injected into .tb-tr. */
+
+/* ---- HUD button (inherits .tb-tr .knit-btn.round sizing) */
+.tb-photo-btn { background: #ffe6c2; }
+.tb-photo-btn.off { opacity: 0.45; }
+/* make room for the extra round button */
+@media (orientation: portrait) {
+  .tb-hud:has(.tb-photo-btn) .tb-chips { max-width: calc(100% - 5 * 46px - 4 * 6px - 8px); }
+}
+@media (orientation: landscape) and (max-height: 430px) {
+  .tb-hud:has(.tb-photo-btn) .tb-tc { max-width: 32vw; }
+}
+@media (max-height: 380px) and (max-width: 720px) {
+  .tb-hud:has(.tb-photo-btn) .tb-tc { max-width: 30vw; }
+  .tb-hud:has(.tb-photo-btn) .tb-tr .knit-btn.round { width: 42px; height: 42px; }
+}
+
+/* ---- photo mode hides the game UI (HUD, joystick, toasts, bubbles, cards) */
+body.tb-photo #ui > :not(.tb-ph-root) { visibility: hidden !important; }
+body.tb-photo canvas#c { cursor: grab; }
+.tb-ph-tint { position: fixed; inset: 0; pointer-events: none; }
+.tb-ph-tint[hidden] { display: none; }
+
+.tb-ph-root {
+  position: absolute; inset: 0; z-index: 30;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+.tb-ph-root[hidden] { display: none; }
+.tb-ph-drag { position: absolute; inset: 0; touch-action: none; cursor: grab; pointer-events: auto; }
+.tb-ph-drag:active { cursor: grabbing; }
+
+/* crop guide: everything outside the card photo is dimmed */
+.tb-ph-guide {
+  position: absolute; border-radius: 12px; pointer-events: none;
+  box-shadow: 0 0 0 200vmax rgba(18, 20, 42, 0.42);
+  outline: 2.5px dashed rgba(255, 244, 226, 0.85); outline-offset: 5px;
+}
+.tb-ph-c { position: absolute; width: 24px; height: 24px; border: 4px solid var(--gold); }
+.tb-ph-c.tl { top: -9px; left: -9px; border-right: 0; border-bottom: 0; border-radius: 10px 0 0 0; }
+.tb-ph-c.tr { top: -9px; right: -9px; border-left: 0; border-bottom: 0; border-radius: 0 10px 0 0; }
+.tb-ph-c.bl { bottom: -9px; left: -9px; border-right: 0; border-top: 0; border-radius: 0 0 0 10px; }
+.tb-ph-c.br { bottom: -9px; right: -9px; border-left: 0; border-top: 0; border-radius: 0 0 10px 0; }
+.tb-ph-showing .tb-ph-guide, .tb-ph-showing .tb-ph-tip { visibility: hidden; }
+
+.tb-ph-tip {
+  position: absolute; transform: translateX(-50%); white-space: nowrap; pointer-events: none;
+  font: 600 13px/1 var(--font); color: var(--cream); background: rgba(30, 34, 60, 0.7); padding: 8px 14px; border-radius: 999px;
+  transition: opacity .6s ease;
+}
+.tb-ph-tip.out { opacity: 0; }
+.tb-ph-flash { position: absolute; inset: 0; background: #fffaf0; opacity: 0; pointer-events: none; }
+.tb-ph-flash.go { animation: tbPhFlash .55s ease-out; }
+@keyframes tbPhFlash { 0% { opacity: .95; } 100% { opacity: 0; } }
+
+/* ---- control panel: bottom sheet (portrait) / side panel (landscape) */
+.tb-ph-panel {
+  position: absolute; pointer-events: auto; display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 14px; border-radius: 24px 24px 0 0; outline-offset: -8px;
+  left: 0; right: 0; bottom: 0;
+  padding-bottom: calc(12px + var(--safe-b)); padding-left: calc(14px + var(--safe-l)); padding-right: calc(14px + var(--safe-r));
+}
+.tb-ph-tabs { display: flex; gap: 6px; align-items: center; }
+.tb-ph-tab {
+  flex: 1 1 0; min-width: 0; min-height: 44px; border-radius: 14px; border: 3px solid #e8d3ae; background: #fffaf0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px; font: 700 14px/1 var(--font); color: var(--ink);
+  box-shadow: 0 3px 0 rgba(90, 60, 30, 0.18);
+}
+.tb-ph-tab svg { width: 20px; height: 20px; flex: none; }
+.tb-ph-tab.on { background: var(--red); color: #fff; border-color: var(--red-dark); outline: 2px dashed rgba(255, 255, 255, .55); outline-offset: -6px; }
+.tb-ph-x {
+  flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
+  background: var(--cream-2); color: var(--ink); box-shadow: 0 3px 0 #cdb38a;
+}
+.tb-ph-x svg { width: 20px; height: 20px; }
+.tb-ph-panes { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+@media (orientation: portrait) { .tb-ph-panes { min-height: 106px; } } /* tabs never change the sheet height (the crop guide stays put) */
+.tb-ph-pane { display: flex; flex-direction: column; gap: 8px; }
+.tb-ph-pane[hidden] { display: none; }
+.tb-ph-row {
+  display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain;
+  scrollbar-width: none; padding: 2px 2px 5px; margin: 0 -2px;
+}
+.tb-ph-row::-webkit-scrollbar { display: none; }
+.tb-ph-chip, .tb-ph-tog {
+  flex: none; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 3px solid #e8d3ae; background: #fffaf0; cursor: pointer;
+  font: 600 15px/1 var(--font); color: var(--ink); white-space: nowrap; display: inline-flex; align-items: center; gap: 7px;
+  box-shadow: 0 3px 0 rgba(90, 60, 30, 0.2);
+}
+.tb-ph-chip.on { background: var(--green); color: #fff; border-color: #2b4d30; outline: 2px dashed rgba(255, 255, 255, .6); outline-offset: -6px; }
+.tb-ph-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .3); flex: none; }
+.tb-ph-tog i { width: 32px; height: 19px; border-radius: 999px; background: #d9c6a4; position: relative; flex: none; transition: background .2s ease; }
+.tb-ph-tog i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .2s ease; }
+.tb-ph-tog[aria-pressed="true"] i { background: var(--green); }
+.tb-ph-tog[aria-pressed="true"] i::after { transform: translateX(13px); }
+.tb-ph-seg { display: inline-flex; gap: 4px; flex: none; }
+.tb-ph-shutter { min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 19px; flex: none; }
+.tb-ph-shutter svg { width: 26px; height: 26px; }
+.tb-ph-shutter.busy { opacity: .7; pointer-events: none; }
+
+/* ---- postcard result */
+.tb-ph-result {
+  position: absolute; inset: 0; display: flex; flex-direction: column; pointer-events: auto; background: rgba(22, 24, 46, 0.8);
+  animation: fadeIn .3s ease both;
+}
+.tb-ph-result[hidden] { display: none; }
+.tb-ph-cardwrap {
+  flex: 1 1 auto; min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center;
+  padding: calc(14px + var(--safe-t)) calc(14px + var(--safe-r)) 12px calc(14px + var(--safe-l));
+}
+.tb-ph-card { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; border-radius: 8px; box-shadow: 0 16px 40px rgba(0, 0, 0, .5); animation: tbPhCard .45s cubic-bezier(.3, 1.4, .5, 1) both; }
+@keyframes tbPhCard { from { transform: scale(.9) rotate(-2deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.tb-ph-rpanel {
+  flex: none; display: flex; flex-direction: column; gap: 8px; border-radius: 24px 24px 0 0; outline-offset: -8px;
+  padding: 14px calc(14px + var(--safe-r)) calc(10px + var(--safe-b)) calc(14px + var(--safe-l));
+}
+.tb-ph-rlab { font: 700 11px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--red); padding-left: 2px; }
+.tb-ph-sw { flex: none; display: flex; flex-direction: column; align-items: center; gap: 5px; background: none; border: 0; cursor: pointer; font: 600 12px/1.1 var(--font); color: var(--ink); min-width: 70px; padding: 2px; }
+.tb-ph-sw i { width: 46px; height: 46px; border-radius: 13px; border: 3px solid #fffaf0; box-shadow: 0 3px 0 rgba(90, 60, 30, 0.25); }
+.tb-ph-sw.on i { border-color: var(--gold); box-shadow: 0 0 0 3px var(--ink), 0 3px 0 rgba(90, 60, 30, 0.25); }
+.tb-ph-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tb-ph-actions .knit-btn { min-height: 50px; padding: 0 12px; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
+.tb-ph-actions .knit-btn svg { width: 20px; height: 20px; flex: none; }
+.tb-ph-actions .tb-ph-share { grid-column: 1 / -1; }
+.tb-ph-actions .tb-ph-share[hidden] { display: none; }
+.tb-ph-actions .tb-ph-share[hidden] + .tb-ph-save { grid-column: 1 / -1; }
+.tb-ph-share.wait { opacity: .6; }
+.tb-ph-actions2 { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.tb-ph-actions2 .tb-ph-chip { min-height: 40px; padding: 0 14px; font-size: 14px; }
+.tb-ph-link { background: none; border: 0; min-height: 44px; padding: 0 6px; cursor: pointer; font: 700 15px/1 var(--font); color: var(--red); display: inline-flex; gap: 4px; align-items: center; }
+.tb-ph-link svg { width: 18px; height: 18px; }
+
+.tb-ph-toast {
+  position: absolute; top: calc(16px + var(--safe-t)); left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: none;
+  font: 600 15px/1.25 var(--font); color: var(--ink); background: var(--cream); padding: 11px 20px; border-radius: 18px;
+  box-shadow: var(--shadow); outline: 2px dashed rgba(184, 48, 45, .5); outline-offset: -6px; max-width: 86vw; text-align: center;
+}
+.tb-ph-toast[hidden] { display: none; }
+.tb-ph-toast.show { animation: fadeIn .3s ease both; }
+
+/* ---- landscape (phones on their side, desktop): side panel on the right, card left of it */
+@media (orientation: landscape) {
+  .tb-ph-panel {
+    left: auto; top: 0; bottom: 0; right: 0; width: min(340px, 40vw); border-radius: 24px 0 0 24px; overflow-y: auto; overscroll-behavior: contain;
+    padding: calc(14px + var(--safe-t)) calc(14px + var(--safe-r)) calc(14px + var(--safe-b)) 14px;
+  }
+  .tb-ph-row { flex-wrap: wrap; overflow: visible; }
+  .tb-ph-shutter { margin-top: auto; }
+  .tb-ph-result { flex-direction: row; }
+  .tb-ph-cardwrap { padding: calc(14px + var(--safe-t)) 14px calc(14px + var(--safe-b)) calc(14px + var(--safe-l)); }
+  .tb-ph-rpanel {
+    width: min(340px, 40vw); border-radius: 24px 0 0 24px; overflow-y: auto; overscroll-behavior: contain;
+    padding: calc(14px + var(--safe-t)) calc(14px + var(--safe-r)) calc(12px + var(--safe-b)) 14px;
+  }
+  .tb-ph-rpanel .tb-ph-actions { order: -1; margin-bottom: 4px; }
+  .tb-ph-rpanel .tb-ph-actions2 { margin-top: auto; }
+}
+/* short landscape phones (844×390, 667×375): tighter controls, still ≥ 40 px targets */
+@media (orientation: landscape) and (max-height: 430px) {
+  .tb-ph-panel { gap: 8px; width: min(300px, 42vw); padding-top: calc(10px + var(--safe-t)); padding-bottom: calc(10px + var(--safe-b)); }
+  .tb-ph-tab { min-height: 40px; font-size: 13px; }
+  .tb-ph-tab svg { display: none; }
+  .tb-ph-x { width: 40px; height: 40px; }
+  .tb-ph-chip, .tb-ph-tog { min-height: 40px; padding: 0 12px; font-size: 14px; }
+  .tb-ph-row { gap: 6px; }
+  .tb-ph-shutter { min-height: 48px; font-size: 17px; }
+  .tb-ph-rpanel { width: min(300px, 42vw); gap: 6px; padding-top: calc(10px + var(--safe-t)); }
+  .tb-ph-sw { min-width: 60px; font-size: 11px; }
+  .tb-ph-sw i { width: 40px; height: 40px; }
+  .tb-ph-actions .knit-btn { min-height: 44px; font-size: 15px; }
+  .tb-ph-tip { display: none; }
+}
+
+/* ---- compact bits added after the first phone pass */
+.tb-ph-shape .tb-ph-chip { padding: 0 11px; }
+.tb-ph-shape .tb-ph-chip svg { width: 20px; height: 20px; }
+.tb-ph-showing .tb-ph-panel { visibility: hidden; } /* the postcard screen owns the view */
+@media (orientation: portrait) {
+  /* poses and looks wrap onto two rows instead of scrolling sideways (the pane is two rows tall anyway) */
+  .tb-ph-pane[data-pane="pose"] .tb-ph-row, .tb-ph-pane[data-pane="look"] .tb-ph-row { flex-wrap: wrap; overflow: visible; }
+}
+@media (orientation: portrait) and (max-width: 374px) {
+  .tb-ph-chip, .tb-ph-tog { padding: 0 11px; font-size: 14px; }
+  .tb-ph-row { gap: 6px; }
+}
+/* short landscape phones: the postcard panel fits without scrolling (rows scroll sideways, Save + Copy share a row) */
+@media (orientation: landscape) and (max-height: 430px) {
+  .tb-ph-rpanel .tb-ph-row { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
+  .tb-ph-rpanel .tb-ph-actions .tb-ph-share[hidden] + .tb-ph-save { grid-column: auto; }
+  .tb-ph-rpanel .tb-ph-actions .knit-btn { padding: 0 8px; font-size: 14.5px; gap: 6px; }
+  .tb-ph-rpanel .tb-ph-actions2 .tb-ph-chip { min-height: 40px; }
+}
