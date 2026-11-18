@@ -124,7 +124,7 @@ export function createTraffic(W) {
     people.push({ x: pl.x, z: pl.z, player: true });
     for (const d of roadPeople) if (d.vis) people.push({ x: d.x, z: d.z });
     for (const v of vehicles) {
-      const show = W.isRevealed(v.district);
+      const show = W.isRevealed(v.district) && !v.held;
       if (show && !v.shown) { v.shown = true; v.pop = 0; v.mesh.visible = true; }
       if (!show && v.shown) { v.shown = false; v.mesh.visible = false; }
       for (const ci of v.circles) ci.c.enabled = v.shown;
@@ -173,5 +173,13 @@ export function createTraffic(W) {
     return false;
   }
 
-  return { vehicles, tram, carriage, update, vehicleNear };
+  /** wave 2: hide one ambient vehicle by kind (e.g. the tram during Tram Conductor) → release() */
+  function hold(kind) {
+    const v = vehicles.find((x) => x.kind === kind);
+    if (!v) return () => {};
+    v.held = (v.held || 0) + 1;
+    let done = false;
+    return () => { if (done) return; done = true; v.held = Math.max(0, v.held - 1); };
+  }
+  return { vehicles, tram, carriage, update, vehicleNear, hold };
 }

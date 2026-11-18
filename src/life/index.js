@@ -197,5 +197,5 @@ export function buildLife(ctx) {
     perf.ms = perf.ms * 0.95 + (performance.now() - t0) * 0.05;
   }, 5);
 
-  return { gatherAt, release, cheer, setFestive, hideDistrict, perf, _debug: { pool, traffic, revealT, W } };
+  return { gatherAt, release, cheer, setFestive, hideDistrict, holdVehicle: (kind) => traffic.hold(kind), perf, _debug: { pool, traffic, revealT, W } };
 }
