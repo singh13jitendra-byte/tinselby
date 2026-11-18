@@ -152,7 +152,9 @@ export function createData(ctx) {
     // ---- net
     townSpirit() {
       const t = safe(() => ctx.net?.townSpirit, null) || {};
-      return { doors: num(t.doors), helpers: num(t.helpers) };
+      // the town total always includes your own doors (offline, or before the first server count arrives)
+      const mine = data.doneCount();
+      return { doors: Math.max(num(t.doors), mine), helpers: Math.max(num(t.helpers), mine ? 1 : 0) };
     },
     get online() { return !!safe(() => ctx.net?.online, false); },
     /** Players in your town including you. */

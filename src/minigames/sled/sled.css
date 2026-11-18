@@ -1,0 +1,28 @@
+/* Sledge Hill Race overlays (scoped .sled-*). */
+.sled-ui { position: absolute; inset: 0; pointer-events: none; }
+.sled-pad {
+  position: absolute; bottom: calc(18px + var(--safe-b)); width: 92px; height: 92px; border-radius: 50%;
+  display: grid; place-items: center; font: 700 38px/1 var(--font); color: var(--red);
+  background: rgba(255, 244, 226, 0.78); box-shadow: 0 5px 0 rgba(139, 37, 35, 0.45), 0 10px 22px rgba(0, 0, 0, 0.25);
+  outline: 2px dashed rgba(184, 48, 45, 0.55); outline-offset: -8px; touch-action: none; cursor: pointer;
+  -webkit-user-select: none; user-select: none; transition: transform .08s ease, background .08s ease;
+}
+.sled-pad.l { left: calc(18px + var(--safe-l)); }
+.sled-pad.r { right: calc(18px + var(--safe-r)); }
+.sled-pad:active { transform: translateY(3px) scale(0.95); background: rgba(236, 176, 60, 0.9); }
+@media (hover: hover) and (pointer: fine) { .sled-pad { width: 62px; height: 62px; font-size: 26px; opacity: 0.75; } }
+.sled-fade { position: absolute; inset: 0; background: #fff6ea; opacity: 0; pointer-events: none; }
+.sled-banner { position: absolute; left: 50%; top: 34%; transform: translate(-50%, -50%); text-align: center; opacity: 0; pointer-events: none; white-space: nowrap; }
+.sled-banner .knit-title { font-size: clamp(28px, 5vw, 52px); }
+.sled-banner .knit-sub { margin-top: 8px; }
+.sled-banner.show { animation: sledBanner 1.6s ease both; }
+@keyframes sledBanner { 0% { opacity: 0; transform: translate(-50%, -40%) scale(.8); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); } 20% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+.sled-pop {
+  position: absolute; left: 50%; top: 27%; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
+  font: 700 26px/1 var(--font); color: var(--cream); text-shadow: 0 3px 0 var(--red-dark), 0 8px 20px rgba(0, 0, 0, .4);
+  animation: sledPop .95s ease both;
+}
+.sled-pop.gold { color: var(--gold); text-shadow: 0 3px 0 #8a5a12, 0 8px 20px rgba(0, 0, 0, .4); }
+.sled-pop.miss { color: #eef2f6; font-size: 22px; }
+@keyframes sledPop { 0% { opacity: 0; transform: translate(-50%, -20%) scale(.7); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); } 100% { opacity: 0; transform: translate(-50%, -110%) scale(1); } }
+.sled-pad.off { opacity: 0; pointer-events: none; transition: opacity .3s ease; }
