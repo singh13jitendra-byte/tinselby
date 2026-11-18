@@ -1,0 +1,111 @@
+/* Snowman Contest overlays (owned by the snowman mini-game). Uses theme.css tokens + safe-area vars.
+   Bottom-left stays free for the town joystick; the gauge / Drop button sit bottom-right under the thumb. */
+.sm-ui { position: absolute; inset: 0; pointer-events: none; overflow: hidden; font-family: var(--font); }
+
+/* ring gauge: current ball (white) against its size band (green ring) */
+.sm-gauge {
+  position: absolute; right: calc(16px + var(--safe-r)); bottom: calc(16px + var(--safe-b));
+  width: 118px; padding: 8px 8px 6px !important; border-radius: 20px !important; outline-offset: -5px !important;
+  text-align: center; transition: box-shadow .25s ease;
+}
+.sm-gauge svg { display: block; width: 86px; height: 86px; margin: 0 auto; }
+.sm-g-bg { fill: #dfe7ee; }
+.sm-g-band { fill: none; stroke: rgba(63, 110, 69, .35); }
+.sm-g-min, .sm-g-max { fill: none; stroke: #3f6e45; stroke-width: 1.6; stroke-dasharray: 4 3; }
+.sm-g-ball { fill: #fbf9f4; stroke: #b9b3aa; stroke-width: 1.5; transition: r .12s linear; }
+.sm-gauge.ok .sm-g-ball { fill: #f3fff0; stroke: #3f6e45; stroke-width: 2.5; }
+.sm-gauge.ok { box-shadow: 0 0 0 3px rgba(118, 186, 108, .75), var(--shadow); }
+.sm-gauge.big .sm-g-ball { stroke: var(--red); stroke-width: 2.5; }
+.sm-g-label { font: 700 12px/1.15 var(--font); color: var(--ink); margin-top: 3px; white-space: nowrap; }
+.sm-gauge.ok .sm-g-label { color: var(--green); }
+.sm-gauge.big .sm-g-label { color: var(--red); }
+
+/* stack: big Drop button under the right thumb (tapping the screen works too) */
+#ui .sm-drop {
+  position: absolute; right: calc(18px + var(--safe-r)); bottom: calc(18px + var(--safe-b));
+  width: 104px; height: 104px; padding: 0; border-radius: 50%; font-size: 24px; pointer-events: auto; touch-action: none;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+
+/* dress: one row of three big chips at a time */
+.sm-deck {
+  position: absolute; left: 50%; bottom: calc(14px + var(--safe-b)); transform: translateX(-50%);
+  width: min(600px, calc(100vw - 28px - var(--safe-l) - var(--safe-r))); display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.sm-deck-title { padding: 6px 16px !important; border-radius: 14px !important; outline-offset: -5px !important; font: 600 16px/1.2 var(--font); }
+.sm-deck-title span { opacity: .6; font-size: 13px; margin-left: 6px; }
+.sm-chips { display: flex; gap: 10px; width: 100%; }
+#ui .sm-chip {
+  flex: 1 1 0; min-width: 0; min-height: 92px; padding: 8px 6px; border-radius: 22px; pointer-events: auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font: 700 15px/1.1 var(--font); white-space: nowrap;
+}
+#ui .sm-chip svg { width: 42px; height: 42px; flex: none; }
+#ui .sm-chip span { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+#ui .sm-chip.picked { background: #e7f3df; box-shadow: 0 0 0 3px #76ba6c, 0 5px 0 #cdb38a; transform: translateY(2px); }
+#ui .sm-chip:disabled { cursor: default; }
+
+.sm-hint {
+  position: absolute; left: 50%; bottom: calc(14px + var(--safe-b)); transform: translateX(-50%);
+  padding: 8px 16px !important; border-radius: 14px !important; outline-offset: -5px !important;
+  font: 600 13px/1.2 var(--font); white-space: nowrap; transition: opacity .8s ease;
+}
+.sm-hint kbd { display: inline-block; min-width: 18px; padding: 2px 5px; margin: 0 1px; border-radius: 6px; background: var(--cream-2); font: 700 12px/1.2 var(--font); text-align: center; box-shadow: 0 2px 0 #cdb38a; }
+.sm-hint.off { opacity: 0; }
+
+.sm-pop {
+  position: absolute; transform: translate(-50%, -50%); white-space: nowrap; pointer-events: none;
+  font: 700 24px/1 var(--font); color: var(--gold); text-shadow: 0 2px 0 #8a5a14, 0 0 12px rgba(255, 210, 120, .55);
+  animation: smRise 1.05s ease-out forwards;
+}
+.sm-pop.small { font-size: 17px; color: var(--cream); text-shadow: 0 2px 0 var(--red-dark), 0 0 10px rgba(0,0,0,.25); }
+.sm-pop.good { color: #e6ffd9; text-shadow: 0 2px 0 #2b4d30, 0 0 12px rgba(120, 220, 120, .45); }
+.sm-pop.big { font-size: 42px; color: var(--cream); text-shadow: 0 4px 0 var(--red-dark), 0 10px 30px rgba(0,0,0,.4); animation: smBig 1.6s ease-out forwards; }
+@keyframes smRise {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); }
+  14% { opacity: 1; transform: translate(-50%, -62%) scale(1.15); }
+  28% { transform: translate(-50%, -72%) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -170%) scale(1); }
+}
+@keyframes smBig {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
+}
+.sm-bubble {
+  position: absolute; transform: translate(-50%, -100%); white-space: nowrap; pointer-events: none;
+  background: var(--cream); color: var(--ink); font: 700 15px/1.15 var(--font); padding: 8px 12px; border-radius: 14px;
+  box-shadow: 0 3px 0 rgba(60, 30, 20, .25), 0 8px 18px rgba(20, 15, 40, .25);
+  outline: 2px dashed rgba(184, 48, 45, .5); outline-offset: -5px; animation: smBubble .25s ease-out both;
+}
+.sm-bubble::after { content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-top-color: var(--cream); border-bottom: 0; }
+.sm-bubble.old { opacity: .75; transform: translate(-50%, -100%) scale(.9); }
+.sm-bubble.wide { white-space: normal; max-width: min(86vw, 340px); text-align: center; font-size: 16px; }
+.sm-bubble.wide::after { display: none; }
+@keyframes smBubble { from { opacity: 0; transform: translate(-50%, -80%) scale(.6); } to { opacity: 1; transform: translate(-50%, -100%) scale(1); } }
+
+/* portrait phones: compact gauge, chips stretch full width, title above */
+@media (orientation: portrait) {
+  .sm-gauge { width: 104px; right: calc(12px + var(--safe-r)); bottom: calc(20px + var(--safe-b)); }
+  .sm-gauge svg { width: 76px; height: 76px; }
+  .sm-g-label { font-size: 11px; white-space: normal; }
+  #ui .sm-drop { width: 112px; height: 112px; right: 50%; transform: translateX(50%); bottom: calc(24px + var(--safe-b)); }
+  #ui .sm-drop:active { transform: translateX(50%) translateY(4px); }
+  .sm-deck { bottom: calc(18px + var(--safe-b)); width: calc(100vw - 20px - var(--safe-l) - var(--safe-r)); }
+  .sm-chips { gap: 8px; }
+  #ui .sm-chip { min-height: 104px; font-size: 14px; border-radius: 20px; }
+  .sm-pop.big { font-size: 34px; }
+  .sm-hint { white-space: normal; text-align: center; width: max-content; max-width: 80vw; }
+}
+/* short landscape phones (≤ 420 px tall): slimmer chips so the snowman keeps the middle of the screen */
+@media (orientation: landscape) and (max-height: 420px) {
+  #ui .sm-chip { min-height: 74px; flex-direction: row; gap: 8px; font-size: 15px; }
+  #ui .sm-chip svg { width: 36px; height: 36px; }
+  .sm-deck { gap: 6px; }
+  .sm-deck-title { font-size: 14px; padding: 4px 12px !important; }
+  .sm-gauge { width: 104px; }
+  .sm-gauge svg { width: 70px; height: 70px; }
+  #ui .sm-drop { width: 92px; height: 92px; font-size: 21px; }
+}

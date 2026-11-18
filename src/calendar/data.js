@@ -1,30 +1,12 @@
-// Read-only adapters over ctx.progress / ctx.net for the calendar + UI. Both may still be stubs (or missing)
-// while other modules are built, so every call is guarded and falls back to the wave-1 door list below.
+// Read-only adapters over ctx.progress / ctx.net for the calendar + UI. Door data (titles, givers, districts, kinds,
+// rewards, availability) is read from ctx.progress, whose doors come from src/progress/doors.js (the single source of
+// truth). Both may be missing or stubs while other modules are built, so every call is guarded; with no progress the
+// adapters fall back to the static DOORS export (pure data, no side effects).
 import { DISTRICTS, DOOR_SPOTS } from '../core/layout.js';
 import { STYLE_OPTIONS } from '../core/player.js';
+import { DOORS, DEFAULT_UNLOCKED, GATED_SLOTS } from '../progress/doors.js';
 
-const SOON_TITLES = ['Figure Skating', 'Your Own House', 'Tram Conductor', 'Gift Wrapping', 'Snowman Contest', 'Ferris Wheel Gnomes',
-  'The Lost Reindeer', 'Sledge Hill Race II', 'Carol Singing', 'Postcard Day', 'Hot Cocoa Delivery', 'Snowball Fight II',
-  'Light-up Puzzle', 'Skating Show', 'Letters to Santa'];
-
-/** Wave-1 doors (WAVE1.md) — used only when ctx.progress.doors is empty. */
-export const FALLBACK_DOORS = [
-  { n: 1, title: 'Lights for Holly Lane', giver: 'Mrs Holly', district: 'residential', kind: 'task', task: 'lights', reward: { slot: 'scarf', key: 'candycane', label: 'Candy-cane scarf' }, available: true, blurb: 'Help Mrs Holly switch on the wreath lights.' },
-  { n: 2, title: 'The Lost Bauble', giver: 'Pip', district: 'park', kind: 'task', task: 'bauble', reward: { slot: 'hat', key: 'santa', label: 'Santa hat' }, available: true, blurb: 'Pip lost a bauble somewhere in the park.' },
-  { n: 3, title: "Ilse's Scarf", giver: 'Ilse', district: 'lakeside', kind: 'task', task: 'scarf', reward: { slot: 'coat', key: 'plum', label: 'Plum coat' }, available: true, blurb: 'Ilse dropped her scarf out on the frozen lake.' },
-  { n: 4, title: 'Star of Sledge Hill', giver: 'Bram', district: 'hill', kind: 'task', task: 'star', reward: { slot: 'hat', key: 'reindeer', label: 'Reindeer hat' }, available: true, blurb: 'Fetch the tree star from the top of Sledge Hill.' },
-  { n: 5, title: 'Snowball Fight!', giver: 'Tilly', district: 'park', kind: 'minigame', game: 'snowball', reward: { slot: 'scarf', key: 'gold', label: 'Gold scarf' }, available: true, blurb: 'A friendly snowball fight in Pinecone Park.' },
-  { n: 6, title: 'Ornament Hunt', giver: 'Mr Pine', district: 'market', kind: 'minigame', game: 'ornaments', reward: { slot: 'coat', key: 'navy', label: 'Navy coat' }, available: true, blurb: 'Find the hidden ornaments around the market.' },
-  { n: 7, title: 'Sledge Hill Race', giver: 'Coach Sasha', district: 'hill', kind: 'minigame', game: 'sled', reward: { slot: 'hat', key: 'elf', label: 'Elf hat' }, available: true, blurb: 'Race your sled down Sledge Hill.' },
-  { n: 8, title: 'Cookie Bakery', giver: 'Baker Bea', district: 'market', kind: 'minigame', game: 'cookies', reward: { slot: 'coat', key: 'gingerbread', label: 'Gingerbread coat' }, available: true, blurb: 'Cut, bake and decorate cookies with Baker Bea.' },
-  ...SOON_TITLES.map((title, i) => ({ n: 9 + i, title, giver: '', district: '', kind: 'task', available: false, blurb: 'Coming soon.' })),
-  { n: 24, title: 'Christmas Eve', giver: 'Mayor Tinsel', district: 'market', kind: 'finale', available: false, blurb: 'Place the star on the big tree.' },
-];
-
-/** Style keys every player starts with (only used while progress.wardrobe is a stub). */
-const BASE_KEYS = { coat: ['red', 'teal', 'cream', 'mustard', 'green'], hat: ['bobble', 'earflap', 'earmuffs', 'none'], scarf: ['green', 'red', 'white', 'striped'] };
-/** Slots that progress gates (everything else in STYLE_OPTIONS — hair, skin, outfit … — is always unlocked). */
-export const GATED_SLOTS = ['coat', 'hat', 'scarf'];
+export { GATED_SLOTS };
 
 const PREP = { residential: 'on', lakeside: 'by', hill: 'on', park: 'in', market: 'in' };
 const safe = (fn, fb) => { try { const v = fn(); return v === undefined ? fb : v; } catch (e) { return fb; } };
@@ -36,8 +18,8 @@ export function createData(ctx) {
 
   const data = {
     /** All 24 door metadata objects. */
-    doors() { return real() ? pr().doors : FALLBACK_DOORS; },
-    door(n) { return data.doors().find((d) => d && d.n === n) || FALLBACK_DOORS[n - 1] || null; },
+    doors() { return real() ? pr().doors : DOORS; },
+    door(n) { return data.doors().find((d) => d && d.n === n) || DOORS[n - 1] || null; },
     /** Lowest open-not-done door number, or null. */
     current() {
       const c = safe(() => pr().current?.(), undefined);
@@ -65,8 +47,14 @@ export function createData(ctx) {
       for (let n = 1; n <= 24; n++) if (data.state(n) === 'done') c++;
       return c;
     },
-    /** Highest door number available in this wave. */
-    lastAvailable() { let m = 0; for (const d of data.doors()) if (d && d.available && d.n > m) m = d.n; return m || 8; },
+    /** Highest door number available in this wave (progress knows the wave; the door list is the fallback). */
+    lastAvailable() {
+      const v = safe(() => pr().lastAvailable?.(), undefined);
+      if (Number.isFinite(v) && v > 0) return v;
+      let m = 0;
+      for (const d of data.doors()) if (d && d.available && d.n > m) m = d.n;
+      return m || 8;
+    },
     /** True when every available door is done (wave end). */
     waveDone() {
       const last = data.lastAvailable();
@@ -94,6 +82,7 @@ export function createData(ctx) {
       const s = DOOR_SPOTS[n];
       return s ? { x: s.x, z: s.z, district: s.district } : null;
     },
+    /** Friendly place names come from layout.DISTRICTS (Pinecone Park, Frostmere Lake, Market Square, Holly Lane, Sledge Hill). */
     districtName(id) { return DISTRICTS.find((d) => d.id === id)?.name || (id ? 'Tinselby' : ''); },
     /** "Tilly in Pinecone Park", "Ilse by Frostmere Lake" (the game's own phrasing when it has one) */
     whereText(n) {
@@ -126,8 +115,8 @@ export function createData(ctx) {
       if (!GATED_SLOTS.includes(slot)) return all;
       const v = safe(() => pr().wardrobe?.unlocked?.(slot), null);
       if (Array.isArray(v) && v.length) return v.filter((k) => all.includes(k));
-      // stub: base keys + rewards of done doors
-      const out = new Set(BASE_KEYS[slot].filter((k) => all.includes(k)));
+      // stub: default keys + rewards of done doors
+      const out = new Set((DEFAULT_UNLOCKED[slot] || []).filter((k) => all.includes(k)));
       for (const d of data.doors()) if (d?.reward?.slot === slot && data.state(d.n) === 'done') out.add(d.reward.key);
       return all.filter((k) => out.has(k));
     },
