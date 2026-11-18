@@ -48,3 +48,4 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - 16:20 IST: Tram (Opus) committed. holdVehicle actually parks the held tram (no queue issue). Polish TODOs: portrait tram chase camera gets blocked by the market tree (Fable); .mg-goal nowrap/max-content in portrait (framework css).
 - 16:45 IST: Portrait core (Opus) committed (74850bf); README/CONTRACTS updated. Running the full playthrough on a clean HEAD worktree (/tmp/ship) before pushing the portrait release. Spawned wave-2 UI (Sonnet) and Calendar data (Haiku).
 - 17:05 IST: Snowman (Opus) and calendar data (Haiku) committed. All 8 wave-2 doors built except Sled II (in progress). Wave-2 UI running.
+- 17:35 IST: Portrait release: full playthrough on clean 74850bf green (0 fails, 0 console errors, portrait checks + rotate back). Pushed 74850bf to main (later local commits — snowman, calendar data — not pushed yet). Wave-2 doors stay hidden without ?w2.
