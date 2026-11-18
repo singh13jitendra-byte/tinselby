@@ -63,3 +63,4 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - 22:45 IST: USER (phone test): music/sfx chirp/crackle on mobile; own name not shown overhead. Spawned Opus audio fix (src/audio/**) and Sonnet own name tag (src/net/tags.js, selftag.js, net/index.js).
 - 23:10 IST: camera follow-ups (Sonnet) committed; push held for audio + name tag.
 - 23:15 IST: USER: free-play 'hang out' rides (tram window view, giant wheel, ice skating, sledging, carousel horses, etc). Scaffolded src/rides (registry + contract + stubs, wired in main.js). Spawned Opus tram+carriage rides (rides/tram,carriage + life/*), Opus Ferris wheel+carousel rides (rides/ferris,carousel + lakeside/market seats), Sonnet free skating+sledging (rides/skate,sled + additive exports in minigame sims).
+- 23:30 IST: mobile audio fix (Opus) committed — needs a real-phone listen (?alat=interactive to A/B).
