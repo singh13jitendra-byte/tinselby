@@ -5,8 +5,8 @@
 
 const reward = (slot, key, label) => ({ id: `${slot}:${key}`, slot, key, label });
 
-// Wave 2 doors (9–16) are built behind ?w2 until release; flip W2 to true when they ship (WAVE2.md §Release).
-const W2 = typeof location !== 'undefined' && /[?&]w2(&|=|$)/.test(location.search || '');
+// Wave 2 doors (9–16) are live (released 18 Nov). `?w1` previews the wave-1-only calendar for testing.
+const W2 = !(typeof location !== 'undefined' && /[?&]w1(&|=|$)/.test(location.search || ''));
 
 const SOON = ['Carol Singing', 'Postcard Day', 'Hot Cocoa Delivery', 'Snowball Fight II',
   'Light-up Puzzle', 'Skating Show', 'Letters to Santa'];
