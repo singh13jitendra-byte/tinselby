@@ -20,7 +20,7 @@
 @keyframes mgPop { from { transform: translate(-50%, -50%) scale(1.6); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
 .mg-hud { position: absolute; inset: 0; }
 .mg-hud .knit-card { padding: 8px 16px; border-radius: 16px; outline-offset: -6px; }
-.mg-goal { position: absolute; left: 50%; top: calc(14px + var(--safe-t)); transform: translateX(-50%); font: 600 15px/1.2 var(--font); max-width: 60vw; text-align: center; }
+.mg-goal { position: absolute; left: 50%; top: calc(14px + var(--safe-t)); transform: translateX(-50%); font: 600 15px/1.2 var(--font); max-width: 60vw; text-align: center; white-space: nowrap; width: max-content; overflow: hidden; text-overflow: ellipsis; }
 .mg-score, .mg-timer { position: absolute; top: calc(14px + var(--safe-t)); min-width: 86px; text-align: center; }
 .mg-score { left: calc(14px + var(--safe-l)); }
 .mg-timer { right: calc(80px + var(--safe-r)); }
@@ -35,7 +35,7 @@
   .mg-timer { right: calc(64px + var(--safe-r)); min-width: 72px; padding: 6px 12px !important; }
   .mg-score b, .mg-timer b { font-size: 21px; }
   .mg-quit { right: calc(10px + var(--safe-r)); }
-  .mg-goal { top: calc(72px + var(--safe-t)); max-width: 92vw; font-size: 14px; padding: 6px 12px !important; }
+  .mg-goal { top: calc(72px + var(--safe-t)); max-width: 92vw; white-space: nowrap; font-size: 14px; padding: 6px 12px !important; }
   .mg-intro h2, .mg-results h2 { font-size: 24px; }
   .mg-count { font-size: 96px; }
   .mg-stars { font-size: 36px; }

@@ -10,7 +10,9 @@ import { saveProfile, validStyle } from './profile.js';
 const CHARACTER = ['hair', 'hairColor', 'skin', 'outfit'];
 const WARDROBE = ['coat', 'hat', 'scarf'];
 const LABEL = { coat: 'Coat', hat: 'Hat', scarf: 'Scarf', hair: 'Hair', hairColor: 'Hair colour', skin: 'Skin', outfit: 'Outfit' };
-const SHORT = { bobble: 'Bobble', earflap: 'Ear-flap', earmuffs: 'Earmuffs', none: 'None', santa: 'Santa', reindeer: 'Reindeer', elf: 'Elf' };
+const SHORT = { bobble: 'Bobble', earflap: 'Ear-flap', earmuffs: 'Earmuffs', none: 'None', santa: 'Santa', reindeer: 'Reindeer', elf: 'Elf', conductor: 'Conductor', bow: 'Bow', gnome: 'Gnome' };
+// small marks so swatches with (nearly) the same colour read differently: jingle = red + gold bell, holly = green + berry, snowy = cream + coal
+const MARK = { jingle: 'gold', holly: 'berry', snowy: 'coal' };
 const SWATCH = { striped: 'repeating-linear-gradient(45deg,#b8302d 0 7px,#f5f1ea 7px 14px)', candycane: 'repeating-linear-gradient(135deg,#b5332e 0 6px,#f5f1ea 6px 12px)' };
 const PRESETS = [
   { id: 'boy', label: 'Boy', style: { hair: 'tousled', hairColor: 'brown', outfit: 'duffle', coat: 'mustard', hat: 'none' }, legacy: { coat: 'mustard', hat: 'earflap' } },
@@ -49,7 +51,7 @@ export function createStyleTray(ctx, data, opts = {}) {
       const v = opts2[k];
       if (swatchy) {
         const css = swatchCss(k, v) || '#ccc';
-        return `<button type="button" class="tb-swatch" data-k="${slot}" data-v="${k}" aria-label="${esc(label)}: ${esc(nice(k))}" style="--c:${esc(css)}"><span class="tb-lock" hidden></span></button>`;
+        return `<button type="button" class="tb-swatch" data-k="${slot}" data-v="${k}" aria-label="${esc(label)}: ${esc(nice(k))}" style="--c:${esc(css)}">${MARK[k] ? `<span class="tb-mark ${MARK[k]}"></span>` : ''}<span class="tb-lock" hidden></span></button>`;
       }
       return `<button type="button" class="tb-chipbtn" data-k="${slot}" data-v="${k}"><span class="tb-chiptxt">${esc(shortLabel(slot, k, v))}</span><span class="tb-lock" hidden></span></button>`;
     }).join('');

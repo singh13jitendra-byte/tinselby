@@ -239,6 +239,7 @@
   font: 500 14px/1 var(--font); color: var(--cream); background: rgba(30, 34, 60, 0.6); padding: 10px 16px; border-radius: 999px; transition: opacity .6s ease;
 }
 .tb-keys.out { opacity: 0; }
+@media (pointer: coarse), (hover: none), (max-width: 640px) { .tb-keys { display: none !important; } }
 .tb-keys b { background: var(--cream); color: var(--ink); border-radius: 5px; padding: 2px 6px; font-weight: 700; }
 
 /* ------------------------------------------------------------------ cards (reward, daily gift, wave end) + net toasts */
@@ -293,7 +294,7 @@
 @keyframes calIn { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
 
 /* ------------------------------------------------------------------ toasts, bubbles, banner, skip */
-.tb-toasts { position: absolute; top: calc(104px + var(--safe-t)); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; width: min(86vw, 480px); }
+.tb-toasts { position: absolute; top: calc(104px + var(--safe-t)); left: 50%; transform: translate(-50%, var(--push, 0px)); transition: transform .35s ease; display: flex; flex-direction: column; align-items: center; gap: 8px; width: min(86vw, 480px); }
 .tb-toast { padding: 11px 20px; font: 600 15px/1.3 var(--font); text-align: center; border-radius: 18px; outline-offset: -6px; animation: fadeIn .35s ease both; transition: opacity .4s ease, transform .4s ease; }
 .tb-toast.out { opacity: 0; transform: translateY(-8px); }
 .tb-toast.has-arrow { display: flex; align-items: center; gap: 10px; text-align: left; padding: 8px 18px 8px 8px; }
@@ -471,3 +472,36 @@
   .tb-act { max-width: calc(100vw - 172px - var(--safe-l) - var(--safe-r)); font-size: 15.5px; }
   .tb-rowlab { width: 52px; }
 }
+
+/* ------------------------------------------------------------------ wave 2: swatch marks, choose card, house decorating */
+.tb-mark { position: absolute; z-index: 1; border-radius: 50%; pointer-events: none; }
+.tb-mark.gold { right: 5px; bottom: 5px; width: 13px; height: 13px; background: radial-gradient(circle at 35% 30%, #fff1b8, #e3aa3a 60%, #b07b1c); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
+.tb-mark.berry { right: 5px; bottom: 5px; width: 12px; height: 12px; background: radial-gradient(circle at 35% 30%, #ff9a8f, #c4362f 65%, #8b2523); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
+.tb-mark.coal { inset: 12px; border: 3px solid #2a2623; background: transparent; }
+.tb-swatch:has(.tb-mark.coal)::after { display: none; }
+
+.tb-choose { position: absolute; inset: 0; display: grid; place-items: center; padding: calc(12px + var(--safe-t)) calc(14px + var(--safe-r)) calc(12px + var(--safe-b)) calc(14px + var(--safe-l)); background: rgba(24, 26, 48, 0.5); z-index: 30; opacity: 0; transition: opacity .25s ease; }
+.tb-choose.in { opacity: 1; }
+.tb-choose.out { opacity: 0; pointer-events: none; }
+.tb-choose-card { position: relative; width: min(400px, 100%); max-height: 100%; overflow: auto; padding: 22px 20px 18px; display: flex; flex-direction: column; gap: 12px; transform: translateY(14px) scale(.96); transition: transform .3s cubic-bezier(.3, 1.4, .5, 1); }
+.tb-choose.in .tb-choose-card { transform: none; }
+.tb-choose-x { position: absolute; right: -8px; top: -12px; width: 44px; height: 44px; }
+.tb-choose-x svg { width: 20px; height: 20px; }
+.tb-choose-title { font: 700 22px/1.15 var(--font); color: var(--red); text-align: center; padding: 0 22px; }
+.tb-choose-text { font: 500 14px/1.3 var(--font); text-align: center; opacity: .85; }
+.tb-choose-opts { display: flex; flex-direction: column; gap: 10px; }
+.tb-choose-opt { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 8px 20px 8px 10px; font-size: 17px; text-align: left; }
+.tb-choose-opt:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.tb-choose-ico { flex: none; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.95); color: var(--green); display: grid; place-items: center; }
+.tb-choose-ico svg { width: 24px; height: 24px; }
+.tb-choose-lab { flex: 1; min-width: 0; }
+@media (max-height: 420px) {
+  .tb-choose-card { padding: 14px 16px 12px; gap: 8px; width: min(520px, 100%); }
+  .tb-choose-title { font-size: 18px; }
+  .tb-choose-opts { flex-direction: row; flex-wrap: wrap; }
+  .tb-choose-opt { flex: 1 1 200px; min-height: 48px; font-size: 15px; }
+}
+
+/* the house decorate panel owns the screen: HUD, joystick, toasts, cards and bubbles step aside (like in mini-games) */
+#ui.tb-house-open .tb-hud, #ui.tb-house-open .tb-joylayer, #ui.tb-house-open .tb-toasts, #ui.tb-house-open .tb-cards,
+#ui.tb-house-open .tb-bubbles, #ui.tb-house-open .tb-banner, #ui.tb-house-open .tb-nettoasts, #ui.tb-house-open .tb-skip { display: none !important; }

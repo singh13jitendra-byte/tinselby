@@ -7,6 +7,7 @@ import { createOverlays } from './overlays.js';
 import { createWardrobe } from './wardrobe.js';
 import { createCards } from './cards.js';
 import { saveProfile } from './profile.js';
+import { createChoose } from './choose.js';
 import { createData } from '../calendar/data.js';
 import { rewardTint } from '../calendar/board.js';
 
@@ -14,8 +15,9 @@ export function createUI(ctx) {
   const { game, engine, uiRoot } = ctx;
   const data = createData(ctx);
   const overlays = createOverlays(ctx, uiRoot);
+  const chooser = createChoose(ctx, uiRoot);
   const ui = {
-    modalOpen: () => !!(ctx.calendar?.isOpen || ui.wardrobe?.isOpen),
+    modalOpen: () => !!(ctx.calendar?.isOpen || ui.wardrobe?.isOpen || ctx.house?.isOpen || uiRoot.classList.contains('tb-house-open') || chooser?.isOpen),
     screenAngle: overlays.screenAngle,
     wardrobe: null,
   };
@@ -28,7 +30,10 @@ export function createUI(ctx) {
     saveProfile({ style: { ...game.state.style } });
     try { ctx.net?.setStyle?.({ ...game.state.style }); } catch (e) { /* offline */ }
   }
-  const cards = createCards(ctx, data, { wear, tint: rewardTint, modalOpen: ui.modalOpen });
+  const cards = createCards(ctx, data, {
+    wear, tint: rewardTint, modalOpen: ui.modalOpen,
+    onShowDoors: () => { const c = data.current(); if (c) hint(c, `Door ${c} · ${data.door(c)?.title || ''} — ${data.findText(c)}`, true); },
+  });
 
   /**
    * Point the way to door n's giver: toast with a live arrow + 'hint:target'. focus → also steer the game's arrow and
@@ -81,6 +86,7 @@ export function createUI(ctx) {
   }, 150);
   return {
     toast: (text, ms, opts) => overlays.toast(text, ms, opts),
+    choose: (spec) => chooser.choose(spec),
     say: (d) => overlays.say(d),
     get entry() { return entry; },
     hud, cards, data, hint, wear,

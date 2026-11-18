@@ -16,8 +16,8 @@ const LEG_X = PANEL_W / 2 + 0.03, SIGN_Y = 0.31, SIGN_W = 0.94, SIGN_H = 0.3;
 const Z_FRONT = 0.04, Z_PLATE = 0.045, Z_DOOR = 0.065, Z_ICON = 0.049;
 const SCALE = 0.8; // whole board (keeps it readable from the follow camera when you stand at it)
 const DOOR_COLS = ['#b8302d', '#3f6e45', '#efe1c6', '#4f9590', '#d59f3c', '#8a4f7d'];
-const HAT_TINT = { santa: '#c4362f', reindeer: '#8a5a3c', elf: '#3f8a4a', bobble: '#efe1c6', earflap: '#8a5a3c', earmuffs: '#e7a1a3' };
-const SPECIAL_TINT = { candycane: '#e0605a', striped: '#e0605a', gingerbread: '#a8693c' };
+const HAT_TINT = { santa: '#c4362f', reindeer: '#8a5a3c', elf: '#3f8a4a', bobble: '#efe1c6', earflap: '#8a5a3c', earmuffs: '#e7a1a3', conductor: '#34486e', bow: '#c4362f', gnome: '#b5332e' };
+const SPECIAL_TINT = { candycane: '#e0605a', striped: '#e0605a', gingerbread: '#a8693c', jingle: '#c4362f', snowy: '#cfc8b8' };
 
 /** Door n (1..24) cell centre in board space. */
 export function cellCentre(n) {

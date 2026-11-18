@@ -8,7 +8,7 @@ const GLYPH = {
   coat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l5 3.5.6 6.5-3 .2V21H6.4v-7.8l-3-.2L4 6.5z" fill="currentColor"/></svg>',
 };
 
-export function createCards(ctx, data, { wear, tint, modalOpen }) {
+export function createCards(ctx, data, { wear, tint, modalOpen, onShowDoors }) {
   const { game } = ctx;
   const layer = document.createElement('div');
   layer.className = 'tb-cards';
@@ -100,22 +100,44 @@ export function createCards(ctx, data, { wear, tint, modalOpen }) {
       ms: 9000,
     });
   }
-  // ---- wave-end teaser
+  // ---- wave-end teaser (copy by the last available door: wave 1 = 8, wave 2 = 16)
   let waveShown = false;
+  const lookUp = () => setTimeout(() => { try { ctx.teasers?.sky?.(); } catch (e) { /* */ } }, 250);
   function waveEnd() {
     if (waveShown) return;
     waveShown = true;
+    const last = data.lastAvailable();
+    const w2 = last > 8;
     push({
-      kind: 'wave', icon: ICONS.sleigh, iconColor: 'var(--red)', sound: 'sleighBells',
-      kicker: `All ${data.lastAvailable()} doors opened!`,
-      title: 'Santa’s sleigh has been spotted over Tinselby…',
-      sub: '…new doors are coming soon!',
-      buttons: [{ label: 'Look up!', cls: 'green', fn: () => setTimeout(() => { try { ctx.teasers?.sky?.(); } catch (e) { /* */ } }, 250) }],
+      kind: 'wave', icon: w2 ? ICONS.bell : ICONS.sleigh, iconColor: 'var(--red)', sound: 'sleighBells',
+      kicker: `All ${last} doors opened!`,
+      title: w2 ? 'Clover is resting and the sleigh bells are ringing…' : 'Santa’s sleigh has been spotted over Tinselby…',
+      sub: w2 ? `…doors ${last + 1}–24 open soon, in time for Christmas Eve!` : '…new doors are coming soon!',
+      buttons: [{ label: 'Look up!', cls: 'green', fn: lookUp }],
+    });
+  }
+  // ---- "New Advent doors are open!" for returning players (progress emits doors:new once per save per wave)
+  let newDoorsKey = '';
+  function doorsNew({ from, to } = {}) {
+    if (!(from >= 1 && to >= from)) return;
+    const key = `${from}-${to}`;
+    if (key === newDoorsKey) return;
+    newDoorsKey = key;
+    push({
+      kind: 'newdoors', icon: ICONS.calendar, iconColor: 'var(--gold)', sound: 'bell',
+      kicker: 'New Advent doors!',
+      title: from === to ? `Door ${from} is open` : `Doors ${from}–${to} are open`,
+      sub: 'Fresh games, a cosy cottage and a few surprises are waiting.',
+      buttons: [
+        { label: 'Show me', cls: 'green', fn: () => onShowDoors?.(from, to) },
+        { label: 'Later', cls: 'cream' },
+      ],
     });
   }
 
   game.on('reward:grant', (r) => { if (performance.now() < suppressGrants) return; reward(r); });
   game.on('wave:end', () => setTimeout(waveEnd, 600));
+  game.on('doors:new', (d) => doorsNew(d));
 
   // ---- tiny net toasts (rate-limited + coalesced)
   const pend = { join: [], leave: [] };
@@ -145,7 +167,7 @@ export function createCards(ctx, data, { wear, tint, modalOpen }) {
   }
 
   return {
-    reward, daily, waveEnd, update,
+    reward, daily, waveEnd, doorsNew, update,
     /** Fold reward:grant events of the next ms into the card being shown (daily gift). */
     suppressGrants(ms = 800) { suppressGrants = performance.now() + ms; },
     get busy() { return !!active || queue.length > 0; },

@@ -58,7 +58,7 @@ export function createHUD(ctx, root, data, ui) {
   joyLayer.hidden = true;
   root.appendChild(joyLayer);
   let joy = null;
-  const coarse = matchMedia('(pointer: coarse)').matches || engine.isMobile;
+  const coarse = matchMedia('(pointer: coarse)').matches || matchMedia('(hover: none)').matches || engine.isMobile;
   let wantJoy = coarse;
   const ensureJoy = () => { if (!joy) joy = createJoystick(ctx, joyLayer); };
   if (coarse) ensureJoy();

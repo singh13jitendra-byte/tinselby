@@ -26,7 +26,24 @@ export const ICONS = {
   back: svg('<path d="M15 5l-7 7 7 7"/>'),
   sparkle: svg('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor" fill-opacity=".3"/><path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/>'),
   sleigh: svg('<path d="M3 15.5h13.5c2 0 3.5-1.5 3.5-3.5V9"/><path d="M5 15.5c-1.5 0-2.2-1-2-2.4L4 8h7l1.5 4h5" fill="currentColor" fill-opacity=".2"/><path d="M2.5 19h15c1.6 0 2.9-.9 3.5-2.5M7 15.5V19M14 15.5V19"/>'),
+  // ---- wave 2 (doors 9-16)
+  home: svg('<path d="M3.5 11.5L12 4l8.5 7.5" /><path d="M5.5 10.5V20h13v-9.5" fill="currentColor" fill-opacity=".2"/><rect x="10" y="13.5" width="4" height="6.5" rx="1" fill="currentColor" fill-opacity=".35"/><path d="M16 5.5V8"/>'),
+  tram: svg('<rect x="5" y="5.5" width="14" height="12" rx="3" fill="currentColor" fill-opacity=".2"/><path d="M5 12h14M12 5.5V12M8 2.5h8M12 2.5v3"/><circle cx="8.5" cy="15" r=".8" fill="currentColor"/><circle cx="15.5" cy="15" r=".8" fill="currentColor"/><path d="M7 20.5l1.5-3M17 20.5l-1.5-3M5 20.5h14"/>'),
+  skate: svg('<path d="M6 3.5h5v8.5l6 2.2c1.3.5 2 1.4 2 2.8v1H6z" fill="currentColor" fill-opacity=".2"/><path d="M3.5 21h17M6 18.8V21M17 18.8V21M8.5 7h2.5"/>'),
+  ribbon: svg('<path d="M12 12.5C9 8 5 7 4.6 9.6 4.3 12 8.4 12.6 12 12.5zm0 0c3-4.500 7-5.500 7.400-2.900.3 2.400-3.800 3-7.400 2.900z" fill="currentColor" fill-opacity=".25"/><circle cx="12" cy="12.5" r="1.8" fill="currentColor"/><path d="M10.800 14.200L8.500 20.500M13.200 14.200l2.300 6.300"/>'),
+  snowman: svg('<circle cx="12" cy="6.500" r="3.200" fill="currentColor" fill-opacity=".2"/><circle cx="12" cy="15.500" r="5.500" fill="currentColor" fill-opacity=".2"/><path d="M12 6.800l2.200.7"/><circle cx="10.800" cy="5.800" r=".5" fill="currentColor"/><circle cx="13.200" cy="5.800" r=".5" fill="currentColor"/><circle cx="12" cy="13.500" r=".6" fill="currentColor"/><circle cx="12" cy="16" r=".6" fill="currentColor"/><path d="M6.500 12.500L3.500 10.500M17.500 12.500l3-2M9 3.200h6"/>'),
+  gnome: svg('<path d="M12 2.500c-1 4-3.500 6-4.200 8.800h8.400C15.500 8.500 13 6.500 12 2.500z" fill="currentColor" fill-opacity=".35"/><path d="M6.800 11.300h10.400"/><path d="M8 11.500c0 3 1.500 4.200 4 4.200s4-1.200 4-4.200" fill="currentColor" fill-opacity=".12"/><path d="M8.500 14.500c.5 4 1.800 5 3.500 5s3-1 3.500-5" fill="currentColor" fill-opacity=".2"/><circle cx="10.500" cy="12.600" r=".5" fill="currentColor"/><circle cx="13.500" cy="12.600" r=".5" fill="currentColor"/>'),
+  hoof: svg('<path d="M7.500 3.500c-2 3-2.800 7-2.200 10 .5 2.800 2.200 4 3.300 2.300.7-1.200.3-3.500.6-6 .2-2.200.6-4.300-1.700-6.300zM16.500 3.500c2 3 2.800 7 2.200 10-.5 2.800-2.200 4-3.300 2.300-.7-1.200-.3-3.500-.6-6-.2-2.200-.6-4.300 1.700-6.300z" fill="currentColor" fill-opacity=".3"/><path d="M8 19.500h8M9.500 21.500h5"/>'),
+  conductor: svg('<path d="M5 14.500c0-6 14-6 14 0z" fill="currentColor" fill-opacity=".25"/><path d="M3 14.500h18l-1.800 4.500c-3.800 1.200-11.600 1.200-15.400 0z" fill="currentColor" fill-opacity=".35"/><circle cx="12" cy="9.500" r="1.500" fill="currentColor"/>'),
+  bell: svg('<path d="M6 17c1.200-1.300 1.800-3 1.800-5.500a4.200 4.200 0 0 1 8.400 0c0 2.500.6 4.200 1.800 5.500z" fill="currentColor" fill-opacity=".25"/><path d="M12 4.500V3M10 19.500a2 2 0 0 0 4 0"/>'),
 };
+
+/** Icon by name; unknown names fall back to the pointing hand. */
+export const icon = (name, fallback = 'hand') => ICONS[name] || ICONS[fallback] || ICONS.hand;
+ICONS.house = ICONS.home;
+ICONS.bow = ICONS.ribbon;
+ICONS.giftwrap = ICONS.ribbon;
+ICONS.cap = ICONS.conductor;
 
 /** A knitted star for the Festive Spirit meter (filled or empty). */
 export function spiritStar() {

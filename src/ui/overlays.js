@@ -121,7 +121,11 @@ export function createOverlays(ctx, root) {
     banner.hidden = false;
     banner.classList.remove('show'); void banner.offsetWidth; banner.classList.add('show');
     clearTimeout(bannerTimer);
-    bannerTimer = setTimeout(() => { banner.hidden = true; }, 3000);
+    // toasts that share the column slide below the ribbon instead of hiding behind it (portrait stacks them close)
+    const bb = banner.querySelector('.tb-banner-ribbon').getBoundingClientRect();
+    const tTop = toasts.getBoundingClientRect().top - (parseFloat(toasts.style.getPropertyValue('--push')) || 0);
+    toasts.style.setProperty('--push', `${Math.max(0, Math.round(bb.bottom + 12 - tTop))}px`);
+    bannerTimer = setTimeout(() => { banner.hidden = true; toasts.style.setProperty('--push', '0px'); }, 3000);
   });
 
   // ---- cinematic skip: tap / key during a skippable shot
