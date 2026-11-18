@@ -19,6 +19,15 @@ export const GIVERS = {
   14: { who: 'Otto', task: 'gnomes', style: { coat: 'mustard', outfit: 'jumper', hat: 'earflap', scarf: 'striped', hair: 'tousled', hairColor: 'ginger' }, opts: {}, scale: 1.1 },
   15: { who: 'Elf Pepper', task: 'reindeer', style: { coat: 'green', outfit: 'duffle', hat: 'elf', scarf: 'candycane', hair: 'bob', hairColor: 'blonde', skin: 'tan' }, opts: {}, scale: 0.9 },
   16: { who: 'Coach Sasha', doll: 7, game: 'sled2' },
+  // wave 3 (WAVE3.md §Doors agent; lead scaffolding, behind ?w3). 17/20/21/22/23 reuse the dolls of 5/24/11/15/12; 18/19 are
+  // new dolls (until the `postal` / `cocoa` wardrobe pieces land they render in placeholder colours, with a THREE colour warning).
+  17: { who: 'Tilly', doll: 5, game: 'carols' },
+  18: { who: 'Postie Percy', task: 'post', style: { coat: 'red', outfit: 'duffle', hat: 'earflap', scarf: 'postal', hair: 'long', hairColor: 'blonde', skin: 'tan' }, opts: {}, scale: 1.08 },
+  19: { who: 'Nana Marigold', game: 'cocoa', style: { coat: 'cocoa', outfit: 'dress', hat: 'earmuffs', scarf: 'berry', hair: 'bob', skin: 'light' }, opts: { hair: '#d9d4cc' }, scale: 1.0 },
+  20: { who: 'Mayor Tinsel', doll: 24, task: 'lanterns' },
+  21: { who: 'Conductor Clem', doll: 11, game: 'presents' },
+  22: { who: 'Elf Pepper', doll: 15, task: 'letters' },
+  23: { who: 'Auntie Noor', doll: 12, game: 'pack' },
   24: { who: 'Mayor Tinsel', style: { coat: 'plum', outfit: 'duffle', hat: 'none', hair: 'tousled', scarf: 'gold' }, opts: { hair: '#e8e2d8', skin: '#efcfb4' }, scale: 1.2 },
 };
 

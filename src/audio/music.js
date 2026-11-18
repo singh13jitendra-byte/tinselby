@@ -7,7 +7,8 @@
 // "now", where its attack ramp would already be over (click) and several notes would bunch up (chirp).
 import { MEDLEY, FINALE_SONG } from './songs.js';
 import { musicBox, glock, bass, padChord, jingle } from './instruments.js';
-import { room } from './voices.js';
+import { room, track, isLite } from './voices.js';
+import { midiToHz } from './engine.js';
 
 // layer index → [name, level gain]
 const LAYERS = [
@@ -30,6 +31,12 @@ export function createMusic(ac, graph) {
   const padF1 = ac.createBiquadFilter(); padF1.type = 'peaking'; padF1.frequency.value = 720; padF1.Q.value = 1.4; padF1.gain.value = 6;
   const padF2 = ac.createBiquadFilter(); padF2.type = 'peaking'; padF2.frequency.value = 1150; padF2.Q.value = 2; padF2.gain.value = 3;
   padIn.connect(padLP); padLP.connect(padF1); padF1.connect(padF2); padF2.connect(layers[3]);
+  // wave 3: a one-note choir "ooh" (the player's voice in the carols game) on its own small formant chain, so it is heard
+  // at every festive level (the choir layer above is silent below level 3)
+  const voiceIn = ac.createGain(); voiceIn.gain.value = 1;
+  const voiceLP = ac.createBiquadFilter(); voiceLP.type = 'lowpass'; voiceLP.frequency.value = 1500; voiceLP.Q.value = 0.5;
+  const voiceF1 = ac.createBiquadFilter(); voiceF1.type = 'peaking'; voiceF1.frequency.value = 720; voiceF1.Q.value = 1.4; voiceF1.gain.value = 6;
+  voiceIn.connect(voiceLP); voiceLP.connect(voiceF1); voiceF1.connect(out);
 
   let level = 0;
   const offAt = [0, -99, -99, -99, -99]; // when each layer was faded out (keep scheduling briefly for the tail)
@@ -39,10 +46,16 @@ export function createMusic(ac, graph) {
   let cur = null; // {song, start, spb, i, chord}
   let pendingSpecial = null;
   let onSpecialEnd = null;
+  let pendingSeg = null; // wave 3: { song, fromBeat, toBeat, at, cb } — play part of a song, then resume the medley
   const activePads = [];
 
   function startSong(song, start) {
-    cur = { song, start, spb: 60 / song.bpm, i: 0, chord: null, special: song === FINALE_SONG };
+    cur = { song, start, spb: 60 / song.bpm, i: 0, chord: null, special: song === FINALE_SONG, segEnd: null, segCb: null };
+  }
+  /** Fade out pad chords still sustaining after time `at` (before a jump to another tune). */
+  function releasePads(at) {
+    for (const p of activePads) if (p.end > at) { p.g.gain.cancelScheduledValues(at); p.g.gain.setTargetAtTime(0, at, 0.25); }
+    activePads.length = 0;
   }
 
   function setLevel(n, instant = false) {
@@ -126,13 +139,33 @@ export function createMusic(ac, graph) {
     if (pendingSpecial) {
       const { song, at } = pendingSpecial; pendingSpecial = null;
       // release sustaining pad chords, then jump straight into the special tune
-      for (const p of activePads) if (p.end > at) { p.g.gain.cancelScheduledValues(at); p.g.gain.setTargetAtTime(0, at, 0.25); }
-      activePads.length = 0;
+      releasePads(at);
       startSong(song, at);
+    }
+    if (pendingSeg) {
+      // wave 3 song segment: beat b of the song sounds at at + (b − fromBeat)·spb; events before fromBeat are skipped
+      const sg = pendingSeg; pendingSeg = null;
+      releasePads(sg.at);
+      startSong(sg.song, sg.at - sg.fromBeat * 60 / sg.song.bpm);
+      const ev = sg.song.events;
+      const i = ev.findIndex((e) => e.b >= sg.fromBeat);
+      cur.i = i < 0 ? ev.length : i;
+      for (let j = cur.i - 1; j >= 0; j--) if (ev[j].k === 'c') { cur.chord = ev[j]; break; } // glock layer keeps its harmony
+      cur.segEnd = sg.toBeat;
+      cur.segCb = sg.cb;
     }
     if (!cur) startSong(MEDLEY[medleyIdx], Math.max(now + 0.1, minT));
     for (let guard = 0; guard < 2000; guard++) {
       const ev = cur.song.events[cur.i];
+      if (cur.segEnd != null && (!ev || ev.b >= cur.segEnd)) {
+        // end of a song segment: one beat of air, then back to the medley (the song that was due next)
+        const end = cur.start + cur.segEnd * cur.spb + cur.spb;
+        const cb = cur.segCb;
+        releasePads(end);
+        startSong(MEDLEY[medleyIdx], end);
+        if (cb) { try { cb(end); } catch (e) { console.warn('[audio] segment onEnd', e); } }
+        continue;
+      }
       if (!ev) {
         const end = cur.start + cur.song.len * cur.spb;
         if (cur.special) {
@@ -172,8 +205,38 @@ export function createMusic(ac, graph) {
     onSpecialEnd = cb;
   }
 
+  /** Wave 3: play beats [fromBeat, toBeat) of `song` from time `at` (taken over at the next tick, so pass an `at` past what
+   *  is already scheduled: currentTime + lookahead), then resume the medley; cb(endTime) is called when the segment's last
+   *  event has been scheduled (endTime lies a little in the future). Returns the timing: beat b sounds at start + b·spb. */
+  function playSegment(song, fromBeat, toBeat, at, cb) {
+    pendingSeg = { song, fromBeat, toBeat, at, cb };
+    const spb = 60 / song.bpm;
+    return { start: at - fromBeat * spb, spb, bpm: song.bpm, meter: song.meter };
+  }
+
+  /** Wave 3: one soft choir "ooh" at midi pitch m from time t (the player's voice joining the carol). Counts against the
+   *  shared voice budget like the melody (skipped only when the budget is full); returns false when skipped. */
+  function voice(m, t, dur = 0.45, vol = 0.7) {
+    const lite = isLite(ac), n = lite ? 1 : 2;
+    if (!room(ac, t, n, 1)) return false;
+    const f = midiToHz(m), hold = Math.max(0.08, dur);
+    const g = ac.createGain(); g.connect(voiceIn);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.07 * vol * (lite ? 1.35 : 1), t + 0.06); // quick, soft onset (a tap needs to be heard)
+    g.gain.setTargetAtTime(0, t + hold, 0.18);
+    const stop = t + hold + 0.9; // ≈ 5 release taus
+    for (const c of (lite ? [-3] : [-7, 7])) {
+      const o = ac.createOscillator(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f * Math.pow(2, c / 1200), t);
+      o.connect(g); o.start(t); o.stop(stop);
+    }
+    track(ac, t, stop, n);
+    return true;
+  }
+
   return {
     tick, setLevel, playSpecial, out,
+    playSegment, voice, // wave 3 (carols)
     /** wave 2: current song timing for beat-synced games (start may lie slightly in the future) */
     get beat() { return cur ? { bpm: cur.song.bpm, meter: cur.song.meter, start: cur.start, spb: cur.spb } : null; },
     get level() { return level; },

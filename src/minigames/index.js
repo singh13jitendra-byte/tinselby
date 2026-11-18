@@ -9,4 +9,9 @@ import tram from './tram/index.js';
 import giftwrap from './giftwrap/index.js';
 import snowman from './snowman/index.js';
 import sled2 from './sled/night.js';
-export const MINIGAMES = [snowball, ornaments, sled, cookies, skate, tram, giftwrap, snowman, sled2];
+// wave 3 (doors 17 / 19 / 21 / 23, behind ?w3 until release)
+import carols from './carols/index.js';
+import cocoa from './cocoa/index.js';
+import presents from './presents/index.js';
+import pack from './pack/index.js';
+export const MINIGAMES = [snowball, ornaments, sled, cookies, skate, tram, giftwrap, snowman, sled2, carols, cocoa, presents, pack];

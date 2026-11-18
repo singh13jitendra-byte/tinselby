@@ -8,7 +8,7 @@
 import { createProgress } from '../progress/index.js';
 import { memoryStorage, SAVE_KEY } from '../progress/save.js';
 
-const EXPECT_LEVEL = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+const EXPECT_LEVEL = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]; // index = doors done (wave 3: 4 up to 24)
 const isStub = (def) => !def || def.intro === 'Coming soon' || /Stub game/.test(String(def.start));
 
 export async function runSelfTest(ctx, { reset = true, finale = false } = {}) {

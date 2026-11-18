@@ -1,15 +1,16 @@
 // Advent door content (WAVE1.md §Doors). Door metadata is plain data so the calendar UI can render it directly.
 //   { n, title, giver, district, kind: 'task'|'minigame'|'finale', task?, game?, reward?: {id, slot, key, label}, available, blurb }
 // available = playable in this wave. Door 24 is the finale: available:false here, but its state is 'locked' (not 'soon')
-// until doors 1–23 are done, then 'open'.
+// until doors 1–23 are done, then 'open' (wave 3 with ?w3: open on 24 Dec once door 4 is done; WAVE3.md §Progress, Doors agent).
 
 const reward = (slot, key, label) => ({ id: `${slot}:${key}`, slot, key, label });
 
 // Wave 2 doors (9–16) are live (released 18 Nov). `?w1` previews the wave-1-only calendar for testing.
 const W2 = !(typeof location !== 'undefined' && /[?&]w1(&|=|$)/.test(location.search || ''));
 
-const SOON = ['Carol Singing', 'Postcard Day', 'Hot Cocoa Delivery', 'Snowball Fight II',
-  'Light-up Puzzle', 'Skating Show', 'Letters to Santa'];
+// Wave 3 doors (17–23) are built behind ?w3 until release (WAVE3.md §Release plan 9: then W3 = !/[?&]w[12](&|=|$)/…).
+// Door 24 keeps available:false either way; its state comes from progress (wave 3: date-gated, see WAVE3.md §Progress).
+export const W3 = typeof location !== 'undefined' && /[?&]w3(&|=|$)/.test(location.search || '');
 
 export const DOORS = [
   { n: 1, title: 'Lights for Holly Lane', giver: 'Mrs Holly', district: 'residential', kind: 'task', task: 'lights', reward: reward('scarf', 'candycane', 'Candy-cane scarf'), available: true, blurb: 'Help Mrs Holly switch on the wreath lights at three houses.' },
@@ -28,8 +29,16 @@ export const DOORS = [
   { n: 14, title: 'Ferris Wheel Gnomes', giver: 'Otto', district: 'lakeside', kind: 'task', task: 'gnomes', reward: reward('hat','gnome','Gnome hat'), available: W2, blurb: "The Ferris wheel gnomes are hiding round the lake. Round them up!" },
   { n: 15, title: 'The Lost Reindeer', giver: 'Elf Pepper', district: 'park', kind: 'task', task: 'reindeer', reward: reward('scarf','jingle','Jingle-bell scarf'), available: W2, blurb: "Follow glowing hoofprints to find Clover, one of Santa's reindeer." },
   { n: 16, title: 'Sledge Hill Race II', giver: 'Coach Sasha', district: 'hill', kind: 'minigame', game: 'sled2', reward: reward('coat','midnight','Midnight coat'), available: W2, blurb: "A night race down Sledge Hill through lantern gates and bells." },
-  ...SOON.map((title, i) => ({ n: 17 + i, title, giver: '', district: '', kind: 'task', available: false, blurb: 'Coming soon!' })),
-  { n: 24, title: 'Christmas Eve', giver: 'Mayor Tinsel', district: 'market', kind: 'finale', available: false, blurb: 'Place the star on the big tree and welcome Santa to Tinselby.' },
+  // wave 3 (WAVE3.md §Doors)
+  { n: 17, title: 'Carol Singing', giver: 'Tilly', district: 'park', kind: 'minigame', game: 'carols', reward: reward('hat', 'tophat', "Caroller's top hat"), available: W3, blurb: 'Sing carols at the park bandstand: tap along in time with the music.' },
+  { n: 18, title: 'Christmas Cards', giver: 'Postie Percy', district: 'market', kind: 'task', task: 'post', reward: reward('scarf', 'postal', "Postie's scarf"), available: W3, blurb: 'Deliver Christmas cards to four old friends all round Tinselby.' },
+  { n: 19, title: 'Hot Cocoa Hut', giver: 'Nana Marigold', district: 'lakeside', kind: 'minigame', game: 'cocoa', reward: reward('coat', 'cocoa', 'Cocoa coat'), available: W3, blurb: 'Pour, top and serve cosy mugs of cocoa at the lakeside hut.' },
+  { n: 20, title: 'Lanterns for Santa', giver: 'Mayor Tinsel', district: 'market', kind: 'task', task: 'lanterns', reward: reward('coat', 'lantern', 'Lantern coat'), available: W3, blurb: 'Light a lantern path through the park so Santa can find his way.' },
+  { n: 21, title: 'Present Delivery', giver: 'Conductor Clem', district: 'market', kind: 'minigame', game: 'presents', reward: reward('hat', 'parcel', 'Present hat'), available: W3, blurb: 'Ride the tram and toss presents to every waving neighbour.' },
+  { n: 22, title: 'Letters to Santa', giver: 'Elf Pepper', district: 'park', kind: 'task', task: 'letters', reward: reward('scarf', 'frost', 'Snowflake scarf'), available: W3, blurb: 'Catch the runaway letters for Santa and write a wish of your own.' },
+  { n: 23, title: 'Pack the Sleigh', giver: 'Auntie Noor', district: 'market', kind: 'minigame', game: 'pack', reward: reward('coat', 'elf', 'Elf tunic'), available: W3, blurb: "Stack the town's presents neatly, ready for Santa's sleigh." },
+  // door 24: Santa's gift is the wish piece (progress.finaleGift(), WAVE3.md §Progress), so no fixed reward here
+  { n: 24, title: 'Christmas Eve', giver: 'Mayor Tinsel', district: 'market', kind: 'finale', available: false, blurb: 'Gather the town, place the star and welcome Santa to Tinselby.' },
 ];
 
 export const FINALE_DOOR = 24;
@@ -60,8 +69,11 @@ export const DAILY_TREATS = [
   { id: 'treat:clementine', slot: null, key: null, label: 'A sweet clementine' },
 ];
 
+/** Wave 3, door 22: the player wishes for one of these; Santa brings it in the finale (progress.wish / finaleGift). */
+export const WISH_REWARDS = [reward('coat', 'santa', 'Santa coat'), reward('hat', 'starlight', 'Starlight crown'), reward('scarf', 'aurora', 'Aurora scarf')];
+
 /** Every wardrobe reward by id. */
-export const REWARDS = Object.fromEntries([...DOORS.filter((d) => d.reward).map((d) => d.reward), ...DAILY_REWARDS].map((r) => [r.id, r]));
+export const REWARDS = Object.fromEntries([...DOORS.filter((d) => d.reward).map((d) => d.reward), ...DAILY_REWARDS, ...WISH_REWARDS].map((r) => [r.id, r]));
 
 /** Doors done → the festive level (0–4) that drives city lights, music layers and the evening sky. */
 export function festiveLevel(done) {

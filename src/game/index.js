@@ -2,6 +2,8 @@
 // mini-games, door 24 (Christmas Eve) places the star → finale. Wave 2 (?w2): doors 9–16 (mini-games 9/11/12/13/16, task
 // activities 10/14/15 from ./w2/*) with 4 new dolls and shared dolls (doors 9/10/13/16 reuse dolls 3/24/2/7). Only the current door's giver shows the star
 // marker and starts its activity; givers of done doors thank you (mini-game givers offer "Play again").
+// Wave 3 (?w3, lead scaffolding): doors 17–23 (mini-games 17/19/21/23, task activities 18/20/22 from ./w3/*), new dolls 18/19,
+// shared dolls 17/20/21/22/23 → 5/24/11/15/12. The Doors agent adds the WAVE3.md hooks (onDoll/dollLabel, gather, door 24 flow).
 // Progress lives in ctx.progress (src/progress); this module only reads door states and calls progress.complete.
 import { makeModels } from './models.js';
 import { createGiver } from './givers.js';
@@ -11,9 +13,15 @@ import { createActivities } from './tasks.js';
 import createHouseActivity from './w2/house.js';
 import createGnomesActivity from './w2/gnomes.js';
 import createReindeerActivity from './w2/reindeer.js';
+import createPostActivity from './w3/post.js';
+import createLanternsActivity from './w3/lanterns.js';
+import createLettersActivity from './w3/letters.js';
 
-export const GIVER_DOORS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 24];
+export const GIVER_DOORS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
 const W2_ACTIVITIES = { house: createHouseActivity, gnomes: createGnomesActivity, reindeer: createReindeerActivity };
+// wave 3 (?w3): task doors 18 post, 20 lanterns, 22 letters (WAVE3.md §Activity interface additions)
+const W3_ACTIVITIES = { post: createPostActivity, lanterns: createLanternsActivity, letters: createLettersActivity };
+const ACTIVITIES = { ...W2_ACTIVITIES, ...W3_ACTIVITIES };
 const PREP = { residential: 'on', hill: 'on', lakeside: 'by', park: 'in', market: 'in' };
 /** Spots moved from layout.DOOR_SPOTS: (3.2, 10.2) is right behind the park gazebo, whose roof hides Tilly and her
  * marker from the camera; she waits on the open snow just south of it, beside the snowball clearing. */
@@ -70,6 +78,7 @@ export function createTasks(ctx) {
   for (const n of GIVER_DOORS) {
     const base = GIVERS[n].doll;
     if (!base || !givers[base]) continue;
+    if (n >= 17 && n < 24 && !doorMeta(n)?.available) continue; // wave-3 doors join their shared doll only with ?w3
     givers[n] = givers[base];
     givers[base].doors.push(n);
   }
@@ -81,8 +90,8 @@ export function createTasks(ctx) {
   const actEnv = { models, givers, say, toast, sfx, ds, completeDoor, taskComplete };
   for (const n of GIVER_DOORS) {
     const id = n >= 9 ? GIVERS[n].task : null;
-    if (!id || !W2_ACTIVITIES[id] || !doorMeta(n)?.available) continue;
-    try { activities[id] = W2_ACTIVITIES[id](ctx, { ...actEnv, n, giver: givers[n] }); } catch (e) { console.error('[tasks] activity ' + id, e); }
+    if (!id || !ACTIVITIES[id] || !doorMeta(n)?.available) continue;
+    try { activities[id] = ACTIVITIES[id](ctx, { ...actEnv, n, giver: givers[n] }); } catch (e) { console.error('[tasks] activity ' + id, e); }
   }
   const actList = Object.values(activities);
   const actFor = (n) => activities[GIVERS[n]?.task] || null;

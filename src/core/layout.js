@@ -137,6 +137,14 @@ export const DOOR_SPOTS = {
   14: { district: 'lakeside', x: 19.3, z: -2.8 }, // Ferris Wheel Gnomes: Otto at the ticket booth
   15: { district: 'park', x: 6.25, z: 8.25 },     // The Lost Reindeer: Elf Pepper beside the Reindeer Rest
   16: { district: 'hill', x: -2.6, z: -8.6 },     // Sledge Hill Race II: Coach Sasha (door 7's doll)
+  // wave 3 (WAVE3.md §Layout); shared givers stand where their doll already stands
+  17: { district: 'park', x: 3.5, z: 13.0 },        // Carol Singing: Tilly (door 5's doll), south-east of the gazebo
+  18: { district: 'market', x: 0.95, z: -3.0 },     // Christmas Cards: Postie Percy beside the post box (new doll)
+  19: { district: 'lakeside', x: 11.65, z: -4.25 }, // Hot Cocoa Hut: Nana Marigold, west of the cocoa hut's front (new doll)
+  20: { district: 'market', x: -0.8, z: -0.35 },    // Lanterns for Santa: Mayor Tinsel (door 24's doll)
+  21: { district: 'market', x: 0, z: 5.0 },         // Present Delivery: Conductor Clem (door 11's doll)
+  22: { district: 'park', x: 6.25, z: 8.25 },       // Letters to Santa: Elf Pepper (door 15's doll)
+  23: { district: 'market', x: -3.55, z: -1.0 },    // Pack the Sleigh: Auntie Noor (door 12's doll)
   24: { district: 'market', x: MARKET.tree.x, z: MARKET.tree.z + 1.5 },
 };
 
@@ -150,6 +158,17 @@ export const ARENAS = {
   giftwrap: { x: -3.75, z: 0.2, heading: Math.PI / 2, cam: { x: -2.55, y: 1.75, z: 0.2 }, target: { x: -3.85, y: 0.82, z: 0.2 } },
   snowman: { x: -4.45, z: 12.25, r: 1.0, build: { x: -4.5, z: 12.8 } }, // rolling lawn west of Pip
   // sled2 reuses ARENAS.sled
+  // wave 3 (WAVE3.md §Layout)
+  // gazebo stage (floor top y 0.2, r 0.72, pillars at r 0.68); player/choir are stage-local [x east, z south], all ≥ 0.2 from a
+  // pillar; the low camera keeps the back row under the roof ring (y 1.08) and over the crowd ring r 2.0
+  carols: { x: 3.0, z: 11.6, stageY: 0.2, cam: { x: 3.0, y: 1.35, z: 14.6 }, target: { x: 3.0, y: 0.5, z: 11.7 },
+    player: [0, 0.42], choir: [[-0.42, 0.22], [0.42, 0.22], [-0.22, -0.05], [0.22, -0.05], [0, -0.25]] },
+  // counter in front of the hut (front wall z −4.84, awning y 0.95); queue[0] = the customer being served; tree at (11.86, −3.01)
+  cocoa: { x: 12.8, z: -4.45, heading: 0, barista: { x: 12.8, z: -4.69 }, cam: { x: 13.35, y: 1.05, z: -3.35 }, target: { x: 12.8, y: 0.38, z: -4.5 },
+    queue: [[12.35, -3.95], [11.9, -3.7], [11.45, -3.5], [11.0, -3.3]] },
+  // the landing rug (clear 3 × 2); Clem (0, 5.0) is behind the camera; the tree, Mayor and star stand sit in the background
+  pack: { x: 0, z: 2.4, heading: 0, cam: { x: 0, y: 1.9, z: 4.75 }, target: { x: 0, y: 0.45, z: 2.3 } },
+  // presents runs on TRAM_LOOP with PRESENTS below
 };
 
 // ---------------------------------------------------------------- Wave 2 (doors 9–16), WAVE2.md §Layout
@@ -183,4 +202,50 @@ export const REINDEER = {
 export const GNOMES = {
   booth: { x: 19.55, z: -3.45 }, // Ferris ticket booth (wheel collider rect x 17.25…19.75, z −4.2…−3.2)
   hide: [[12.8, -6.3, 'behind the cocoa hut'], [12.55, 1.2, 'at the end of the pier'], [20.0, 1.55, 'behind the snowman'], [18.3, -4.6, 'behind the Ferris wheel']],
+};
+
+// ---------------------------------------------------------------- Wave 3 (doors 17–24), WAVE3.md §Layout
+/** Door 18: the post box (front faces the plaza centre) and the friends who get a card (their dolls: doors 1–4). */
+export const POST = {
+  box: { x: 1.45, z: -3.35, heading: -0.41 }, // collider r 0.15; snowman (2.5, −3.05) 0.87 away, plaza walk loop 0.7 away
+  to: [1, 2, 3, 4], // Mrs Holly (Holly Lane), Pip (park), Ilse (lake), Bram (hill): use tasks.giverPos(n) (nudged positions)
+};
+
+/** Door 20: Santa's lantern runway along the park path (path x = 0, half-width 0.35), ordered gate → market.
+ *  Each ≥ 0.25 from the nearest collider (park lamps at (−0.6, 10.4) and (0.6, 12.8), pom-pom trees); collider r 0.07 each. */
+export const LANTERNS = {
+  spots: [[-0.95, 14.75], [0.95, 14.75], [-0.95, 13.2], [0.95, 13.2], [-0.9, 11.8], [0.95, 11.6], [-0.95, 10.0], [0.95, 10.0], [-0.95, 8.25], [0.95, 8.25]],
+};
+
+/** Door 22: five runaway letters (each flutters from a to b once when you come within 1.0, then waits at b) and
+ *  Santa's mailbox beside the Reindeer Rest (front faces the park; Pepper 0.7 away, the Rest's west wall 0.3 away). */
+export const LETTERS = {
+  flutter: [[[-4.7, 9.4], [-5.2, 10.9]], [[-3.2, 13.4], [-1.7, 14.4]], [[2.3, 9.4], [1.8, 8.4]], [[4.3, 13.4], [4.8, 12.4]], [[4.8, 10.4], [4.3, 9.4]]],
+  mailbox: { x: 6.75, z: 7.75, heading: -0.52 },
+};
+
+/** Door 21: Present Delivery. The tram starts at the Park Gate stop heading west and drives 1.5 laps of TRAM_LOOP (ends at
+ *  the Sledge Hill stop). Catchers in route order; side 'R' = right of travel = plaza side (≈ 0.65 from the rails, behind the
+ *  low fence), 'L' = outer pavement (≈ 1.6 from the rails). All clear of colliders; visits 16–19 reuse spots on lap 2. */
+export const PRESENTS = {
+  speed: 1.25, cornerSpeed: 0.85,
+  catchers: [[-3.2, 5.45, 'R'], [-4.6, 8.6, 'L'], [-8.75, 3.2, 'L'], [-6.35, 1.6, 'R'], [-6.35, -2.8, 'R'], [-8.75, -3.2, 'L'],
+    [-4.6, -8.5, 'L'], [-2.6, -5.45, 'R'], [0.9, -5.45, 'R'], [2.9, -8.45, 'L'], [8.75, -3.0, 'L'], [6.35, -1.6, 'R'],
+    [6.35, 2.0, 'R'], [4.6, 8.6, 'L'], [3.2, 5.45, 'R'],
+    [-3.2, 5.45, 'R'], [-8.75, 3.2, 'L'], [-6.35, -2.8, 'R'], [-1.2, -8.5, 'L']],
+};
+
+/** Door 24: Christmas Eve. gather = where your friends (giver dolls) stand round the tree, facing it (all clear; the aisle
+ *  |x| < 0.75 between the tree and the landing stays free for the sleigh and team; the player's walk to Santa stays clear).
+ *  Clover walks from the Rest to cloverWait during the gathering, then on cue into the empty harness (team slot 2 = rig-local
+ *  (−0.19, 1.52) → world (0.19, 0.88) with the sleigh at MARKET.landing, heading π). netRing: remote players' dolls (radius
+ *  round the tree, angle range from +z). */
+export const EVE = {
+  gather: [[-1.3, -0.65], [-1.3, 0.4], [-1.3, 1.45], [-2.0, -1.0], [-2.0, 0.75], [-2.35, -0.3], [-2.0, 1.8],
+    [1.5, -0.65], [1.5, 0.4], [-0.95, 2.15], [2.2, -1.0], [2.2, 0.05], [1.85, 1.1], [2.9, -0.3]],
+  cloverFromRest: [[7.53, 9.19], [6.9, 9.2], [6.45, 8.6], [6.5, 8.0], [5.0, 7.6], [2.8, 7.3], [1.0, 7.0], [0.4, 6.3], [0.5, 5.3], [1.0, 4.3], [1.55, 3.55]],
+  cloverWait: { x: 1.55, z: 3.55 },
+  cloverPath: [[1.55, 3.55], [0.95, 2.0], [0.6, 1.05], [0.19, 0.88]],
+  teamSlot: 2,
+  netRing: { r: 4.4, a0: -1.2, a1: 1.2 },
 };

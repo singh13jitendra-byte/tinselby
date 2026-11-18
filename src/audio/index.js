@@ -14,6 +14,11 @@ import { createGraph, unlockIOS, clamp } from './engine.js';
 import { createMusic } from './music.js';
 import { createSfx, SFX_NAMES, SFX_MIN_GAP } from './sfx.js';
 import { setBudget, room, voiceStats } from './voices.js';
+import { glock } from './instruments.js';
+import { JINGLE_BELLS, DECK_THE_HALLS, WE_WISH } from './songs.js';
+
+// wave 3: songs the carols game can play part of (audio.playSong), by full name or short id
+const SEG_SONGS = { jingle: JINGLE_BELLS, deck: DECK_THE_HALLS, wish: WE_WISH };
 
 const LS_KEY = 'tinselby.muted';
 const TICK_MS = 25;
@@ -109,7 +114,8 @@ export function createAudio(ctx) {
       // after Joy to the World: settle into a gentle loop
       const bus = music.out.gain;
       bus.cancelScheduledValues(end); bus.setValueAtTime(1.35, end); bus.setTargetAtTime(1, end, 2);
-      setTimeout(() => setMusicLevel(2), Math.max(0, (end - ac.currentTime) * 1000));
+      // wave 3: the finale ends in free play, so settle back to the town's festive level (the old end screen kept 2)
+      setTimeout(() => setMusicLevel(game.state.phase === 'end' ? 2 : (game.state.spirit ?? 2)), Math.max(0, (end - ac.currentTime) * 1000));
     });
     const bus = music.out.gain;
     bus.cancelScheduledValues(t);
@@ -256,6 +262,30 @@ export function createAudio(ctx) {
         latSmooth = latSmooth < 0 ? lat : latSmooth + (lat - latSmooth) * 0.05;
         return { ...b, now: ac.currentTime - latSmooth, latency: latSmooth };
       } catch (e) { return null; }
+    },
+    /** wave 3 (carols): play beats [fromBeat, toBeat) of a medley song ('Jingle Bells' | 'Deck the Halls' |
+     *  'We Wish You a Merry Christmas', or 'jingle' | 'deck' | 'wish'), then the medley resumes. Beat b sounds at
+     *  start + b·spb (AudioContext seconds; subtract the output latency for what is heard, as beat() does). Returns
+     *  { start, spb, bpm, meter, end } or null when there is no running audio (not started, muted, hidden tab): then run
+     *  your own clock. `at` defaults to just after the music already scheduled; onEnd(endTime) once the last note is queued. */
+    playSong(name, { fromBeat = 0, toBeat = Infinity, at, onEnd } = {}) {
+      try {
+        const s = SEG_SONGS[name] || Object.values(SEG_SONGS).find((x) => x.name === name);
+        if (!s || !ac || !music || muted || ac.state !== 'running') return null;
+        const from = Math.max(0, +fromBeat || 0), to = Math.min(+toBeat || 0, s.melLen);
+        if (!(to > from)) return null;
+        const t = Math.max(Number.isFinite(at) ? at : 0, ac.currentTime + LOOKAHEAD + 0.1);
+        const r = music.playSegment(s, from, to, t, onEnd);
+        return { ...r, end: r.start + to * r.spb };
+      } catch (e) { return null; }
+    },
+    /** wave 3 (carols): one note now: kind 'choir' (soft "ooh", dur seconds) or 'bell' (glockenspiel). */
+    note(midi, { dur = 0.45, vol = 0.7, kind = 'choir' } = {}) {
+      try {
+        if (!ac || !music || muted || ac.state !== 'running' || !Number.isFinite(midi)) return;
+        const t = ac.currentTime + LEAD;
+        if (kind === 'bell') { if (room(ac, t, 3, 1)) glock(ac, music.out, midi, t, vol); } else music.voice(midi, t, dur, vol);
+      } catch (e) { /* audio is optional */ }
     },
     setMusicLevel,
     toggleMute,

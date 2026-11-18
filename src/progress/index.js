@@ -51,6 +51,10 @@ export function createProgress(ctx = {}, opts = {}) {
 
   // ---------------------------------------------------------------- doors
   const isDone = (n) => !!S.doors[n];
+  // TODO(wave 3, Doors agent; WAVE3.md §Progress): with W3 (src/progress/doors.js) door 24 becomes date-gated
+  // (`eve.isEve && isDone(4)` → 'open'), doors 1–23 lose their sequential locks once `eve.isAfter`, current() prefers 24;
+  // add progress.eve / wish / finaleGift / flags / markEveWatched, the ?date= / ?eve / ?xmas test clock via api._clock and
+  // the eve re-check in the 30 s timer. Without W3 everything below must stay exactly as it is.
   function state(n) {
     const d = door(n);
     if (!d) return 'locked';
