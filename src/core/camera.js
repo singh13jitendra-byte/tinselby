@@ -7,6 +7,9 @@ import * as THREE from 'three';
  *  - toggleView()  follow ↔ high (UI button / C key)
  *  - playShot({ duration, update(t01, out, ctx), blendIn = 0.7, blendOut = 0.7, skippable = true, tilt = 1 }) → Promise
  *      update() writes out.pos (Vector3) and out.target (Vector3); t01 runs 0 → 1 over duration.
+ *      Optional post: { bloom, glow, threshold, band, falloff } = look override for close shots, blended in and out
+ *      with the shot (bloom / glow multiply the time-of-day look, threshold is added, band / falloff set the sharp
+ *      tilt-shift band in screen heights; see engine.shotPost). The blur amount itself is `tilt`.
  *  - skip()        ends the current skippable shot (tap / any key during a cinematic)
  *  - yaw           current ground yaw used for camera-relative controls
  */
@@ -92,6 +95,10 @@ export function createCameraDirector(engine, game) {
       tmp.copy(look).project(cam);
       engine.post.focus += ((tmp.y + 1) / 2 - engine.post.focus) * (1 - Math.exp(-dt * 6));
       engine.post.strength = tilt;
+      // per-shot look override (engine.shotPost): fades with the shot weight, back to neutral when no shot runs
+      const sp = engine.shotPost, o = shot && shot.post;
+      sp.w = o ? w : 0;
+      if (o) { sp.bloom = o.bloom ?? 1; sp.glow = o.glow ?? 1; sp.threshold = o.threshold ?? 0; sp.band = o.band ?? 0.11; sp.falloff = o.falloff ?? 0.36; }
     },
   };
   return director;

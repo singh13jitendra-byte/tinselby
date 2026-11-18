@@ -80,6 +80,12 @@ export function createEngine(canvas) {
       glow: 7.0, bloom: 1.45, bloomThr: 1.02, vignette: 0.66, lamp: 1, shadowRadius: 2.2,
       keyDir: new THREE.Vector3(-0.5, 0.84, 0.46).normalize(),
     },
+    /**
+     * Per-shot post override, written every frame by the camera director from playShot({ post }) and blended by the
+     * shot's weight w (0 = the time-of-day look untouched). bloom and glow are multipliers on the current look,
+     * threshold is added to the bright-pass threshold, band / falloff replace the tilt-shift focus band.
+     */
+    shotPost: { w: 0, bloom: 1, threshold: 0, glow: 1, band: 0.11, falloff: 0.36 },
     resize,
     step,
     start,
@@ -110,10 +116,13 @@ export function createEngine(canvas) {
     bg.copy(e.bg);
     scene.fog.color.copy(bg); scene.fog.near = e.fogNear; scene.fog.far = e.fogFar;
     // festive progress makes every decoration glow a little stronger (garlands, fairy lights, lanterns)
-    mat.userData.uniforms.uGlow.value = e.glow * (0.8 + 0.34 * k);
-    post.bloom = e.bloom * (0.92 + 0.14 * k);
-    post.threshold = e.bloomThr;
+    const sp = engine.shotPost, w = sp.w;
+    mat.userData.uniforms.uGlow.value = e.glow * (0.8 + 0.34 * k) * (1 + (sp.glow - 1) * w);
+    post.bloom = e.bloom * (0.92 + 0.14 * k) * (1 + (sp.bloom - 1) * w);
+    post.threshold = e.bloomThr + sp.threshold * w;
     post.vignette = e.vignette;
+    post.band = 0.11 + (sp.band - 0.11) * w;
+    post.falloff = 0.36 + (sp.falloff - 0.36) * w;
   }
 
   function step(dt) {

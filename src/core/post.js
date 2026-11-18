@@ -87,6 +87,9 @@ export class TiltShift {
     this.bloom = 1.45;
     this.threshold = 1.02;
     this.vignette = 0.66;
+    /** Half-height of the sharp band and the width of its soft edge, in screen heights (close shots widen them). */
+    this.band = 0.11;
+    this.falloff = 0.36;
   }
   setSize(w, h) {
     this.rtScene.setSize(w, h);
@@ -111,6 +114,8 @@ export class TiltShift {
     r.render(scene, camera);
     const u = this.blur.uniforms;
     u.focus.value = this.focus;
+    u.band.value = this.band;
+    u.falloff.value = this.falloff;
     const base = 3.7 * (this.h / 900) * this.strength;
     // small axis-aligned pair first (pre-filter), then a wide diagonal pair: no visible tap grid in the bokeh
     const passes = [

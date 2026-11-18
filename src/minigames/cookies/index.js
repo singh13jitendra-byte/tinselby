@@ -327,9 +327,12 @@ export default {
 
     // ---------------------------------------------------------------- camera
     cam.setMode('close');
+    // counter close-up: wide sharp band (counter, oven meter and stall front all crisp), gentle bloom so the bulb
+    // garland stays small warm points instead of blown discs
+    const CLOSE_POST = { bloom: 0.42, glow: 0.6, threshold: 0.35, band: 0.3, falloff: 0.3 };
     const shotOut = new V3(), shotTgt = new V3();
     cam.playShot({
-      name: 'cookies', duration: 900, skippable: false, blendIn: 1.0, blendOut: 0.6, tilt: 1.3,
+      name: 'cookies', duration: 900, skippable: false, blendIn: 1.0, blendOut: 0.6, tilt: 0.55, post: CLOSE_POST,
       update(u, out) {
         const sway = Math.sin(G * 0.7) * 0.012;
         out.pos.copy(camPos).add(origin); out.pos.x += sway;
@@ -645,7 +648,7 @@ export default {
       if (window.__cookies === dbg) delete window.__cookies;
       // ease the camera back out instead of snapping
       const p = camPos.clone().add(origin), t = camTgt.clone().add(origin);
-      cam.playShot({ name: 'cookies-out', duration: 0.7, skippable: false, blendIn: 0.01, blendOut: 0.6, tilt: 1.9, update(u, out) { out.pos.copy(p); out.target.copy(t); } });
+      cam.playShot({ name: 'cookies-out', duration: 0.7, skippable: false, blendIn: 0.01, blendOut: 0.6, tilt: 0.55, post: CLOSE_POST, update(u, out) { out.pos.copy(p); out.target.copy(t); } });
     });
 
     // ---------------------------------------------------------------- go

@@ -27,9 +27,9 @@ const KEYS = [
     vignette: 0.7, lamp: 0.7, stars: 0.12, moon: 0.2, sun: 0.8, sunCol: C('#ffb48a'), field: C('#cfc4cf'), hill: C('#b9b3cc'), cloud: C('#f1cfc4'),
     keyDir: D(0.8, 0.3, 0.35), shadowRadius: 3.2,
   },
-  { // morning: cool bright white snow, pale blue sky, soft long shadows
-    h: 9, zen: C('#8fbbe8'), hor: C('#e6eef7'), bg: C('#dfe8f2'), hemiSky: C('#dfeaff'), hemiGround: C('#f3f0ec'), hemiI: 1.5,
-    keyCol: C('#fff3e2'), keyI: 2.1, fillCol: C('#bcd0ff'), fillI: 0.5, exposure: 0.9, glow: 1.6, bloom: 0.55, bloomThr: 1.35,
+  { // morning: bright snow with a warm low key against cool blue shade (less ambient = more shape), pale blue sky
+    h: 9, zen: C('#8fbbe8'), hor: C('#e6eef7'), bg: C('#dfe8f2'), hemiSky: C('#d6e4ff'), hemiGround: C('#f3f0ec'), hemiI: 1.36,
+    keyCol: C('#ffe9cc'), keyI: 2.4, fillCol: C('#b4c9ff'), fillI: 0.44, exposure: 0.9, glow: 1.6, bloom: 0.55, bloomThr: 1.35,
     vignette: 0.84, lamp: 0.1, stars: 0, moon: 0, sun: 1, sunCol: C('#fff2d8'), field: C('#e4ebf3'), hill: C('#dfe6f0'), cloud: C('#ffffff'),
     keyDir: D(0.72, 0.55, 0.42), shadowRadius: 3.0,
   },
