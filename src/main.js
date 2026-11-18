@@ -18,6 +18,7 @@ import { createProgress } from './progress/index.js';
 import { createMiniGames } from './minigames/framework.js';
 import { MINIGAMES } from './minigames/index.js';
 import { createHouse } from './house/index.js';
+import { createRides } from './rides/index.js';
 import { createCalendar } from './calendar/index.js';
 import { createNet } from './net/index.js';
 import { createWorld } from './world/index.js';
@@ -50,6 +51,9 @@ ctx.ui = createUI(ctx);
 ctx.calendar = createCalendar(ctx);
 ctx.net = createNet(ctx);
 ctx.finale = createFinale(ctx);
+ctx.rides = createRides(ctx); // free-play rides: tram, carriage, Ferris wheel, carousel, skating, sledging
+let rideT = 0;
+engine.addUpdate((dt) => { rideT += dt; ctx.rides.update(dt, rideT); }, 50);
 // the wave-end card asks for a sky teaser: use the world's moon fly-by
 ctx.teasers = ctx.teasers || {};
 if (!ctx.teasers.sky) ctx.teasers.sky = () => ctx.world?.flyby?.();
