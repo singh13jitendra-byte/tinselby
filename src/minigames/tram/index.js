@@ -391,12 +391,19 @@ async function startTram(ctx, mg) {
       const w = rig.side;
       // chase: behind, a little to the plaza side; stop: three-quarter view over the platform
       // (portrait: the stop view rises rather than swinging far into the plaza, where garlands and baubles hang)
-      const back = (2.3 * (1 - w) + 1.3 * w) * ak, up = (2.0 * (1 - w) + 1.6 * w) * ak, side = (0.4 * ak) * (1 - w) + 1.9 * Math.sqrt(ak) * w;
+      // Portrait at speed: the narrow frame is only ~2 units wide at the tram, so the plaza-edge firs (0.95 inside the
+      // rails, 0.9 wide) filled a third of it from the plaza side. There the chase sits on the outer side of the rails,
+      // a little higher, and looks slightly outward: the firs slide along the right edge instead (pk: 0 landscape … 1
+      // phone portrait; po fades the offset out as the tram slows for a stop, where the plaza-side view takes over).
+      const pk = Math.min(1, Math.max(0, (ak - 1) / 0.72));
+      const sv = Math.min(1, Math.max(0, (S.v - 0.3) / 1.0)), po = pk * sv * sv * (3 - 2 * sv);
+      const back = ((2.3 - 0.2 * pk) * (1 - w) + 1.3 * w) * ak, up = ((2.0 + 0.4 * pk) * (1 - w) + 1.6 * w) * ak;
+      const side = (0.4 - 0.85 * po) * ak * (1 - w) + 1.9 * Math.sqrt(ak) * w;
       wantPos.set(RF.x - dx * back + RF.nx * side, py + up, RF.z - dz * back + RF.nz * side);
       // look at the tram itself (it stays in the sharp tilt-shift band, mid-screen above the gauge); portrait looks a
       // little further ahead so the track runs up the tall screen
-      const look = (0.7 + (ak - 1) * 1.1) * (1 - w) + 0.45 * w;
-      wantTarget.set(RF.x + dx * look + RF.nx * 0.3 * w, py + 0.25, RF.z + dz * look + RF.nz * 0.3 * w);
+      const look = (0.7 + (ak - 1) * 1.1) * (1 - w) + 0.45 * w, out = 0.18 * po * (1 - w);
+      wantTarget.set(RF.x + dx * look + RF.nx * (0.3 * w - out), py + 0.25, RF.z + dz * look + RF.nz * (0.3 * w - out));
     }
     wantPos.y = Math.max(wantPos.y, ground(wantPos.x, wantPos.z) + 0.6);
     if (snap) { rig.pos.copy(wantPos); rig.target.copy(wantTarget); return; }

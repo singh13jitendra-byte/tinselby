@@ -173,7 +173,7 @@ export const HOUSE = {
 
 /** Door 15: Santa's Reindeer Rest (heading: open front faces (sin h, cos h), i.e. towards the camera) and Clover's trail. */
 export const REINDEER = {
-  rest: { x: 7.0, z: 8.6, heading: 0.3 }, // clear radius 0.75; nearest: tree (6.6, 9.48), ring road 1.2 north
+  rest: { x: 7.35, z: 8.6, heading: 0.3 }, // clear radius 0.75; nearest: tree (6.6, 9.48), ring road 1.2 north
   find: { x: 15.3, z: 2.3 }, // Clover on the ice
   trail: [[6.5, 8.0], [5.0, 7.6], [2.8, 7.3], [1.0, 7.0], [0.4, 6.3], [0.5, 5.3], [1.0, 4.3], [2.9, 3.9], [4.6, 4.4],
     [5.4, 3.6], [5.7, 2.3], [5.95, 0.9], [7.4, 0.3], [8.6, 0.15], [9.7, 0.3], [10.8, 0.4], [12.4, 0.5], [14.0, 1.4]],

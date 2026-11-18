@@ -259,6 +259,7 @@ export async function startSled(ctx, mg, opts = {}) {
   cam.playShot(shotSpec);
   const trees = obstacles.filter((o) => o.tree);
   const walls = obstacles.filter((o) => !o.tree && o.r < 0.03); // chalet / bench / station outlines
+  const START_AIM = [null, 0.31]; // per run: chase heading (rad from +z towards +x) held at the start gate; null = follow the track
   function camBlocked(cx, cy, cz, sx, sy, sz) {
     for (const t of trees) {
       if (Math.abs(cx - t.x) > 2.5 || Math.abs(cz - t.z) > 2.5) continue;
@@ -287,6 +288,14 @@ export async function startSled(ctx, mg, opts = {}) {
       wantTarget.set(P.x + 0.15, py + 0.3, P.z);
     } else {
       PR.avgDir(Cr, race.s - 0.15, race.s + 1.5, tmpDir);
+      // heat start: run 2 sets off due east, which put the chase camera inside / behind the hilltop chalet (x -4.1…-2.3).
+      // Start it north of the gate instead, already looking down the hill the way the run turns after ~1 unit
+      // (lamp to one side, bench to the other), and hand over to the normal chase direction by s ≈ 1.5.
+      const sa = START_AIM[race.heat];
+      if (sa != null && race.s < 1.5) {
+        const u = Math.min(1, Math.max(0, (race.s - 0.3) / 1.2)), k = 1 - u * u * (3 - 2 * u);
+        tmpDir.x += (Math.sin(sa) - tmpDir.x) * k; tmpDir.z += (Math.cos(sa) - tmpDir.z) * k;
+      }
       const kd = snap ? 1 : 1 - Math.exp(-dt * 2.4);
       rig.dir.x += (tmpDir.x - rig.dir.x) * kd; rig.dir.z += (tmpDir.z - rig.dir.z) * kd;
       const l = Math.hypot(rig.dir.x, rig.dir.z) || 1;

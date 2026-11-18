@@ -12,6 +12,8 @@ const FALLBACK_KEY = 'tinselby.house.v1'; // only used while progress.house does
 const CAM_SHOT = { bloom: 0.6, glow: 0.8, threshold: 0.1, band: 0.34, falloff: 0.5 };
 const TARGET = new THREE.Vector3(HOUSE.x - 0.05, 1.0, HOUSE.z + HOUSE.d / 2); // the facade, door height
 const MAX_CAM_Z = 1.62; // stay in the street, in front of the south row's front walls (z 1.95)
+const VIEW_LEFT = HOUSE.x - 0.8; // left edge of the close-up on the facade: 0.05 past the west wall, 0.1 inside the street garland (x -14.5)
+const NEAR_CAM_Z = 0.75; // just north of the south pavement garland (z 0.9)
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, k) => a + (b - a) * k;
 
@@ -99,14 +101,12 @@ export function createHouse(ctx) {
   });
 
   // ---- close-up camera (aspect aware: side panel in landscape, bottom sheet in portrait)
-  const tmpC = new THREE.Vector3(), tmpF = new THREE.Vector3(), tmpR = new THREE.Vector3(), tmpU = new THREE.Vector3();
+  const tmpF = new THREE.Vector3(), tmpR = new THREE.Vector3(), tmpU = new THREE.Vector3();
   const UP = new THREE.Vector3(0, 1, 0);
   let free = { w: 0.58, h: 1 }, panel = null;
   function frame(out, dt) {
     const c = engine.camera, aspect = Math.max(0.2, c.aspect || innerWidth / innerHeight);
     const portrait = innerWidth < innerHeight;
-    const port = clamp((1.1 - aspect) / 0.55, 0, 1);
-    const a = -(0.1 + port * 0.12); // camera a touch left of the door: clear of the street lamps (x -12.7 / -12.1) and the garland at x -14.5
     let gw = 1, gh = 1;
     if (panel) {
       if (portrait) gh = 1 - clamp(panel.el.offsetHeight / innerHeight, 0, 0.7);
@@ -114,23 +114,35 @@ export function createHouse(ctx) {
     }
     const k = 1 - Math.exp(-dt * 6);
     free.w = lerp(free.w, gw, k); free.h = lerp(free.h, gh, k);
-    const tf = Math.tan((c.fov * Math.PI) / 360);
-    const needW = portrait ? 1.95 : 2.1, needH = portrait ? 2.1 : 2.15;
-    const maxD = (MAX_CAM_Z - TARGET.z) / Math.cos(a);
-    // the camera only turns towards the free area (it never slides sideways in front of a lamp post)
-    const d = clamp(Math.max(needW / (2 * tf * aspect * free.w), needH / (2 * tf * free.h)), 2.4, maxD);
-    out.target.copy(TARGET);
-    out.pos.set(TARGET.x + Math.sin(a) * d, 1.4, TARGET.z + Math.cos(a) * d);
-    tmpF.copy(out.target).sub(out.pos).normalize();
+    const tf = Math.tan((c.fov * Math.PI) / 360), tw = tf * aspect;
+    // Holly Lane's lamp-to-lamp garlands (festive.js: z ±0.9, cord y 1.11-1.31, a knitted lantern hanging to y 0.88
+    // at x -13.78 north / -13.18 south) run between the street and the facade. Two camera spots keep them tidy:
+    //  near (the cottage fits the free width from 2.7 away: landscape, tablets): north of the south garland, so only
+    //       the north one is in view;
+    //  far  (phone portrait): against the south row, low enough that the south garland passes above the frame.
+    // Eye height is chosen so the north cord and its lantern project onto the blank wall band between the two floors
+    // (y 0.92-1.36) instead of across the windows, the door and the wreath.
+    const near = tw * gw >= 0.28;
+    const d = (near ? NEAR_CAM_Z : MAX_CAM_Z) - TARGET.z, cy = near ? 0.94 : 0.85;
+    // The cross-street garland at x -14.5 hangs 0.15 west of the cottage. The camera stands east of it and pans right
+    // until the left edge of the picture meets the facade just inside that garland (VIEW_LEFT): neither its cord nor
+    // its star can cross the shot, and the cottage sits flush left, beside (landscape) or above (portrait) the panel.
+    const left = near ? VIEW_LEFT : VIEW_LEFT + 0.08; // phone portrait is only ~1.5 wide at the facade: keep the owner by the door in
+    const cx = Math.min(left + d * tw, HOUSE.x + 0.35);
+    const yaw = Math.max(0, Math.atan(tw) - Math.atan((cx - left) / d));
+    out.pos.set(cx, cy, TARGET.z + d);
+    // framed from the doorstep up (door, wreath, ground-floor window, snowman, owner); the upper windows may crop
+    out.target.set(cx + Math.tan(yaw) * d, near ? 0.86 : 0.82, TARGET.z);
+    // portrait: lift the facade into the free area above the bottom sheet
+    tmpF.copy(out.target).sub(out.pos);
+    const visH = 2 * tf * tmpF.length();
+    tmpF.normalize();
     tmpR.crossVectors(tmpF, UP).normalize();
     tmpU.crossVectors(tmpR, tmpF);
-    const visW = 2 * tf * aspect * d, visH = 2 * tf * d;
-    const dx = ((1 - free.w) / 2) * visW, dy = ((1 - free.h) / 2) * visH;
-    tmpC.copy(tmpR).multiplyScalar(dx).addScaledVector(tmpU, -dy);
-    out.target.add(tmpC);
+    out.target.addScaledVector(tmpU, -((1 - free.h) / 2) * visH);
   }
 
-  let openPromise = null;
+  let openPromise = null, holdCarriage = null;
   function decorate({ first = false, auto = false } = {}) {
     if (openPromise) return openPromise;
     if (auto) {
@@ -144,18 +156,20 @@ export function createHouse(ctx) {
       preview = { ...prev };
       const prevCtl = player.controllable, prevEnabled = input.enabled, prevMode = cam.mode;
       player.controllable = false; input.enabled = false;
-      player.teleport(HOUSE.door.x + 0.5, HOUSE.door.z, 0); // beside the door, facing the camera: wreath and door stay visible
+      player.teleport(HOUSE.door.x + 0.33, HOUSE.door.z + 0.1, 0); // beside the door, facing the camera: wreath and door stay visible (and inside the narrow portrait frame)
+      holdCarriage = ctx.life?.holdVehicle?.('carriage') || null; // the ambient carriage would drive through the close-up
       uiRoot.classList.add('tb-house-open');
       refresh();
       emit('house:open', { first });
       cam.setMode('close');
-      free = { w: 0.58, h: 1 };
+      free = { w: 0.58, h: innerWidth < innerHeight ? 0.58 : 1 };
       cam.playShot({
         name: 'house', duration: 1e5, skippable: false, blendIn: 0.9, blendOut: 0.6, tilt: 0.5, portrait: false, post: CAM_SHOT,
         update(u, out, s) { frame(out, s?.dt ?? 0.016); },
       });
       const end = (style) => {
         panel?.close(); panel = null;
+        if (holdCarriage) { try { holdCarriage(); } catch (e) { /* ignore */ } holdCarriage = null; }
         isOpen = false; openPromise = null; preview = null;
         uiRoot.classList.remove('tb-house-open');
         cam.release('house');

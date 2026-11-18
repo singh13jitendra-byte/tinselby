@@ -41,7 +41,7 @@ const SLOTS = [[-0.17, 0, 0.0, 0.12], [0.0, 0, 0.02, -0.16], [0.17, 0, -0.01, 0.
 // layouts in counter-local metres (x right, z toward the camera); `fit` is the content box the camera frames
 const LAY = {
   land: { gz: 0.04, tree: [-0.62, -0.4], pile: [-0.24, -0.3], card: [0.44, -0.3], fit: { t: [0, -0.04], halfW: 0.68, halfD: 0.44 }, pitch: 37 },
-  port: { gz: 0.12, tree: [-0.27, -0.5], pile: [-0.04, -0.33], card: [0.29, -0.44], fit: { t: [0, -0.1], halfW: 0.45, halfD: 0.56 }, pitch: 38 },
+  port: { gz: 0.12, tree: [-0.27, -0.5], pile: [-0.04, -0.33], card: [0.29, -0.44], fit: { t: [0, -0.14], halfW: 0.385, halfD: 0.52 }, pitch: 41 }, // tight: gift ~17% larger, counter edge lands under the TAP pill
 };
 
 // ------------------------------------------------------------------ paper prints (knitted pixel patterns)
@@ -337,7 +337,7 @@ export default {
       const th = Math.tan((c.fov * D2R) / 2), asp = Math.max(0.2, c.aspect);
       const side = sideBtn();
       // free screen fractions above (HUD) and below (TAP pill) the content
-      const top = portrait ? 0.15 : side ? 0.17 : 0.13, bot = portrait ? 0.19 : side ? 0.05 : 0.2;
+      const top = portrait ? 0.17 : side ? 0.17 : 0.13, bot = portrait ? 0.15 : side ? 0.05 : 0.2;
       // keep the camera below y 2.0: the market's cream cord garlands (pole to tree, y 2.15-2.6) run right over the
       // portrait camera spot otherwise and smear across the view (nothing above the camera height is ever visible)
       let pr = lay.pitch * D2R, dist = 1.1;

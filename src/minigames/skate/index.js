@@ -82,7 +82,9 @@ export default {
 
     // ------------------------------------------------------------------ ribbon: one strip for the whole routine, dashed + faded in the shader
     const ribbonMat = own(new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+      // premultiplied blend: the live dashes cover the pale ice with saturated gold (plain additive washed out to cream
+      // on the bright ice); alpha 0 parts (the icy preview of the next pattern) still add like before
+      transparent: true, depthWrite: false, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, fog: false,
       polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
       uniforms: { uS: { value: 0 }, uA: { value: 0 }, uB: { value: 0 }, uC: { value: 0 }, uT: { value: 0 }, uK: { value: 0 } },
       vertexShader: 'attribute float aS; attribute float aX; varying float vS; varying float vX; void main() { vS = aS; vX = aX; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
@@ -91,12 +93,15 @@ export default {
           float stitch = smoothstep(0.08, 0.16, fract(vS / 0.17)) * (1.0 - smoothstep(0.62, 0.7, fract(vS / 0.17)));
           float edge = 1.0 - smoothstep(0.45, 1.0, abs(vX));
           float ahead = vS - uS;
-          vec3 gold = vec3(1.0, 0.78, 0.46), ice = vec3(0.55, 0.78, 1.0);
+          vec3 gold = vec3(1.0, 0.55, 0.09), ice = vec3(0.55, 0.78, 1.0);
           vec3 c = vec3(0.0);
-          if (vS >= uA && vS <= uB) c = gold * (ahead < -0.15 ? 0.2 : mix(1.5, 0.7, clamp(ahead / 7.0, 0.0, 1.0)));
-          else if (vS > uB && vS <= uC) c = ice * 0.32;
-          c *= (0.82 + 0.18 * sin(vS * 7.0 - uT * 4.0)) * uK;
-          gl_FragColor = vec4(c * stitch * edge, 1.0);
+          float a = 0.0; // how much of the ice the dash covers
+          if (vS >= uA && vS <= uB) {
+            if (ahead < -0.15) { c = gold * 0.42; a = 0.4; } // already skated: a dim amber stitch
+            else { float near = 1.0 - clamp(ahead / 7.0, 0.0, 1.0); c = gold * mix(1.25, 1.5, near); a = 0.95; }
+          } else if (vS > uB && vS <= uC) c = ice * 0.32;
+          float m = stitch * edge * (0.82 + 0.18 * sin(vS * 7.0 - uT * 4.0)) * uK;
+          gl_FragColor = vec4(c * m, a * m);
         }`,
     }));
     const ribbon = new THREE.Mesh(own(ribbonGeo()), ribbonMat);
