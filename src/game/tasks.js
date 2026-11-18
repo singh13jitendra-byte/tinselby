@@ -262,6 +262,13 @@ export function createActivities(ctx, env) {
     enabled: () => playing() && ds(24) === 'open' && st.starHome && !S.starPlaced && !st.placing,
     onInteract: () => placeStar(),
   });
+  /** The star on top of the tree (instant-ish: the tree's own 0.8 s spring). Idempotent; after a progress reset it can be shown again. */
+  function showTreeStar() {
+    try { const t = city().tree; t?.placeStar?.(); if (t?.star && !t.star.visible) t.star.visible = true; } catch (e) { console.warn('[tasks] placeStar', e); }
+  }
+  function hideTreeStar() {
+    try { const t = city().tree; if (t?.star) t.star.visible = false; } catch (e) { /* stub city */ }
+  }
   function placeStar() {
     const t = city().tree;
     const sock = t?.starSocket ? t.starSocket.clone() : new THREE.Vector3(MARKET.tree.x, MARKET.tree.height + 0.1, MARKET.tree.z);
@@ -269,7 +276,7 @@ export function createActivities(ctx, env) {
     player.faceTowards(sock.x, sock.z);
     st.starHome = false;
     fly(homeStar.position.clone(), sock, 0.8, 1.1, () => {
-      try { city().tree?.placeStar?.(); } catch (e) { console.warn('[tasks] placeStar', e); }
+      showTreeStar();
       S.starPlaced = true;
       completeDoor(24);
       game.emit('tree:starPlaced', {});
@@ -326,6 +333,9 @@ export function createActivities(ctx, env) {
         S.tasks[it.id] = 'available';
       }
     }
+    // door 24 done (e.g. after a reload): the star belongs on the tree, not on the stand (it used to reappear on the stand)
+    if (done(24)) { S.starPlaced = true; showTreeStar(); }
+    else if (reset && S.starPlaced) { S.starPlaced = false; hideTreeStar(); }
     // star
     if (done(4)) {
       if (st.hasStar) { star.back.removeFromParent(); st.hasStar = false; }

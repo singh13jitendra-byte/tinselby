@@ -33,6 +33,7 @@ export const GIVERS = {
 
 export const LINES = {
   1: {
+    card: "A card for me? Merry Christmas to you too, {name}!",
     accept: "Hello, {name}! The three houses with wreaths are still dark. Could you switch their lights on?",
     remind: "Look for the wreath doors on Holly Lane, {name}. {left} to go!",
     done: "Holly Lane is twinkling! Thank you, {name}. Merry Christmas!",
@@ -40,6 +41,7 @@ export const LINES = {
     neighbour: "Hello, neighbour {name}! Your cottage looks lovely. Welcome to Holly Lane!",
   },
   2: {
+    card: "A Christmas card! Thank you, {name}, I'll put it up high!",
     accept: "{name}! I dropped my shiny red bauble in the snow. Can you find it? I think it rolled east!",
     remind: "It's red and shiny, by the trees on the east side of the park!",
     done: "My bauble! You're the best, {name}!",
@@ -47,6 +49,7 @@ export const LINES = {
     locked: "Hi {name}! I'm building a snow fort right now. {next} needs you first!",
   },
   3: {
+    card: "A card, for me? How kind, {name}. Merry Christmas!",
     accept: "Brr! The wind blew my scarf onto the ice, {name}. Could you fetch it for me? Mind your step!",
     remind: "It's lying out on the ice, the striped one!",
     done: "Toasty again! Thank you so much, {name}.",
@@ -54,6 +57,7 @@ export const LINES = {
     locked: "Brr, it's chilly by the lake! {next} could use a hand first, {name}.",
   },
   4: {
+    card: "Ooh, a card! Merry Christmas, {name}. I'll keep it safe!",
     accept: "The big tree's star is waiting up at the top station, {name}. Ride up, bring it down and keep it safe by the tree!",
     remind: "The cable car's right behind me. Up you go, {name}!",
     carrying: "Carry that star to the big tree in Market Square, {name}. There's a cushion waiting for it!",
@@ -154,12 +158,72 @@ export const LINES = {
     again: "Back on the night slope, {name}? Beat your best!",
     locked: "Come back after {next}, {name}! The lanterns aren't lit yet.",
   },
+  // ---- wave 3 (doors 17–23). Mini-game doors: accept, done, replay, retry, again, locked. Task doors: accept, remind, done, after, locked.
+  17: {
+    accept: "Sing with us, {name}! Tap along in time with the music at the bandstand!",
+    done: "Beautiful, {name}! The whole park joined in!",
+    replay: "What a lovely choir voice, {name}!",
+    retry: "A few wobbly notes! Shall we sing again, {name}?",
+    again: "More carols, {name}? Take your place in the choir!",
+    locked: "We're warming up our voices, {name}! Help {next} first.",
+  },
+  18: {
+    accept: "Hello, {name}! I have four Christmas cards for old friends. Will you help me deliver them?",
+    remind: "Four cards to deliver, {name}: Mrs Holly, Pip, Ilse and Bram.",
+    back: "All delivered? Pop back to Percy, {name}!",
+    done: "Every card delivered! Thank you, {name}. Merry Christmas!",
+    after: "My post bag is empty and my heart is full, {name}!",
+    locked: "Psst, {name}! The post is piling up. Help {next} first.",
+  },
+  19: {
+    accept: "Come in, dear {name}! Pour, top and serve cosy mugs of cocoa with me.",
+    done: "Lovely cocoa, {name}! Everyone is warm and happy.",
+    replay: "Another round of cocoa, {name}. Perfect!",
+    retry: "A few spills! Shall we serve again, {name}?",
+    again: "More cocoa, {name}? The pot is hot!",
+    locked: "The cocoa is brewing, {name}! Help {next} first, then come by.",
+  },
+  20: {
+    accept: "Santa needs a path of lanterns through the park to land safely on Christmas Eve.",
+    remind: "Light all ten lanterns along the park path, {name}.",
+    done: "The path glows! Santa will land safely, {name}. Thank you!",
+    after: "Doesn't the lantern path look magical, {name}?",
+    locked: "Hello, {name}! I'll need your help with lanterns soon. {next} comes first.",
+  },
+  21: {
+    accept: "All aboard, {name}! Toss presents to every waving neighbour from the tram.",
+    done: "Every neighbour got a present, {name}! Splendid throwing!",
+    replay: "Another fine delivery, {name}!",
+    retry: "Ding-ding! A few presents missed. Try again, {name}?",
+    again: "More presents to deliver, {name}? Hop on!",
+    locked: "The presents are still being wrapped, {name}. Help {next} first!",
+  },
+  22: {
+    accept: "Oh {name}! Santa's mail sack burst and the wind blew the children's letters all over the park!",
+    remind: "Catch the runaway letters, {name}. They flutter fast!",
+    wish: "Would you like to write to Santa too, {name}?",
+    posted: "Posted! Santa will get every letter, {name}. Thank you!",
+    done: "Every letter is on its way to Santa, {name}!",
+    after: "I bet Santa is reading your letter right now, {name}!",
+    locked: "Psst, {name}! The letters will fly soon. Help {next} first.",
+  },
+  23: {
+    accept: "Dear {name}, help me pack the sleigh! Stack the presents neatly.",
+    done: "What a neat pack, {name}! Santa will be delighted.",
+    replay: "Tidy as ever, {name}!",
+    retry: "A few presents tumbled! Shall we pack again, {name}?",
+    again: "More presents to pack, {name}? Come on in!",
+    locked: "The presents are piled high, {name}! Help {next} first, then pop by.",
+  },
   24: {
     greet: "Welcome to Tinselby, {name}! On Christmas Eve our star goes on top of the tree. Every Advent door brings that night closer!",
     resting: "Our star is safe on its cushion, {name}. On Christmas Eve, we'll place it together!",
     starHome: "Splendid, {name}! The star can rest on this cushion until Christmas Eve.",
     open: "It's Christmas Eve, {name}! Will you place the star on top of our tree?",
     after: "Merry Christmas, {name}! Tinselby has never looked so bright.",
+    soon: "Christmas Eve is {sleeps} away, {name}. Want a little peek?",
+    needStar: "It's Christmas Eve, {name}! Ask Bram about the star first.",
+    xmas: "Merry Christmas, {name}! Every Advent door is open. Play again any time!",
   },
 };
 

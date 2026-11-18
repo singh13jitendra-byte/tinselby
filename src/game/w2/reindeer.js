@@ -14,6 +14,7 @@ const SPACING = 0.32; // distance between hoofprint pairs
 const AHEAD = 8; // prints lit ahead of the furthest reached one
 const BEHIND = 2; // prints still lit behind it
 const CLOVER_SCALE = 1;
+// wave 3 (finale hooks, additive): trotTo(path, speed) / away(on) / snapHome() drive Clover in the 'script' mode, see tasks.reindeer.
 
 /** One pair of cloven hoofprints (flat on the ground, forward = −z): 4 glowing lobes on a trampled felt patch, 20 tris. */
 function printGeo() {
@@ -94,8 +95,15 @@ export default function create(ctx, env) {
   engine.scene.add(clover);
   const cf = { x: find.x, z: find.z, y: 0, h: Math.atan2(-find.x, -find.z), speed: 0, visible: true }; // follower record
   const fol = createFollowers(ctx, { spacing: 0.55 });
-  const cState = { mode: 'off', t: 0, ph: 0, hop: 0, from: null, path: null, seg: 0 }; // off | ice | follow | trot | rest
+  const cState = { mode: 'off', t: 0, ph: 0, hop: 0, from: null, path: null, seg: 0 }; // off | ice | follow | trot | rest | script (wave 3 finale)
   let accepted = false, finished = false;
+  let script = null; // { pts: [{x, z}], i, speed, res }: the polyline Clover walks while mode === 'script'
+  let awayOn = false; // hidden while in the Rest / on a script (the finale puts Clover into the empty harness)
+  function endScript(result) {
+    const sc = script;
+    script = null;
+    if (sc && sc.res) { try { sc.res(result); } catch (e) { /* */ } }
+  }
   const homeCol = (() => { try { const c = colliders.addCircle(rest.home.x, rest.home.z, 0.11, 'clover'); c.enabled = false; return c; } catch (e) { return null; } })();
   const mBody = new THREE.Matrix4(), mLeg = new THREE.Matrix4(), bd = new THREE.Object3D(), lg = new THREE.Object3D();
 
@@ -121,6 +129,8 @@ export default function create(ctx, env) {
   const setClover = (x, y, z, h, lift = 0) => { clover.position.set(x, y + lift, z); clover.rotation.y = h; };
 
   function resetAll() {
+    endScript(false);
+    awayOn = false;
     fol.clear();
     accepted = false; finished = false; furthest = -1; printsOn = false;
     cState.mode = 'off'; cState.hop = 0;
@@ -129,6 +139,7 @@ export default function create(ctx, env) {
     clover.visible = false;
   }
   function finalLook() {
+    endScript(false);
     fol.clear();
     accepted = true; finished = true; printsOn = false; furthest = -1;
     cState.mode = 'rest';
@@ -214,6 +225,8 @@ export default function create(ctx, env) {
     if (cState.mode === 'off' && accepted && s === 'open' && revealed('lakeside')) { cState.mode = 'ice'; cf.x = find.x; cf.z = find.z; cf.y = gy(find.x, find.z); }
     if (cState.mode === 'ice' || cState.mode === 'follow' || cState.mode === 'trot') show = revealed('lakeside') || cState.mode !== 'ice';
     if (cState.mode === 'rest') show = rest.shown;
+    if (cState.mode === 'script') show = true;
+    if (awayOn && (cState.mode === 'rest' || cState.mode === 'script')) show = false;
     if (cState.mode === 'ice' && !playing()) show = false; // never stand on the skate ice (or anywhere) during a mini-game
     updatePrints(dt, t);
     fol.update(dt);
@@ -234,6 +247,19 @@ export default function create(ctx, env) {
       if (d < v * dt + 0.01) { cf.x = tgt.x; cf.z = tgt.z; cState.seg++; if (cState.seg >= cState.path.length) arrive(); }
       else { cf.x += (dx / d) * v * dt; cf.z += (dz / d) * v * dt; cf.h = turnTo(cf.h, Math.atan2(dx, dz), dt * 8); }
       cf.y = gy(cf.x, cf.z); speed = v; idle = false;
+    } else if (cState.mode === 'script') {
+      // wave 3: walk the polyline (walk cycle, ignores the task logic); idle at the end until snapHome() / the next trotTo()
+      const sc = script;
+      if (sc) {
+        const tgt = sc.pts[sc.i];
+        const dx = tgt.x - cf.x, dz = tgt.z - cf.z, d = Math.hypot(dx, dz);
+        if (d < sc.speed * dt + 0.01) {
+          cf.x = tgt.x; cf.z = tgt.z; sc.i++;
+          if (sc.i >= sc.pts.length) { cf.speed = 0; endScript(true); }
+        } else { cf.x += (dx / d) * sc.speed * dt; cf.z += (dz / d) * sc.speed * dt; cf.h = turnTo(cf.h, Math.atan2(dx, dz), dt * 8); }
+        cf.y = gy(cf.x, cf.z); speed = sc ? sc.speed : 0; idle = false;
+        if (!script) speed = 0;
+      }
     } else if (cState.mode === 'rest') {
       cf.x = rest.home.x; cf.z = rest.home.z; cf.y = gy(cf.x, cf.z);
       const d = Math.hypot(px - cf.x, pz - cf.z);
@@ -272,13 +298,34 @@ export default function create(ctx, env) {
     update,
     sync({ reset } = {}) {
       if (reset) resetAll();
-      if (env.ds(n) === 'done') finalLook();
+      if (env.ds(n) === 'done' && cState.mode !== 'script') finalLook();
     },
     /** The wave-3 finale hook: tasks.reindeer → this object. */
     reindeer: {
       get atRest() { return cState.mode === 'rest' && finished; },
       home: { x: rest.home.x, z: rest.home.z },
       get object() { return clover; },
+      /** Walk Clover along a polyline of [x, z] points at `speed` (units/s). Resolves true on arrival, false when cancelled. */
+      trotTo(path, speed = 1.4) {
+        const pts = (path || []).map((p) => (Array.isArray(p) ? { x: p[0], z: p[1] } : { x: p.x, z: p.z })).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.z));
+        endScript(false);
+        if (!pts.length) return Promise.resolve(true);
+        if (cState.mode === 'follow') fol.remove(cf);
+        if (cState.mode === 'rest' || cState.mode === 'off') { cf.x = rest.home.x; cf.z = rest.home.z; cf.y = gy(cf.x, cf.z); }
+        if (homeCol) homeCol.enabled = false;
+        cState.mode = 'script';
+        return new Promise((res) => { script = { pts, i: 0, speed: Math.max(0.2, +speed || 1.4), res }; });
+      },
+      /** A little hop (e.g. when the letters are posted in Santa's mailbox). */
+      hop() { cState.hop = 0.8; },
+      /** Hide / show Clover while he is in the Rest (or on a script). */
+      away(on) { awayOn = !!on; },
+      /** Cancel any script and put Clover back in the Rest, visible (if door 15 is done). */
+      snapHome() {
+        endScript(false);
+        awayOn = false;
+        if (finished || env.ds(n) === 'done') finalLook();
+      },
     },
     get state() { return { accepted, mode: cState.mode, furthest, prints: pts.length, finished, atRest: act.reindeer.atRest, clover: clover.visible, restShown: rest.shown }; },
     rest,

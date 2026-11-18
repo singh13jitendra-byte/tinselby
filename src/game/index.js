@@ -4,12 +4,15 @@
 // marker and starts its activity; givers of done doors thank you (mini-game givers offer "Play again").
 // Wave 3 (?w3, lead scaffolding): doors 17–23 (mini-games 17/19/21/23, task activities 18/20/22 from ./w3/*), new dolls 18/19,
 // shared dolls 17/20/21/22/23 → 5/24/11/15/12. The Doors agent adds the WAVE3.md hooks (onDoll/dollLabel, gather, door 24 flow).
+// Wave 3 additions here: activity hooks (onDoll / dollLabel), actEnv extras (sayOrToast, giverPos, dolls, fill, GIVERS), setGiverHidden,
+// gather (finale: friends round the tree), Clover API on tasks.reindeer, tasks.lanterns, door 24 lines / labels (peek, watch again).
 // Progress lives in ctx.progress (src/progress); this module only reads door states and calls progress.complete.
 import { makeModels } from './models.js';
 import { createGiver } from './givers.js';
 import { GIVERS, LINES, fill } from './lines.js';
 import { createHintArrow } from './hints.js';
 import { createActivities } from './tasks.js';
+import { W3 } from '../progress/doors.js';
 import createHouseActivity from './w2/house.js';
 import createGnomesActivity from './w2/gnomes.js';
 import createReindeerActivity from './w2/reindeer.js';
@@ -47,14 +50,29 @@ export function createTasks(ctx) {
     const g = GIVERS[n], dist = layout.DOOR_SPOTS[n]?.district;
     return g ? `${g.who} ${PREP[dist] || 'in'} ${districtName(dist)}` : '';
   };
+  /** "3 sleeps" / "1 sleep" (wave 3: until Christmas Eve) */
+  const sleepsText = () => { const k = prog()?.eve?.sleeps ?? 0; return k === 1 ? '1 sleep' : `${k} sleeps`; };
   const vars = (extra = {}) => {
     const c = current();
-    return { name: S.playerName || 'friend', next: c && GIVERS[c] ? whereText(c) : 'someone else', ...extra };
+    return { name: S.playerName || 'friend', next: c && GIVERS[c] ? whereText(c) : 'someone else', sleeps: sleepsText(), ...extra };
   };
   function say(n, key, extra) {
     const g = givers[n], text = LINES[n]?.[key];
     if (!g || !text) return;
     game.emit('dialog', { who: g.who, text: fill(text, vars(extra)), pos: g.headPos().clone(), id: n, door: n });
+  }
+  /** A speech bubble when the giver stands within 6 units of the player, else a toast `{who}: "{line}"` (wave 3). */
+  function sayOrToast(n, key, extra) {
+    const g = givers[n], text = LINES[n]?.[key];
+    if (!g || !text) return;
+    const d = Math.hypot(g.root.position.x - player.pos.x, g.root.position.z - player.pos.z);
+    if (d <= 6) say(n, key, extra);
+    else toast(`${g.who}: "${fill(text, vars(extra))}"`);
+  }
+  /** Where a door's giver stands: {x, z, district, who} (door 24 → the Mayor by the tree). */
+  function giverPos(n) {
+    const g = givers[n];
+    return g ? { x: g.x, z: g.z, district: layout.DOOR_SPOTS[n]?.district, who: g.who } : null;
   }
   const toast = (text, ms) => game.emit('ui:toast', { text, ms });
   const sfx = (name, x, z) => { try { ctx.audio?.sfx?.(name, x != null ? { x, z } : undefined); } catch (e) { /* audio optional */ } };
@@ -87,7 +105,7 @@ export function createTasks(ctx) {
   // wave-2 task doors (10 house, 14 gnomes, 15 reindeer) are plug-in activities (WAVE2.md §Activity interface)
   const taskComplete = (id) => game.emit('task:complete', { id });
   const activities = {};
-  const actEnv = { models, givers, say, toast, sfx, ds, completeDoor, taskComplete };
+  const actEnv = { models, givers, say, toast, sfx, ds, completeDoor, taskComplete, sayOrToast, giverPos, dolls, fill, GIVERS };
   for (const n of GIVER_DOORS) {
     const id = n >= 9 ? GIVERS[n].task : null;
     if (!id || !ACTIVITIES[id] || !doorMeta(n)?.available) continue;
@@ -146,7 +164,15 @@ export function createTasks(ctx) {
     if (doneGames.length > 1) return { type: 'choose', doors: doneGames };
     // 3. a line: the Mayor's wave-1 logic, else the `after` of the highest done door, else the `locked` of the lowest locked door
     if (list.includes(24)) {
+      if (W3 && ds(24) === 'done') return { type: 'eve-replay', n: 24, key: prog()?.eve?.isAfter ? 'xmas' : 'after' };
       if (ds(24) === 'done' || S.starPlaced) return { type: 'line', n: 24, key: 'after' };
+      if (W3) {
+        const ev = prog()?.eve;
+        if (ev?.isEve && ds(4) !== 'done') return { type: 'line', n: 24, key: 'needStar' };
+        let all = true;
+        for (let i = 1; i <= 23 && all; i++) all = ds(i) === 'done';
+        if (all && ds(24) === 'locked' && !ev?.isEve) return { type: 'peek', n: 24, key: 'soon' };
+      }
       if (ds(10) === 'done' && !acts.starHome) return { type: 'line', n: 10, key: 'after' };
       if (ds(10) === 'locked' && prog()?.doneCount?.() > 0) return { type: 'line', n: 10, key: 'locked' };
       return { type: 'line', n: 24, key: acts.starHome ? 'resting' : 'greet' };
@@ -158,6 +184,8 @@ export function createTasks(ctx) {
   }
   async function onDoll(doll) {
     doll.wave();
+    // wave 3: an activity may take the talk (Christmas Cards: give a card to this friend), except on its own giver
+    for (const act of actList) { if (givers[act.n] === doll) continue; try { if (act.onDoll?.(doll)) return; } catch (e) { console.error('[tasks] onDoll ' + act.id, e); } }
     const a = resolve(doll);
     switch (a.type) {
       case 'task1': acts.onGiver(a.n); break;
@@ -177,6 +205,16 @@ export function createTasks(ctx) {
         break;
       }
       case 'line': say(a.n, a.key); break;
+      case 'peek': if (ctx.finale?.preview) ctx.finale.preview(); else say(a.n, a.key); break; // before Eve: the sleigh flyover
+      case 'eve-replay': { // Christmas Eve is done: "Watch Christmas Eve again?"
+        say(a.n, a.key);
+        if (typeof ctx.ui?.choose !== 'function' || !ctx.finale?.replay) break;
+        choosing = true;
+        let v = null;
+        try { v = await ctx.ui.choose({ title: 'Watch Christmas Eve again?', options: [{ label: 'Yes, please!', value: 1 }] }); } catch (e) { console.warn('[tasks] choose', e); } finally { choosing = false; }
+        if (v != null && S.phase === 'play') ctx.finale.replay();
+        break;
+      }
       default: break;
     }
   }
@@ -185,7 +223,17 @@ export function createTasks(ctx) {
     if (a.type === 'task1') { const o = acts.giverLabel(a.n); if (o) return o; }
     if (a.type === 'activity') { const o = actFor(a.n)?.giverLabel?.(); if (o) return o; }
     if (a.type === 'again' || a.type === 'choose') return { label: `Play again with ${doll.who}`, icon: 'star' };
+    if (a.type === 'peek') return { label: 'Peek at Christmas Eve', icon: 'star' };
+    if (a.type === 'eve-replay') return { label: 'Watch Christmas Eve again', icon: 'star' };
     return { label: `Talk to ${doll.who}`, icon: 'talk' };
+  }
+  /** Wave 3: an activity's own label for a doll that is not its giver ("Give a card to …"), or null. */
+  function actLabel(g) {
+    for (const act of actList) {
+      if (!act.dollLabel || givers[act.n] === g) continue;
+      try { const o = act.dollLabel(g); if (o) return o; } catch (e) { console.error('[tasks] dollLabel ' + act.id, e); }
+    }
+    return null;
   }
   for (const g of dolls) {
     g.spot = interact.add({
@@ -193,7 +241,12 @@ export function createTasks(ctx) {
       // the Mayor steps aside while you carry the star to the tree, and on Christmas Eve (the tree spot takes over)
       enabled: () => {
         if (S.phase !== 'play' || pending || playingDoor || choosing) return false;
-        if (g.doors.includes(24) && (acts.st.hasStar || acts.st.placing || ds(24) === 'open')) return false;
+        if (g.hiddenBy.size) return false;
+        if (g.doors.includes(24)) {
+          if (acts.st.hasStar || acts.st.placing) return false;
+          // on Christmas Eve the tree spot takes over (so anywhere round the tree places the star), unless the Mayor still has door 10 / 20 for you
+          if (ds(24) === 'open' && !(ds(10) === 'open' || ds(20) === 'open')) return false;
+        }
         if (w2Busy()) { const t = resolve(g).type; return t === 'game' || t === 'again' || t === 'choose'; } // mini-games still work
         return true;
       },
@@ -247,15 +300,55 @@ export function createTasks(ctx) {
     for (const g of dolls) {
       const carryingFor = acts.st.hand && g.doors.some((n) => n <= 4 && GIVERS[n].task === acts.st.hand);
       g.showMarker = pl && (g.doors.some((n) => ds(n) === 'open') || !!carryingFor);
-      const over = labelFor(g, resolve(g));
+      const over = actLabel(g) || labelFor(g, resolve(g));
       g.spot.label = over.label; g.spot.icon = over.icon;
       g.update(dt, t);
+    }
+    while (gatherQ.length && gatherQ[0].at <= engine.time) { // gathering: friends hop in one after another
+      const { g } = gatherQ.shift();
+      g.hop(); g.pop();
+      sfx('pop', g.root.position.x, g.root.position.z);
     }
     for (const a of actList) { try { a.update?.(dt, t); } catch (e) { console.error('[tasks] update ' + a.id, e); } }
     acts.update(dt, t);
     objective = pickObjective();
     arrow.update(dt, t, objective);
   }, 5);
+
+  // ------------------------------------------------------------ wave 3: hide a giver, gather the friends (finale)
+  /** Hide a giver's doll (root, marker and spot), ref-counted by token like life.holdVehicle: returns restore(). `hidden: false` clears every hold. */
+  function setGiverHidden(n, hidden = true) {
+    const g = givers[n];
+    if (!g) return () => {};
+    if (!hidden) { g.hiddenBy.clear(); g.root.visible = true; return () => {}; }
+    const token = {};
+    g.hiddenBy.add(token);
+    g.root.visible = false;
+    let done = false;
+    return () => { if (done) return; done = true; g.hiddenBy.delete(token); if (!g.hiddenBy.size) g.root.visible = true; };
+  }
+  let gatherOn = false;
+  const gatherQ = []; // { at, g }: staggered hop + pop (0.08 s apart)
+  /** The finale's gathering: every unique doll except the Mayor goes onto layout.EVE.gather in ascending order of its first door and turns to `face`. */
+  function gather({ on = true, face = layout.MARKET.tree } = {}) {
+    if (!on) {
+      gatherQ.length = 0;
+      gatherOn = false;
+      for (const g of dolls) { g.moveTo(null); g.faceTowards(null, null, true); }
+      return;
+    }
+    const fx = face?.x ?? layout.MARKET.tree.x, fz = face?.z ?? layout.MARKET.tree.z;
+    for (const g of dolls) g.faceTowards(fx, fz); // the Mayor stays by the tree but turns too
+    if (gatherOn) return; // called again with a new face: only turn them
+    gatherOn = true;
+    const guests = dolls.filter((g) => !g.doors.includes(24)).sort((a, b) => a.doors[0] - b.doors[0]);
+    guests.forEach((g, i) => {
+      const slot = layout.EVE?.gather?.[i];
+      if (!slot) return; // extra dolls take no slot and stay put
+      g.moveTo(slot[0], slot[1]);
+      gatherQ.push({ at: engine.time + 0.08 * i, g });
+    });
+  }
 
   return {
     /** Current objective {id, door, text, icon, x, z} or null (HUD task chip + hint arrow). */
@@ -269,8 +362,23 @@ export function createTasks(ctx) {
     /** The Reindeer Rest + Clover (wave-3 finale hook): { atRest, home: {x, z}, object }. */
     get reindeer() {
       const a = activities.reindeer, r = a && a.reindeer;
-      return { atRest: r && r.atRest != null ? !!r.atRest : ds(15) === 'done', home: (r && r.home) || { ...layout.REINDEER.rest }, object: (r && r.object) || null };
+      return {
+        atRest: r && r.atRest != null ? !!r.atRest : ds(15) === 'done', home: (r && r.home) || { ...layout.REINDEER.rest }, object: (r && r.object) || null,
+        // wave 3 finale hooks: Clover walks a polyline (→ Promise, true on arrival), hides in the harness, snaps back to the Rest
+        trotTo: (path, speed) => (r?.trotTo ? r.trotTo(path, speed) : Promise.resolve(false)),
+        away: (on) => { try { r?.away?.(on); } catch (e) { /* */ } },
+        snapHome: () => { try { r?.snapHome?.(); } catch (e) { /* */ } },
+        hop: () => { try { r?.hop?.(); } catch (e) { /* */ } },
+      };
     },
+    /** Door 20's lantern runway { positions, lit, allLit, chase(dur) } (the finale calls chase while the sleigh comes in), or null. */
+    get lanterns() { return activities.lanterns?.runway || null; },
+    setGiverHidden,
+    gather,
+    /** The unique dolls (giver objects; `.doors` = every door a doll serves; `.x/.z` = its spot, `.root.position` = where it stands now). */
+    get dolls() { return dolls; },
+    /** Re-derive item / star / activity state from progress (tests; the same code as after a load). */
+    resync(opts) { acts.sync(opts); syncActs(opts); },
     /** Start door n's mini-game right now (tests): resolves the framework's result, completes the door like a normal play. */
     playDoor(n) {
       const id = doorMeta(n)?.game;
@@ -279,10 +387,7 @@ export function createTasks(ctx) {
     },
     doorGivers: givers,
     /** Where a door's giver stands: {x, z, district, who} (door 24 → the Mayor by the tree). */
-    giverPos(n) {
-      const g = givers[n];
-      return g ? { x: g.x, z: g.z, district: layout.DOOR_SPOTS[n]?.district, who: g.who } : null;
-    },
+    giverPos,
     /** "Tilly in Pinecone Park" */
     whereText,
     /** Point the hint arrow + task chip at a door's giver for a while (calendar "Find {giver}"), until reached. */

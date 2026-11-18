@@ -7,11 +7,14 @@
 // progress:change {} (anything changed: refresh UI; {house:true} when the house style was saved), progress:reset {},
 // daily:available {} (a new day began mid-session), doors:new {from, to} (wave 2: a returning save is told once that more
 // doors opened; `wave` in the save is the highest door it has been told about).
+// Wave 3 (?w3, WAVE3.md §Progress): progress.eve (clock-driven Christmas Eve state), the test clock (?date=YYYY-MM-DD, ?eve,
+// ?xmas → api._clock), date-gated door 24, post-Christmas unlock of doors 1–23, wish / finaleGift / flags / markEveWatched,
+// events wish:set {id}, progress:change {eve:true}, door:open {n:24} (date flip, 30 s timer + _checkEve()).
 import { STYLE_OPTIONS, DEFAULT_STYLE } from '../core/player.js';
-import { DOORS, FINALE_DOOR, door, doorForGame, DEFAULT_UNLOCKED, GATED_SLOTS, DAILY_REWARDS, DAILY_TREATS, REWARDS, festiveLevel } from './doors.js';
-import { SAVE_KEY, blankSave, defaultStorage, load, store, wipe, dayKey, prevDay, cleanHouse } from './save.js';
+import { DOORS, FINALE_DOOR, W3, WISH_REWARDS, door, doorForGame, DEFAULT_UNLOCKED, GATED_SLOTS, DAILY_REWARDS, DAILY_TREATS, REWARDS, festiveLevel } from './doors.js';
+import { SAVE_KEY, blankSave, defaultStorage, load, store, wipe, dayKey, prevDay, cleanHouse, isWishId, FLAG_RE, MAX_FLAGS } from './save.js';
 
-export { DOORS, REWARDS, DAILY_REWARDS, festiveLevel };
+export { DOORS, REWARDS, DAILY_REWARDS, WISH_REWARDS, festiveLevel };
 const SPIRIT_MAX = 4;
 
 /**
@@ -36,7 +39,22 @@ export function createProgress(ctx = {}, opts = {}) {
   if (loaded.fresh) S.wave = lastAvailable(); // brand-new players never see the "new doors" card
   if (loaded.corrupt && !silent) console.warn('[progress] save was unreadable; starting fresh');
 
-  const now = () => (api._clock ? api._clock() : opts.clock ? opts.clock() : new Date());
+  /** Test clock from the URL (WAVE3.md §Progress): ?date=YYYY-MM-DD (noon that day), ?eve (24 Dec of the season, 18:00), ?xmas (26 Dec). Keeps ticking. */
+  function paramClock() {
+    let at = null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(params.get?.('date') || '');
+    if (m) at = new Date(+m[1], +m[2] - 1, +m[3], 12);
+    else if (params.has?.('eve') || params.has?.('xmas')) {
+      const r = new Date();
+      const season = r.getMonth() >= 6 ? r.getFullYear() : r.getFullYear() - 1;
+      at = params.has('eve') ? new Date(season, 11, 24, 18) : new Date(season, 11, 26, 12);
+    }
+    if (!at || isNaN(at.getTime())) return null;
+    const t0 = Date.now(), base = at.getTime();
+    return () => new Date(base + (Date.now() - t0));
+  }
+  const clockFromParams = opts.clock ? null : paramClock();
+  const now = () => (api._clock ? api._clock() : opts.clock ? opts.clock() : clockFromParams ? clockFromParams() : new Date());
   const today = () => dayKey(now());
   const emit = (evt, data = {}) => {
     if (silent || quiet || !game?.emit) return;
@@ -51,23 +69,36 @@ export function createProgress(ctx = {}, opts = {}) {
 
   // ---------------------------------------------------------------- doors
   const isDone = (n) => !!S.doors[n];
-  // TODO(wave 3, Doors agent; WAVE3.md §Progress): with W3 (src/progress/doors.js) door 24 becomes date-gated
-  // (`eve.isEve && isDone(4)` → 'open'), doors 1–23 lose their sequential locks once `eve.isAfter`, current() prefers 24;
-  // add progress.eve / wish / finaleGift / flags / markEveWatched, the ?date= / ?eve / ?xmas test clock via api._clock and
-  // the eve re-check in the 30 s timer. Without W3 everything below must stay exactly as it is.
+  // ---------------------------------------------------------------- Christmas Eve clock (wave 3)
+  let eveCache = null; // recomputed when the minute changes (state() runs many times per frame)
+  /** { season, day, isEve, isAfter, sleeps } for the progress clock: season = the year when the local month ≥ July, else year − 1. */
+  function computeEve() {
+    const d = now(), ms = d.getTime(), mk = Math.floor(ms / 60000);
+    if (eveCache && eveCache.mk === mk) return eveCache.v;
+    const season = d.getMonth() >= 6 ? d.getFullYear() : d.getFullYear() - 1;
+    const day = `${season}-12-24`, t = dayKey(d);
+    const sleeps = Math.max(0, Math.round((Date.UTC(season, 11, 24) - Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000));
+    const v = Object.freeze({ season, day, isEve: t >= day, isAfter: t >= `${season}-12-25`, sleeps });
+    eveCache = { mk, v };
+    return v;
+  }
   function state(n) {
     const d = door(n);
     if (!d) return 'locked';
     if (isDone(n)) return 'done';
     if (n === FINALE_DOOR) {
+      // wave 3: opens on 24 Dec (the player's local date) once door 4 is done (the star is resting by the tree)
+      if (W3) return computeEve().isEve && isDone(4) ? 'open' : 'locked';
       for (let i = 1; i < FINALE_DOOR; i++) if (!isDone(i)) return 'locked';
       return 'open';
     }
     if (!d.available) return 'soon';
+    if (W3 && computeEve().isAfter) return 'open'; // from 25 Dec the one-by-one unlock is lifted
     if (n === 1 || isDone(n - 1)) return 'open';
     return 'locked';
   }
   function current() {
+    if (W3 && state(FINALE_DOOR) === 'open') return FINALE_DOOR; // Christmas Eve comes first
     for (const d of DOORS) if (state(d.n) === 'open') return d.n;
     return null;
   }
@@ -155,6 +186,8 @@ export function createProgress(ctx = {}, opts = {}) {
     /** Where an option comes from: {door, title, label} | {daily: true, label} | null (always available). */
     source(slot, k) {
       if (!GATED_SLOTS.includes(slot) || DEFAULT_UNLOCKED[slot]?.includes(k)) return null;
+      const wr = WISH_REWARDS.find((x) => x.slot === slot && x.key === k);
+      if (wr) return { santa: true, label: wr.label };
       const d = DOORS.find((x) => x.reward && x.reward.slot === slot && x.reward.key === k);
       if (d) return { door: d.n, title: d.title, label: d.reward.label };
       const dr = DAILY_REWARDS.find((x) => x.slot === slot && x.key === k);
@@ -234,6 +267,46 @@ export function createProgress(ctx = {}, opts = {}) {
     },
   };
 
+  // ---------------------------------------------------------------- wave 3: wish, Santa's gift, one-time flags
+  const wish = {
+    options: WISH_REWARDS,
+    get: () => S.wish,
+    set(id) {
+      if (!isWishId(id)) return null;
+      S.wish = id;
+      persist();
+      emit('wish:set', { id });
+      changed({ wish: true });
+      return id;
+    },
+  };
+  /** Santa's gift in the finale: the wish if it isn't owned yet, else the first unowned wish piece, else null. Only once door 24 is done. */
+  function finaleGift() {
+    if (state(FINALE_DOOR) !== 'done') return null;
+    const id = S.wish && !S.rewards.includes(S.wish) ? S.wish : WISH_REWARDS.find((r) => !S.rewards.includes(r.id))?.id;
+    if (!id) return null;
+    const g = grant(id, { notify: false });
+    return g ? { id: g.id, slot: g.slot, key: g.key, label: g.label } : null;
+  }
+  const flags = {
+    has: (k) => S.flags.includes(k),
+    set(k) {
+      if (typeof k !== 'string' || !FLAG_RE.test(k)) return false;
+      if (!S.flags.includes(k)) {
+        if (S.flags.length >= MAX_FLAGS) S.flags.shift();
+        S.flags.push(k);
+        persist();
+      }
+      return true;
+    },
+  };
+  function markEveWatched() {
+    S.eveWatched = Math.min(9999, (S.eveWatched | 0) + 1);
+    persist();
+    changed({ eveWatched: true });
+    return S.eveWatched;
+  }
+
   // ---------------------------------------------------------------- profile (name + style, for "Welcome back")
   const profile = {
     get name() { return S.profile.name || ''; },
@@ -247,6 +320,18 @@ export function createProgress(ctx = {}, opts = {}) {
   };
 
   let dailyTimer = null, waveTimer = null;
+  // date flips mid-session (wave 3): door 24 opening and the post-Christmas unlock are announced like a normal change
+  let eveSeen = null;
+  function checkEve(silentInit = false) {
+    if (!W3) return;
+    const k = { s24: state(FINALE_DOOR), after: computeEve().isAfter, cur: current() };
+    const prev = eveSeen;
+    eveSeen = k;
+    if (silentInit || !prev) return;
+    if (k.s24 === prev.s24 && k.after === prev.after) return;
+    if (k.s24 === 'open' && prev.s24 !== 'open') emit('door:open', { n: FINALE_DOOR });
+    changed({ eve: true });
+  }
   const api = {
     get playerId() { return S.playerId; },
     doors: DOORS,
@@ -266,6 +351,13 @@ export function createProgress(ctx = {}, opts = {}) {
     daily,
     profile,
     house,
+    wish,
+    flags,
+    finaleGift,
+    markEveWatched,
+    get eveWatched() { return S.eveWatched | 0; },
+    /** { season, day, isEve, isAfter, sleeps } from the progress clock (WAVE3.md §Progress). */
+    get eve() { return computeEve(); },
     lastAvailable,
     /** Highest door the player has been told about (doors:new fires while this is below lastAvailable()). */
     get wave() { return S.wave; },
@@ -284,6 +376,7 @@ export function createProgress(ctx = {}, opts = {}) {
     toJSON: () => JSON.parse(JSON.stringify(S)),
     _clock: null,
     _syncSpirit: syncSpirit,
+    _checkEve: (quiet = false) => checkEve(!!quiet),
   };
 
   // ?doors=N → doors 1..N done (quietly) for testing
@@ -315,10 +408,12 @@ export function createProgress(ctx = {}, opts = {}) {
       }, opts.newDoorsDelay ?? 1500);
     });
     let wasAvail = daily.available;
+    checkEve(true); // remember the starting date state (no events)
     dailyTimer = setInterval(() => {
       const a = daily.available;
       if (a && !wasAvail) { emit('daily:available', {}); changed({ daily: true }); }
       wasAvail = a;
+      checkEve();
     }, 30000);
   }
   /** Stop the timers (tests that build extra non-silent instances). */

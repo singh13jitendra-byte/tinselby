@@ -1,3 +1,4 @@
+import { WISH_REWARDS } from './doors.js';
 // Save file: localStorage key `tinselby.save.v1`, versioned JSON. Every read/write is guarded (private mode, quota,
 // corrupt JSON, hand-edited values): a bad save never breaks the game, it just starts fresh.
 export const SAVE_KEY = 'tinselby.save.v1';
@@ -27,6 +28,9 @@ export function blankSave() {
     daily: { last: '', streak: 0, claims: 0 },
     house: null, // wave 2: { wreath, lights, door, snowman } (option keys), null until the player decorates
     wave: 8, // highest available door the player has been told about (new saves: progress sets lastAvailable())
+    wish: null, // wave 3: id of the wish piece picked at door 22 (one of WISH_REWARDS), Santa brings it in the finale
+    flags: [], // wave 3: one-time card flags ('eve-card', 'xmas-card'), ≤ 32 entries /^[a-z0-9-]{1,24}$/
+    eveWatched: 0, // wave 3: how many times the Christmas Eve finale reached its end card
   };
 }
 
@@ -38,6 +42,10 @@ export function cleanHouse(v) {
   for (const k of HOUSE_KEYS) if (typeof v[k] === 'string' && /^[a-z]{1,12}$/.test(v[k])) out[k] = v[k];
   return Object.keys(out).length ? out : null;
 }
+
+export const FLAG_RE = /^[a-z0-9-]{1,24}$/;
+export const MAX_FLAGS = 32;
+export const isWishId = (id) => typeof id === 'string' && WISH_REWARDS.some((r) => r.id === id);
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const int = (v, d = 0) => (Number.isFinite(+v) ? Math.floor(+v) : d);
@@ -78,6 +86,9 @@ export function normalize(raw) {
   s.house = cleanHouse(raw.house);
   // saves from before wave 2 have no `wave`: they were told about doors 1–8
   s.wave = raw.wave === undefined || !Number.isFinite(+raw.wave) ? 8 : Math.max(0, Math.min(24, int(raw.wave, 8)));
+  s.wish = isWishId(raw.wish) ? raw.wish : null;
+  if (Array.isArray(raw.flags)) s.flags = [...new Set(raw.flags.filter((f) => typeof f === 'string' && FLAG_RE.test(f)))].slice(0, MAX_FLAGS);
+  s.eveWatched = Math.max(0, Math.min(9999, int(raw.eveWatched, 0)));
   return s;
 }
 
