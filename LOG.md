@@ -80,3 +80,4 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - 06:45 IST: batch B spawned: UI & Net (Sonnet), Calendar data (Haiku), Cocoa (Sonnet), Pack (Sonnet).
 - 07:10 IST: calendar data (Haiku) committed. Note for UI & Net: wardrobe.js lockInfo should check source().santa before daily (wish pieces).
 - 07:35 IST: Carols (Opus) committed; kept 3 lanes (user brief) over WAVE3's one-lane. Polish TODOs: gazebo rail crosses the player's chest, landscape HUD covers the roof, how-to hint covers the stage 8 s. Pattern note for builders: register mg.addUpdate before awaiting mg.intro().
+- 07:55 IST: Doors (Sonnet) committed; clean HEAD builds; selftest 359/0 with ?w3 (incl. eve/xmas).
