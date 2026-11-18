@@ -37,3 +37,4 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - Spawned wave-2 builders: Doors (Sonnet), Trails (Sonnet), House (Sonnet), Wardrobe (Fable), Skate (Opus), Tram (Opus), Snowman (Opus), Gift wrap (Sonnet). Waiting: Sled II (sled/ is with the mini-game portrait agent), UI (ui/ with portrait agent), Calendar data (Haiku). All builders told: portrait + landscape required.
 - Running total: 11 agents; Chrome lock will queue — builders told to prefer logic tests.
 - 11:40 IST: Server restart stopped all 11 agents mid-work (~11:26). Files intact; resumed all 11 via SendMessage. Perf agent's city/ edits are no longer in the working tree (it may have reverted them while testing variants) — check its report.
+- Wardrobe (Fable) committed: 8 pieces. For the wave-2 UI agent: jingle swatch = scarf:red hex, holly ≈ green, snowy ≈ cream → add dots/rings or SPECIAL_TINT; SHORT labels + HAT_TINT per WAVE2 §UI.
