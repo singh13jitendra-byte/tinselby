@@ -58,3 +58,4 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - 20:45 IST: Fable wave-2 polish committed (+ REINDEER.rest x 7.0→7.35).
 - 21:20 IST: QA wave 2 (Sonnet): no P1; P2 Clover/gnomes visible during skate → fixed; P3 midnight swatch, house chips 44px, skate duplicate hint → fixed. Cable car (Opus) committed. W2 flipped to live (4c5a1fb). Release playthrough running on clean worktree. Later: camera.js lens hook (shot.lens {w,fov,near}) for a wider cabin FOV; drop src/camera/shots.js cable car listener; HUD hidden during the ride.
 - 22:15 IST: WAVE 2 RELEASED. Release playthrough on clean 4c5a1fb: selfTest 197/0, all 9 mini-games start/quit clean, portrait + rotate checks, 0 fails, 0 console errors. Pushed 4c5a1fb to main.
+- 23:00 IST: Lake cocoa hut + ticket booth fold (Sonnet) committed; desktop playthrough green; pushed.
