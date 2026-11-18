@@ -84,7 +84,7 @@ export function createPanel(ctx, data, { onHint, rewardTint }) {
     const streak = data.streak;
     streakEl.innerHTML = streak > 0 ? `<b>${streak}</b>-day streak` : 'First visit!';
     const ts = data.townSpirit();
-    spiritEl.innerHTML = `<b>${ts.doors.toLocaleString()}</b> doors${ts.helpers ? ` · <b>${ts.helpers.toLocaleString()}</b> helpers` : ''}`;
+    spiritEl.innerHTML = `<b>${ts.doors.toLocaleString()}</b> door${ts.doors === 1 ? '' : 's'}${ts.helpers ? ` · <b>${ts.helpers.toLocaleString()}</b> helper${ts.helpers === 1 ? '' : 's'}` : ''}`;
     const pc = data.playerCount();
     playersEl.innerHTML = data.online ? `<b>${pc}</b> in your town` : 'Playing offline';
     $('.cal-players').classList.toggle('off', !data.online);

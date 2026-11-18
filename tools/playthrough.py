@@ -43,7 +43,11 @@ with sync_playwright() as p:
         ready(pg, BASE + '&reset')
         shot(pg, 'entry', 20)
         pg.fill('input', 'Jitendra')
+        pg.get_by_text('Next: choose your look').first.click()
+        pg.evaluate('new Promise(r => setTimeout(r, 600))')
+        shot(pg, 'tray', 6)
         pg.get_by_text('Enter Tinselby').first.click()
+        pg.evaluate('new Promise(r => setTimeout(r, 300))')
         S = 'window.__tinselby.ctx.game.state'
         check(pg.evaluate(f'{S}.phase') == 'play', 'Enter → play phase')
         check(pg.evaluate(f'{S}.playerName') == 'Jitendra', 'player name kept')
