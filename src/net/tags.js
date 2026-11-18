@@ -61,15 +61,22 @@ export function createNameTags(ctx) {
     const grd = g.createLinearGradient(0, y, 0, y + h);
     grd.addColorStop(0, 'rgba(255,220,200,0.28)'); grd.addColorStop(0.55, 'rgba(255,255,255,0)'); grd.addColorStop(1, 'rgba(60,10,10,0.25)');
     g.fillStyle = grd; pill(); g.fill();
-    // cream running stitch
-    g.setLineDash([5, 4]); g.lineWidth = 2.4; g.strokeStyle = '#f6e6c8';
+    // cream running stitch (the player's own tag: warm gold stitch + an outer gold rim)
+    if (s.self) { pill(); g.lineWidth = 3; g.strokeStyle = '#f2b843'; g.stroke(); }
+    g.setLineDash([5, 4]); g.lineWidth = 2.4; g.strokeStyle = s.self ? '#ffd877' : '#f6e6c8';
     g.beginPath(); const ir = r - 5;
     g.moveTo(x + 5 + ir, y + 5); g.arcTo(x + w - 5, y + 5, x + w - 5, y + h - 5, ir); g.arcTo(x + w - 5, y + h - 5, x + 5, y + h - 5, ir); g.arcTo(x + 5, y + h - 5, x + 5, y + 5, ir); g.arcTo(x + 5, y + 5, x + w - 5, y + 5, ir); g.closePath();
     g.stroke(); g.setLineDash([]);
-    // pom in their coat colour
-    g.beginPath(); g.arc(x + 22, y + h / 2, 9.5, 0, Math.PI * 2); g.fillStyle = '#f6e6c8'; g.fill();
-    g.beginPath(); g.arc(x + 22, y + h / 2, 7.5, 0, Math.PI * 2); g.fillStyle = s.coat; g.fill();
-    g.beginPath(); g.arc(x + 19.5, y + h / 2 - 2.5, 2.6, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,0.5)'; g.fill();
+    if (s.self) { // a little gold felt star = "you"
+      g.beginPath();
+      for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? 4.8 : 11; g[k ? 'lineTo' : 'moveTo'](x + 22 + Math.cos(a) * rr, y + h / 2 + 0.5 + Math.sin(a) * rr); }
+      g.closePath(); g.fillStyle = '#ffd25a'; g.fill(); g.lineWidth = 1.6; g.lineJoin = 'round'; g.strokeStyle = '#fff1c4'; g.stroke();
+    } else {
+      // pom in their coat colour
+      g.beginPath(); g.arc(x + 22, y + h / 2, 9.5, 0, Math.PI * 2); g.fillStyle = '#f6e6c8'; g.fill();
+      g.beginPath(); g.arc(x + 22, y + h / 2, 7.5, 0, Math.PI * 2); g.fillStyle = s.coat; g.fill();
+      g.beginPath(); g.arc(x + 19.5, y + h / 2 - 2.5, 2.6, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,0.5)'; g.fill();
+    }
     // name
     g.textBaseline = 'middle'; g.textAlign = 'left';
     g.fillStyle = 'rgba(60,10,10,0.55)'; g.fillText(text, x + 37, y + h / 2 + 3, SW - 62);
@@ -87,7 +94,7 @@ export function createNameTags(ctx) {
     if (i === undefined) {
       i = slots.indexOf(null);
       if (i < 0) return -1;
-      slots[i] = { id: t.id, label, coat: t.coat };
+      slots[i] = { id: t.id, label, coat: t.coat, self: !!t.self };
       byId.set(t.id, i);
       draw(i);
     } else if (slots[i].label !== label || slots[i].coat !== t.coat) { slots[i].label = label; slots[i].coat = t.coat; draw(i); }
@@ -114,12 +121,16 @@ export function createNameTags(ctx) {
       if (i < 0) continue;
       seen.add(t.id);
       const s = slots[i];
-      const cx = t.x, cy = t.y + LIFT, cz = t.z;
-      const alpha = t.k * (1 - smooth(26, 34, d));
+      const cx = t.x, cy = t.y + LIFT + (t.self ? 0.04 : 0), cz = t.z;
+      const alpha = t.k * (t.self ? 1 : 1 - smooth(26, 34, d));
       if (alpha < 0.02) continue;
       let size = TAG_H * Math.min(1.9, Math.max(1, 0.6 + d / 16)) * (0.7 + 0.3 * Math.min(1, t.k));
+      if (t.self) { // own tag: constant screen-space height (≥ ~26 px, ≤ 8 % of the view), clamped in world size
+        const vh = Math.max(200, engine.renderer.domElement.clientHeight || 540);
+        size = Math.min(TAG_H * 5, Math.max(TAG_H * 0.8, d * 2 * tanHalf * Math.min(0.08, Math.max(0.047, 26 / vh)))) * (0.7 + 0.3 * Math.min(1, t.k));
+      }
       // eye view (camera at doll height, often < 1 m away): never bigger on screen than at the follow-camera distance
-      if (eyeK > 0) size += (Math.min(size, TAG_H * 1.15 * d * tanHalf / FOLLOW_REF) - size) * eyeK;
+      if (eyeK > 0 && !t.self) size += (Math.min(size, TAG_H * 1.15 * d * tanHalf / FOLLOW_REF) - size) * eyeK;
       const hw = (size * s.aspect) / 2;
       const o = n * 12;
       // bl, br, tr, tl

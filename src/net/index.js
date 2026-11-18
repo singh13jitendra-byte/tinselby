@@ -16,6 +16,7 @@ import { createNetCore, TUNING } from './core.js';
 import { createSupabaseTransport, createLocalTransport } from './transport.js';
 import { createDollView, MAX_DOLLS } from './dolls.js';
 import { createNameTags } from './tags.js';
+import { createSelfTag } from './selftag.js';
 
 const STORE_KEY = 'tinselby.net.v1';
 
@@ -124,6 +125,8 @@ function createNetImpl(ctx) {
 
   const view = createDollView(ctx);
   const tags = createNameTags(ctx);
+  const selfTag = createSelfTag(ctx, () => nameOverride || game.state.playerName);
+  ctx.nameTag = { setVisible: (b) => selfTag.setVisible(b), get visible() { return selfTag.visible; } };
 
   // ---------------------------------------------------------------- per frame
   let styleCheck = 0, lastStyleKey = '', lastDoor = null, warnedFrame = false;
@@ -156,8 +159,12 @@ function createNetImpl(ctx) {
       if (!warnedFrame) { warnedFrame = true; console.warn('[net] frame update error (further ones are silent):', e); }
     }
   }, 50);
-  engine.addUpdate(() => { // after the camera moved (order 100), so tags face this frame's view
-    try { tags.update(view.visible()); } catch (e) { /* never break the frame */ }
+  engine.addUpdate((dt) => { // after the camera moved (order 100), so tags face this frame's view
+    try {
+      const list = view.visible(), me = selfTag.entry(dt);
+      if (me) list.push(me);
+      tags.update(list);
+    } catch (e) { /* never break the frame */ }
   }, 110);
 
   // ---------------------------------------------------------------- game events
