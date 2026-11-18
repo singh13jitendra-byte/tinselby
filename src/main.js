@@ -31,7 +31,7 @@ const game = createGame();
 const colliders = createColliders();
 const interact = createInteractions(game);
 const input = createInput(canvas, engine, game, colliders);
-const cam = createCameraDirector(engine, game);
+const cam = createCameraDirector(engine, game, input); // input: eye-view look / turn controls
 const player = createPlayer(engine, input, colliders, game, cam);
 cam.follow(player);
 
@@ -91,7 +91,7 @@ game.on('game:start', ({ name, style }) => {
 // ---------------------------------------------------------------- test / capture hooks
 // ?capture  → manual stepping via window.__tinselby.step(dt, n)
 // ?play     → skip the entry screen (name "Tester")      ?at=x,z → teleport after start
-// ?view=high|close|follow                                ?doors=n → doors 1..n done (progress module)
+// ?view=high|close|follow|eye                               ?doors=n → doors 1..n done (progress module)
 // ?reveal=all → reveal every district immediately
 window.__tinselby = {
   ready: false,
@@ -109,7 +109,7 @@ window.__tinselby = {
 function applyTestParams() {
   if (params.has('play')) game.emit('game:start', { name: 'Tester' });
   if (params.has('at')) { const [x, z] = params.get('at').split(',').map(Number); player.teleport(x, z); }
-  if (params.has('view')) cam.setMode(params.get('view'));
+  if (params.has('view')) { const v = params.get('view'); if (v === 'follow' || v === 'eye' || v === 'high') cam.setView(v); else cam.setMode(v); }
   if (params.has('reveal')) for (const d of layout.DISTRICTS) ctx.city.revealDistrict?.(d.id, true);
   // ?spirit=n is the old name for ?doors=n (handled by the progress module): festive level n needs doors 1..2n-1
   if (params.has('spirit') && !params.has('doors')) console.warn('[tinselby] ?spirit is retired, use ?doors=N');

@@ -427,6 +427,17 @@ export function buildCharacter(mat, style = DEFAULT_STYLE, opts = {}) {
   return {
     group, yaw, body, legs, arms, hands,
     animate(dt, speed, onStep) {
+      if (this.seated) { // sitting on a bench (cable car): thighs forward, mittens on the lap, a slow breath
+        idle += dt;
+        body.position.y = 0;
+        body.rotation.set(-0.05, 0, 0);
+        body.scale.y = 1 + Math.sin(idle * 2.2) * 0.01;
+        legs[0].rotation.set(-1.42, 0, 0.06);
+        legs[1].rotation.set(-1.42, 0, -0.06);
+        arms[0].rotation.x = arms[1].rotation.x = -0.72;
+        return;
+      }
+      if (legs[0].rotation.z) legs[0].rotation.z = legs[1].rotation.z = 0;
       const walking = speed > 0.08;
       const prev = phase;
       phase += dt * (walking ? 6 + speed * 2.4 : 0);
@@ -443,8 +454,12 @@ export function buildCharacter(mat, style = DEFAULT_STYLE, opts = {}) {
       if (walking && onStep && Math.floor(prev / Math.PI) !== Math.floor(phase / Math.PI)) onStep();
     },
     armsUp: false,
+    /** Seated pose (bench in the cable car cabin): the doll's root then sits SEAT_DROP below the bench top. */
+    seated: false,
   };
 }
+/** How far below the bench top the doll's root goes in the seated pose (design units; × the doll's scale). */
+export const SEAT_DROP = 0.056;
 
 /** The player: knitted character + movement, collisions, ground height, carrying, scripted walkTo. */
 export function createPlayer(engine, input, colliders, game, camYawRef) {
@@ -459,6 +474,7 @@ export function createPlayer(engine, input, colliders, game, camYawRef) {
   let heading = SPAWN.heading;
   let carried = null;
   let script = null; // {x, z, resolve}
+  let dollVisible = true; // false while the camera looks through the character's eyes (eye view)
 
   const player = {
     object: root,
@@ -476,10 +492,14 @@ export function createPlayer(engine, input, colliders, game, camYawRef) {
       ch.group.removeFromParent();
       ch = buildCharacter(engine.mat, game.state.style);
       ch.group.scale.setScalar(SCALE);
+      ch.group.visible = dollVisible;
       root.add(ch.group);
       player.character = ch;
       if (carried) ch.hands.add(carried);
     },
+    /** Show / hide the doll (and anything it carries); the camera hides it in eye view. */
+    setDollVisible(v) { dollVisible = !!v; ch.group.visible = dollVisible; },
+    get dollVisible() { return dollVisible; },
     teleport(x, z, h = heading) { pos.set(x, colliders.heightAt(x, z), z); heading = h; vel.set(0, 0); },
     /** Hold an Object3D in front of the chest (null to drop). Returns the previously carried object. */
     carry(obj) {

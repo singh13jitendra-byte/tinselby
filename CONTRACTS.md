@@ -141,3 +141,10 @@ Procedural Web Audio only (no files). `start()` (on the first gesture), `sfx(nam
 ## Portrait (18 Nov)
 - `ctx.cam.portrait` 0..1 (smoothed), `ctx.cam.isPortrait`, `ctx.cam.aspect`; `playShot({ portrait: { keep, lift } | false })`, `cam.setShotPortrait(name, opts)`; `<body>` gets `tb-portrait`/`tb-landscape`; event `view:orientation {portrait}`.
 - Mini-games: `src/minigames/view.js` (`aspectK`, `zoomOut`, `isPortrait`); games that handle aspect themselves pass `portrait: false` to their shots.
+
+## Eye view (18 Nov)
+- Camera views cycle follow → eye → high (camera button / C key), saved in localStorage `tinselby.cam`; `?view=follow|eye|high`.
+- `cam.view`, `cam.nextView`, `cam.eye` (0..1 blend), `cam.setView(v, persist)`; `createCameraDirector(engine, game, input)`.
+- Eye view suspends itself during any playShot, when phase ≠ play, or when the player isn't controllable; `setMode('follow')` from game code means "back to the player's view".
+- `input.eyeView`, `input.consumeLook()`, `input.getTurn()`, `input.looking`; `player.setDollVisible(v)` / `player.dollVisible`.
+- Holly Lane cut-away folds the houses next to the player to 7% (rest of the south row 26%); fades out in eye view.

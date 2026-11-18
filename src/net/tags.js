@@ -7,6 +7,7 @@ import { cleanName } from '../core/names.js';
 
 const SLOTS = 16, COLS = 2, SW = 256, SH = 64; // atlas 512 × 512
 const TAG_H = 0.17; // world height of a tag at the follow-camera distance (~25 px tall)
+const FOLLOW_REF = 6.7 * Math.tan(THREE.MathUtils.degToRad(16)); // follow camera: distance × tan(fov / 2)
 const LIFT = 0.6; // above the doll's feet (doll is ~0.48 tall incl. pom-pom)
 
 export function createNameTags(ctx) {
@@ -102,6 +103,7 @@ export function createNameTags(ctx) {
     right.set(e[0], e[1], e[2]).normalize();
     up.set(e[4], e[5], e[6]).normalize();
     cp.setFromMatrixPosition(cam.matrixWorld);
+    const eyeK = ctx.cam?.eye || 0, tanHalf = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
     const seen = new Set();
     let n = 0;
     // no depth test: draw far tags first so nearer ones overlap them
@@ -115,7 +117,9 @@ export function createNameTags(ctx) {
       const cx = t.x, cy = t.y + LIFT, cz = t.z;
       const alpha = t.k * (1 - smooth(26, 34, d));
       if (alpha < 0.02) continue;
-      const size = TAG_H * Math.min(1.9, Math.max(1, 0.6 + d / 16)) * (0.7 + 0.3 * Math.min(1, t.k));
+      let size = TAG_H * Math.min(1.9, Math.max(1, 0.6 + d / 16)) * (0.7 + 0.3 * Math.min(1, t.k));
+      // eye view (camera at doll height, often < 1 m away): never bigger on screen than at the follow-camera distance
+      if (eyeK > 0) size += (Math.min(size, TAG_H * 1.15 * d * tanHalf / FOLLOW_REF) - size) * eyeK;
       const hw = (size * s.aspect) / 2;
       const o = n * 12;
       // bl, br, tr, tl

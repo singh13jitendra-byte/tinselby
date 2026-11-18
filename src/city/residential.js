@@ -102,7 +102,7 @@ export function buildResidential(K) {
   const rnd = mulberry32(77);
   const houses = [];
   const chimneys = [];
-  const southRow = [];
+  const rows = []; // per house, same order as chimneys: { x, z, props } (cut-away below)
   const taskKey = (x, z) => R.taskHouses.findIndex((t) => Math.abs(t.x - x) < 0.01 && Math.abs(t.z - z) < 0.01);
   const all = [];
   let n = 0;
@@ -127,7 +127,7 @@ export function buildResidential(K) {
     const name = 'house' + k;
     b.add(th.lights.map(toW), name);
     b.add(th.wreath.map(toW), name);
-    if (hd.z > 0) southRow.push(...b.props);
+    rows.push({ x: hd.x, z: hd.z, props: b.props, s: 1, applied: 1 });
     colliders.addRect(hd.x - w / 2 - 0.04, hd.z - d / 2 - 0.04, hd.x + w / 2 + 0.04, hd.z + d / 2 + 0.04, 'house');
     K.keepCircle(hd.x, hd.z, 1.05);
     const sz = hd.z < 0 ? 1 : -1;
@@ -211,7 +211,7 @@ export function buildResidential(K) {
     chimneys.forEach((c, ci) => {
       for (let p = 0; p < PUFFS; p++) {
         const u = ((t * 0.22 + p / PUFFS + ci * 0.137) % 1);
-        const cy = c.z > 0 ? c.y * (1 - 0.74 * smokeCut()) : c.y;
+        const cy = c.y * rows[ci].s; // follows the cut-away
         v.set(c.x + Math.sin(u * 5 + ci) * 0.05 + u * 0.25, cy + u * 0.9, c.z - u * 0.1);
         const r = 0.05 + u * 0.1;
         const fade = Math.sin(Math.PI * Math.min(1, u * 1.15));
@@ -223,21 +223,39 @@ export function buildResidential(K) {
     smoke.instanceMatrix.needsUpdate = true;
   });
 
-  // ---------------------------------------------------------------- cut-away: the south row folds down while the player is in the street
+  // ---------------------------------------------------------------- cut-away: houses between the camera and the player fold down
+  // The camera looks north from the south-south-east (~36° down), and the roof ridges run front-to-back, so a south-row
+  // house is at its tallest (up to ~3.9) right at the pavement edge. While the player is in the street the whole south
+  // row folds to 26 % (the street stays readable); the houses just beside the player (east-biased: the camera sits a
+  // little east) fold to 7 %, lower than the doll itself (~0.43), so the player and the door they stand at stay in
+  // view even right at a south-row door (Mrs Holly, the south task house). Behind the north row (back gardens) the
+  // north houses next to the player fold the same way. Eye view needs none of it (the camera is in the street).
   const player = K.ctx.player;
-  let cut = 0, applied = -1;
+  const cam = K.ctx.cam;
   K.updates.push((dt) => {
     const grp = K.G.residential.group;
-    if (grp.state !== 'shown') { applied = -1; cut = 0; return; }
+    if (grp.state !== 'shown') { for (const r of rows) { r.s = 1; r.applied = -1; } return; }
     const p = player?.pos;
-    const inStreet = p && p.x < -8.3 && p.z > -2.3 && p.z < 2.15 ? 1 : 0;
-    cut += (inStreet - cut) * (1 - Math.exp(-dt * 5));
-    if (Math.abs(cut - inStreet) < 0.003) cut = inStreet;
-    const k = Math.round(cut * 200) / 200;
-    if (k !== applied) { squashProps(southRow, 1 - 0.74 * k); applied = k; }
+    const eye = cam?.eye || 0;
+    const inside = p && p.x < -8.3 && p.x > -21.2;
+    const inStreet = inside && p.z > -2.3 && p.z < 2.15;
+    const northBack = inside && p.z <= -3.2 && p.z > -7.6;
+    const kd = 1 - Math.exp(-dt * 5);
+    const dirty = [];
+    for (const r of rows) {
+      const near = p ? Math.max(0, Math.min(1, 1 - (Math.abs(r.x - p.x - 0.35) - 1.0) / 1.0)) : 0; // 1 within ~1 of the player
+      let cut = 0;
+      if (r.z > 0 && inStreet) cut = 0.74 + 0.19 * near;
+      else if (r.z < 0 && northBack) cut = 0.93 * near;
+      cut *= 1 - eye; // eye view: the street is seen from inside, houses stand tall
+      const goal = 1 - cut;
+      r.s += (goal - r.s) * kd;
+      if (Math.abs(r.s - goal) < 0.003) r.s = goal;
+      const q = Math.round(r.s * 200) / 200;
+      if (q !== r.applied) { r.applied = q; dirty.push(r); }
+    }
+    for (const r of dirty) squashProps(r.props, r.applied);
   });
-  // chimney smoke follows the cut-away
-  const smokeCut = () => cut;
 
   return { houses, setHouseLights(i, on) { houses[i]?.setLights(on); } };
 }

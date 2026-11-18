@@ -9,6 +9,7 @@ export const ICONS = {
   cable: svg('<path d="M2 4l20 4"/><path d="M12 6v3"/><rect x="6" y="9" width="12" height="10" rx="2.5" fill="currentColor" fill-opacity=".2"/><path d="M6 13h12M10 13v6M14 13v6"/>'),
   gift: svg('<rect x="3.5" y="9" width="17" height="11.5" rx="1.5" fill="currentColor" fill-opacity=".2"/><path d="M2.5 9h19M12 9v11.5M12 9C10 4 6 5 7.5 7.5 8.4 9 12 9 12 9zm0 0c2-5 6-4 4.5-1.5C15.6 9 12 9 12 9z"/>'),
   camera: svg('<path d="M4 8h3l2-2.5h6L17 8h3v11H4z" fill="currentColor" fill-opacity=".18"/><circle cx="12" cy="13.3" r="3.4"/>'),
+  eye: svg('<path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z" fill="currentColor" fill-opacity=".15"/><circle cx="12" cy="12" r="3"/>'),
   mountain: svg('<path d="M2 19l7-11 4 6 2.5-3.5L22 19z" fill="currentColor" fill-opacity=".2"/><path d="M7.3 10.7l1.7 1.3 1.4-1.6"/>'),
   soundOn: svg('<path d="M4 9.5h4L13 5v14l-5-4.5H4z" fill="currentColor" fill-opacity=".25"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/>'),
   soundOff: svg('<path d="M4 9.5h4L13 5v14l-5-4.5H4z" fill="currentColor" fill-opacity=".25"/><path d="M17 9.5l5 5m0-5l-5 5"/>'),

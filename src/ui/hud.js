@@ -138,8 +138,13 @@ export function createHUD(ctx, root, data, ui) {
     // mute + camera state
     const muted = !!ctx.audio?.muted;
     if (muted !== lastMuted) { lastMuted = muted; muteBtn.innerHTML = muted ? ICONS.soundOff : ICONS.soundOn; muteBtn.setAttribute('aria-label', muted ? 'Unmute' : 'Mute'); muteBtn.classList.toggle('off', muted); }
-    const mode = cam.mode;
-    if (mode !== lastMode) { lastMode = mode; camBtn.innerHTML = mode === 'high' ? ICONS.camera : ICONS.mountain; camBtn.setAttribute('aria-label', mode === 'high' ? 'Follow camera' : 'Bird’s-eye view'); }
+    // the button shows the NEXT view in the cycle follow → eye → high
+    const next = cam.nextView || (cam.mode === 'high' ? 'follow' : 'high');
+    if (next !== lastMode) {
+      lastMode = next;
+      const [ic, label] = next === 'eye' ? [ICONS.eye, 'Eye view'] : next === 'high' ? [ICONS.mountain, 'Bird’s-eye view'] : [ICONS.camera, 'Follow camera'];
+      camBtn.innerHTML = ic; camBtn.setAttribute('aria-label', label); camBtn.title = label;
+    }
     if (keysT > 0) { keysT -= dt; if (keysT <= 0 || player.speed > 0.3 && keysT < 6) { keys.classList.add('out'); keysT = -1; setTimeout(() => { keys.hidden = true; }, 600); } }
   }
   return { el, update, setHint, get hint() { return hint; } };
