@@ -64,3 +64,4 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - 23:10 IST: camera follow-ups (Sonnet) committed; push held for audio + name tag.
 - 23:15 IST: USER: free-play 'hang out' rides (tram window view, giant wheel, ice skating, sledging, carousel horses, etc). Scaffolded src/rides (registry + contract + stubs, wired in main.js). Spawned Opus tram+carriage rides (rides/tram,carriage + life/*), Opus Ferris wheel+carousel rides (rides/ferris,carousel + lakeside/market seats), Sonnet free skating+sledging (rides/skate,sled + additive exports in minigame sims).
 - 23:30 IST: mobile audio fix (Opus) committed — needs a real-phone listen (?alat=interactive to A/B).
+- 23:40 IST: WAVE3.md draft committed (8 open decisions, defaults recommended). Holding wave-3 builders: the user asked to discuss the next direction first.
