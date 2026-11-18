@@ -1,10 +1,13 @@
 // Tram + cars: follow their loops, look ahead (≤ 1.2) for the player, pedestrians, other vehicles and
 // occupied crossings, slow/stop smoothly, tram pauses at TRAM_STOP with a ding. Vehicles are moving
 // obstacles for the player (circle colliders updated every frame).
+// Free-play rides (src/rides/tram.js, carriage.js): the tram stops at every layout.TRAM_STOPS stop and the carriage at
+// CARRIAGE_STOP; v.rider = true while the player sits aboard (the player is then no obstacle for anyone, the vehicle's
+// sounds play at the rider), v.minWait = the shortest stand at the next stop, v.scaleMul = a size multiplier.
 import { Path, clamp } from './paths.js';
 import { buildTramMesh, TRAM_LEN, TRAM_HALF_W } from './tram.js';
 import { buildCarMesh, CAR_LEN, CAR_HALF_W } from './cars.js';
-import { buildCarriage, CARRIAGE_LEN, CARRIAGE_HALF_W } from './carriage.js';
+import { buildCarriage, CARRIAGE_LEN, CARRIAGE_HALF_W, CARRIAGE_STOP } from './carriage.js';
 
 const LOOK = 1.2;
 
@@ -29,7 +32,8 @@ export function createTraffic(W) {
       c.r = o.r; c.enabled = false;
       return { off, c };
     });
-    const v = { ...o, circles, v: 0, x: 0, z: 0, yaw: 0, fx: 0, fz: 1, wait: 0, served: false, blockT: 0, pop: 0, shown: false, blocker: '' };
+    const v = { ...o, circles, v: 0, x: 0, z: 0, yaw: 0, fx: 0, fz: 1, wait: 0, served: false, blockT: 0, pop: 0, shown: false, blocker: '',
+      rider: false, minWait: 0, scaleMul: 1, scaleK: 1, atStop: -1, nextStop: -1, nextDs: Infinity };
     vehicles.push(v);
     place(v);
     return v;
@@ -47,7 +51,9 @@ export function createTraffic(W) {
   // tram
   const tramPath = new Path(layout.TRAM_LOOP, { closed: true, radius: 1.0 });
   const stopS = tramPath.nearestS(layout.TRAM_STOP[0], layout.TRAM_STOP[1]);
-  const tram = addVehicle({ kind: 'tram', mesh: buildTramMesh(engine), path: tramPath, s: stopS - 3, len: TRAM_LEN, half: TRAM_HALF_W, vmax: 0.85, offsets: [-0.5, 0, 0.5], r: 0.27, district: 'market', stopS });
+  // stops in travel order (layout.TRAM_STOPS); falls back to the single TRAM_STOP
+  const tramStops = (layout.TRAM_STOPS || [{ pos: layout.TRAM_STOP }]).map((st) => tramPath.nearestS(st.pos[0], st.pos[1]));
+  const tram = addVehicle({ kind: 'tram', mesh: buildTramMesh(engine), path: tramPath, s: stopS - 3, len: TRAM_LEN, half: TRAM_HALF_W, vmax: 0.85, offsets: [-0.5, 0, 0.5], r: 0.27, district: 'market', stopS, stops: tramStops, stopWait: 3.6, ding: 'tram' });
 
   // cars
   const ring = layout.CAR_LANES.find((l) => l.id === 'ringOuter') || layout.CAR_LANES[0];
@@ -62,9 +68,14 @@ export function createTraffic(W) {
   let carriage = null;
   if (west) {
     const westPath = new Path(west.pts, { closed: true, radius: 0.36 });
-    const hoof = (x, z, vol) => { try { ctx.audio?.sfx?.('step', { x, z, vol }); } catch (e) { /* audio optional */ } };
+    // hoof beats: at the rider's ears while the player rides (a touch louder), positional otherwise
+    const hoof = (x, z, vol) => {
+      const pl = ctx.player.pos, ride = carriage && carriage.rider;
+      try { ctx.audio?.sfx?.('step', ride ? { x: pl.x, z: pl.z, vol: vol * 1.25 } : { x, z, vol }); } catch (e) { /* audio optional */ }
+    };
     const rig = buildCarriage(engine, hoof);
-    carriage = addVehicle({ kind: 'carriage', mesh: rig.mesh, anim: rig.animate, path: westPath, s: 3, len: CARRIAGE_LEN, half: CARRIAGE_HALF_W, vmax: 0.46, offsets: [-0.45, -0.1, 0.38], r: 0.21, district: 'residential' });
+    const cs = CARRIAGE_STOP ? [westPath.nearestS(CARRIAGE_STOP.pos[0], CARRIAGE_STOP.pos[1])] : null;
+    carriage = addVehicle({ kind: 'carriage', mesh: rig.mesh, anim: rig.animate, rig, path: westPath, s: 3, len: CARRIAGE_LEN, half: CARRIAGE_HALF_W, vmax: 0.46, offsets: [-0.45, -0.1, 0.38], r: 0.21, district: 'residential', stops: cs, stopWait: 3.0 });
   }
 
   const CROSS = layout.CROSSINGS;
@@ -74,6 +85,7 @@ export function createTraffic(W) {
     return false;
   }
 
+  let riding = false; // the player sits aboard some vehicle: they are nobody's obstacle
   function freeAhead(v) {
     let free = 99;
     v.blocker = '';
@@ -84,7 +96,7 @@ export function createTraffic(W) {
       if (ds >= free) break;
       v.path.at(front + ds, S);
       const lim = v.half + 0.1;
-      if ((S.x - pl.x) ** 2 + (S.z - pl.z) ** 2 < lim * lim) { free = ds; v.blocker = 'player'; break; }
+      if (!riding && (S.x - pl.x) ** 2 + (S.z - pl.z) ** 2 < lim * lim) { free = ds; v.blocker = 'player'; break; }
       let hit = false;
       for (const p of people) {
         if (p.player) continue;
@@ -121,7 +133,8 @@ export function createTraffic(W) {
     // who's on the street
     people.length = 0;
     const pl = ctx.player.pos;
-    people.push({ x: pl.x, z: pl.z, player: true });
+    riding = vehicles.some((v) => v.rider);
+    if (!riding) people.push({ x: pl.x, z: pl.z, player: true });
     for (const d of roadPeople) if (d.vis) people.push({ x: d.x, z: d.z });
     for (const v of vehicles) {
       const show = W.isRevealed(v.district) && !v.held;
@@ -134,16 +147,27 @@ export function createTraffic(W) {
       let vt = v.vmax;
       const free = freeAhead(v);
       vt = Math.min(vt, v.vmax * clamp((free - 0.2) / 0.9, 0, 1));
-      if (v.stopS != null) {
+      if (v.stops) {
+        // the next stop ahead (stops in travel order; the one just served stays 'next' until the vehicle leaves it)
         const L = v.path.length;
-        const ds = (((v.stopS - v.s) % L) + L) % L;
-        if (ds > 0.5) v.served = false;
-        if (!v.served) {
+        let ds = Infinity, si = -1;
+        for (let i = 0; i < v.stops.length; i++) {
+          const d = (((v.stops[i] - v.s) % L) + L) % L;
+          const dd = d > L - 0.5 ? d - L : d; // just past a stop (stopped a hair beyond it): still that stop
+          if (dd < ds && dd > -0.5) { ds = dd; si = i; }
+        }
+        if (si !== v.nextStop) v.served = false;
+        v.nextStop = si; v.nextDs = Math.max(0, ds);
+        if (!v.served && ds >= 0) {
           vt = Math.min(vt, Math.max(0.06, Math.sqrt(2 * 0.9 * ds)));
-          if (ds < 0.03) { v.served = true; v.wait = 3.2; v.v = 0; W.sfx('tram', v.x, v.z); }
+          if (ds < 0.03) {
+            v.served = true; v.wait = Math.max(v.stopWait || 3.2, v.minWait); v.minWait = 0; v.v = 0;
+            if (v.ding) W.sfx(v.ding, v.rider ? pl.x : v.x, v.rider ? pl.z : v.z);
+          }
         }
       }
       if (v.wait > 0) { v.wait -= dt; vt = 0; }
+      v.atStop = v.stops && v.served && v.v < 0.02 && v.wait > 0 ? v.nextStop : -1;
       const dv = vt - v.v;
       v.v += clamp(dv, -(free < 0.3 ? 6 : 2.5) * dt, 0.6 * dt);
       if (v.v < 0) v.v = 0;
@@ -158,7 +182,10 @@ export function createTraffic(W) {
       const m = v.mesh;
       const k = v.pop;
       const ov = k < 1 ? 1 + Math.sin(k * Math.PI) * 0.18 : 1;
-      m.scale.set(k * ov, k * (k < 1 ? 1.25 - 0.25 * k : 1), k * ov);
+      v.scaleK += (v.scaleMul - v.scaleK) * (1 - Math.exp(-dt * 4));
+      if (Math.abs(v.scaleMul - v.scaleK) < 1e-3) v.scaleK = v.scaleMul;
+      const sk = v.scaleK;
+      m.scale.set(k * ov * sk, k * (k < 1 ? 1.25 - 0.25 * k : 1) * sk, k * ov * sk);
       m.position.set(v.x, W.groundAt(v.x, v.z), v.z);
       m.rotation.y = v.yaw;
       if (v.anim) v.anim(dt, v);
@@ -181,5 +208,5 @@ export function createTraffic(W) {
     let done = false;
     return () => { if (done) return; done = true; v.held = Math.max(0, v.held - 1); };
   }
-  return { vehicles, tram, carriage, update, vehicleNear, hold };
+  return { vehicles, tram, carriage, update, vehicleNear, hold, tramPath };
 }

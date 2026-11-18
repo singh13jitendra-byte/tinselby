@@ -9,6 +9,11 @@ const dot = (r, c, k = FELT) => part(new THREE.SphereGeometry(r, 6, 4), c, k, [1
 const ball = (r, c, k = FELT, ws = 10, hs = 7) => part(new THREE.SphereGeometry(r, ws, hs), c, k, [(6.283 * r) / 0.08, (3.1416 * r) / 0.064]);
 
 export const CARRIAGE_LEN = 1.36, CARRIAGE_HALF_W = 0.2;
+/** Where the carriage pulls up for passengers (free-play ride, src/rides/carriage.js): on the westbound lane at the east
+ *  end of Holly Lane; wait = where riders stand on the north pavement. */
+export const CARRIAGE_STOP = { name: 'Holly Lane', pos: [-9.75, -0.4], wait: [-9.75, -1.12] };
+/** Passenger bench for a rider (carriage-local, faces +z): x, top of the back cushion, z. */
+export const CARRIAGE_SEAT = { x: 0.04, y: 0.287, z: -0.3 - 0.12 };
 const HORSE_Z = 0.36; // horse centre (carriage group faces +z)
 const CAR_Z = -0.3; // carriage body centre
 const HIP_Y = 0.235, LEG_LEN = 0.2;
@@ -69,7 +74,7 @@ function passenger(p, x, y, z, coat, hat, scarf) {
     p.push(xf(cyl(0.016, 0.014, 0.09, 5, coat, KNIT), [x + s * 0.055, y + 0.08, z + 0.02], [-0.5, 0, s * 0.25]));
   }
 }
-function carriageBody() {
+function carriageBody(rider = false) {
   const p = [], z = CAR_Z;
   // tub: red knitted body, darker floor, raised curved back, gold trim along the rim
   p.push(xf(rbox(0.34, 0.13, 0.5, 0.05, P.red, KNIT), [0, 0.205, z]));
@@ -94,11 +99,15 @@ function carriageBody() {
   p.push(xf(rbox(0.28, 0.05, 0.13, 0.02, P.cream, FELT, 1), [0, 0.262, z - 0.13]));
   p.push(xf(rbox(0.28, 0.05, 0.11, 0.02, P.cream, FELT, 1), [0, 0.29, z + 0.13]));
   // driver in front, two passengers behind, a gift and a wreath on the back
-  passenger(p, 0, 0.3, z + 0.13, P.pine, P.red, P.cream);
-  passenger(p, -0.075, 0.272, z - 0.12, P.deepRed, P.pine, P.gold);
-  passenger(p, 0.075, 0.272, z - 0.12, '#4f7fa8', P.red, '#fbf7ee');
-  p.push(tube([[0.03, 0.4, z + 0.17], [0.05, 0.4, z + 0.42], [0.04, 0.39, z + 0.72]], 0.004, P.ink, FELT, 6, 3)); // reins
-  p.push(tube([[-0.03, 0.4, z + 0.17], [-0.05, 0.4, z + 0.42], [-0.04, 0.39, z + 0.72]], 0.004, P.ink, FELT, 6, 3));
+  // (rider variant: the back bench is the player's, and the driver shifts aside so the rider sees past him to the horse)
+  const rx = rider ? -0.105 : 0; // driver x (the reins start at his mittens)
+  passenger(p, rx, 0.3, z + 0.13, P.pine, P.red, P.cream);
+  if (!rider) {
+    passenger(p, -0.075, 0.272, z - 0.12, P.deepRed, P.pine, P.gold);
+    passenger(p, 0.075, 0.272, z - 0.12, '#4f7fa8', P.red, '#fbf7ee');
+  }
+  p.push(tube([[rx + 0.03, 0.4, z + 0.17], [0.05, 0.4, z + 0.42], [0.04, 0.39, z + 0.72]], 0.004, P.ink, FELT, 6, 3)); // reins
+  p.push(tube([[rx - 0.03, 0.4, z + 0.17], [-0.05, 0.4, z + 0.42], [-0.04, 0.39, z + 0.72]], 0.004, P.ink, FELT, 6, 3));
   p.push(xf(torus(0.06, 0.022, P.pine, KNIT, Math.PI * 2, 10), [0, 0.3, z - 0.278], [0.2, 0, 0]));
   p.push(xf(dot(0.02, P.red), [0, 0.245, z - 0.3], null, [1.4, 0.8, 0.6]));
   for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; p.push(xf(dot(0.01, i % 2 ? '#ff6a5a' : P.glow, GLOW), [Math.cos(a) * 0.06, 0.3 + Math.sin(a) * 0.058, z - 0.3 - Math.sin(a) * 0.012])); }
@@ -113,7 +122,9 @@ export function buildCarriage(engine, sfx) {
   group.name = 'life-carriage';
   const mk = (geo, name) => { const m = new THREE.Mesh(geo, engine.mat); m.castShadow = m.receiveShadow = true; m.name = name; group.add(m); return m; };
   mk(horseBody(), 'life-carriage-horse');
-  mk(carriageBody(), 'life-carriage-body');
+  const body = mk(carriageBody(), 'life-carriage-body');
+  const bodyGeo = body.geometry;
+  let riderGeo = null;
   const legs = new THREE.InstancedMesh(legGeo(), engine.mat, 4);
   const wheels = new THREE.InstancedMesh(wheelGeo(), engine.mat, 4);
   for (const m of [legs, wheels]) { m.castShadow = true; m.frustumCulled = false; group.add(m); }
@@ -144,6 +155,13 @@ export function buildCarriage(engine, sfx) {
 
   return {
     mesh: group,
+    /** Free-play ride: true swaps in the body without the two back passengers (the player sits there). */
+    setRider(on) {
+      if (on && !riderGeo) riderGeo = carriageBody(true);
+      body.geometry = on ? riderGeo : bodyGeo;
+    },
+    /** Gait phase (radians; two hoof beats per π): the ride camera bobs with it. */
+    get stride() { return stride; },
     /** Called by traffic every frame while shown: v.v = current speed, v.x / v.z = position. */
     animate(dt, v) {
       if (v.v < 0.004) return; // standing still: hold the pose (no matrix uploads)

@@ -80,7 +80,7 @@ export function createHUD(ctx, root, data, ui) {
     const show = S.phase === 'play' && !modal;
     if (show !== lastShow) { el.hidden = !show; lastShow = show; }
     // cable car ride: the eye-level ride shot owns the screen; only the mute button stays (CSS .tb-ride), and the 'Tap to skip' pill lives in overlays
-    const ride = cam.shotName === 'cablecarRide';
+    const ride = cam.shotName === 'cablecarRide' || !!ctx.rides?.active; // free-play rides (src/rides) own the screen too
     if (ride !== lastRide) { lastRide = ride; el.classList.toggle('tb-ride', ride); }
     const joyOn = wantJoy && !ride && ((S.phase === 'play' && !modal) || (S.phase === 'minigame' && player.controllable));
     if (joyOn !== lastJoy) { lastJoy = joyOn; joyLayer.hidden = !joyOn; if (!joyOn) joy?.reset(); }
