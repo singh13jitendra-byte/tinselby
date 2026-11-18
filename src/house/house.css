@@ -39,7 +39,7 @@
   .tbh-title { font-size: 18px; }
   .tbh-scroll { gap: 5px; }
   .tbh-rowlab { font-size: 11px; }
-  .tbh-chip { min-height: 42px; border-radius: 14px; }
+  .tbh-chip { min-height: 44px; border-radius: 14px; }
   .tbh-done { min-height: 44px; font-size: 17px; }
 }
 @media (orientation: portrait) {

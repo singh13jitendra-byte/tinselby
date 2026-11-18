@@ -144,7 +144,7 @@ export default function create(ctx, env) {
   function update(dt, t) {
     const s = env.ds(n);
     if (s === 'done' && !finished) finalLook();
-    const show = revealed() && (s === 'open' || delivering) && !finished;
+    const show = revealed() && (s === 'open' || delivering) && !finished && playing(); // hidden during mini-games (one hides on the skate pier)
     if (!show) {
       if (mesh.visible) { mesh.visible = false; spark.visible = false; }
       fol.update(dt);

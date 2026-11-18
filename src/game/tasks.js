@@ -203,6 +203,17 @@ export function createActivities(ctx, env) {
     onInteract: () => { ride('down'); },
   });
   function attachStarToBack() {
+    // in the cable car the star rests on the bench beside the rider (on the back it would poke through the cabin wall)
+    let stow = null;
+    try { stow = st.riding ? city().cableCar?.stowAnchor : null; } catch (e) { stow = null; }
+    if (stow) {
+      if (star.back.parent !== stow) stow.add(star.back);
+      star.back.position.set(0, 0, 0);
+      star.back.rotation.set(0, 0, 0);
+      star.back.scale.setScalar(0.45);
+      star.back.visible = true;
+      return;
+    }
     const body = player.character?.body;
     if (!body) return;
     if (star.back.parent !== body) body.add(star.back);

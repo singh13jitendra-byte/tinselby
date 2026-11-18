@@ -12,7 +12,7 @@ const WARDROBE = ['coat', 'hat', 'scarf'];
 const LABEL = { coat: 'Coat', hat: 'Hat', scarf: 'Scarf', hair: 'Hair', hairColor: 'Hair colour', skin: 'Skin', outfit: 'Outfit' };
 const SHORT = { bobble: 'Bobble', earflap: 'Ear-flap', earmuffs: 'Earmuffs', none: 'None', santa: 'Santa', reindeer: 'Reindeer', elf: 'Elf', conductor: 'Conductor', bow: 'Bow', gnome: 'Gnome' };
 // small marks so swatches with (nearly) the same colour read differently: jingle = red + gold bell, holly = green + berry, snowy = cream + coal
-const MARK = { jingle: 'gold', holly: 'berry', snowy: 'coal' };
+const MARK = { jingle: 'gold', holly: 'berry', snowy: 'coal', midnight: 'gold' };
 const SWATCH = { striped: 'repeating-linear-gradient(45deg,#b8302d 0 7px,#f5f1ea 7px 14px)', candycane: 'repeating-linear-gradient(135deg,#b5332e 0 6px,#f5f1ea 6px 12px)' };
 const PRESETS = [
   { id: 'boy', label: 'Boy', style: { hair: 'tousled', hairColor: 'brown', outfit: 'duffle', coat: 'mustard', hat: 'none' }, legacy: { coat: 'mustard', hat: 'earflap' } },

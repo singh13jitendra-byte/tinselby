@@ -214,6 +214,7 @@ export default function create(ctx, env) {
     if (cState.mode === 'off' && accepted && s === 'open' && revealed('lakeside')) { cState.mode = 'ice'; cf.x = find.x; cf.z = find.z; cf.y = gy(find.x, find.z); }
     if (cState.mode === 'ice' || cState.mode === 'follow' || cState.mode === 'trot') show = revealed('lakeside') || cState.mode !== 'ice';
     if (cState.mode === 'rest') show = rest.shown;
+    if (cState.mode === 'ice' && !playing()) show = false; // never stand on the skate ice (or anywhere) during a mini-game
     updatePrints(dt, t);
     fol.update(dt);
     if (!show) { if (clover.visible) clover.visible = false; return; }

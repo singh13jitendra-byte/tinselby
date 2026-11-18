@@ -245,7 +245,7 @@ export default {
     S.running = true;
     mg.hud.setScore(0);
     mg.hud.setTimer((R.bEnd - S.b) * spb);
-    setGoal(touch ? 'Hold a side to curve onto the ribbon' : 'Curve onto the glowing ribbon');
+    setGoal('Skate the glowing ribbon');
     hintT = 7;
 
     // ================================================================== per-frame
