@@ -17,6 +17,7 @@ import { createAudio } from './audio/index.js';
 import { createProgress } from './progress/index.js';
 import { createMiniGames } from './minigames/framework.js';
 import { MINIGAMES } from './minigames/index.js';
+import { createHouse } from './house/index.js';
 import { createCalendar } from './calendar/index.js';
 import { createNet } from './net/index.js';
 import { createWorld } from './world/index.js';
@@ -43,6 +44,7 @@ ctx.life = buildLife(ctx);
 ctx.progress = createProgress(ctx);
 ctx.minigames = createMiniGames(ctx);
 for (const def of MINIGAMES) ctx.minigames.register(def);
+ctx.house = createHouse(ctx); // wave 2: the player's own cottage (door 10)
 ctx.tasks = createTasks(ctx);
 ctx.ui = createUI(ctx);
 ctx.calendar = createCalendar(ctx);

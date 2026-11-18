@@ -47,6 +47,18 @@ function bodyGeo(rudolph) {
   return merge(g).translate(0, -0.025, 0);
 }
 
+function legGeo() {
+  return merge([
+    xf(sph(0.034, C.reindeer, FELT, 8, 6), [0, -0.01, 0], null, [0.75, 1.3, 1]),
+    xf(cyl(0.018, 0.026, 0.13, 7, C.reindeer, FELT), [0, -0.075, 0]),
+    xf(cyl(0.02, 0.018, 0.035, 7, C.muzzle, FELT), [0, -0.145, 0.002]),
+    xf(sph(0.021, C.reindeerDark, FELT, 8, 6), [0, -0.158, 0.006], null, [1, 0.6, 1.2]),
+  ]);
+}
+/** wave 2 (door 15, Clover): the team's rig numbers and geometry for a standalone reindeer */
+export const REINDEER_RIG = { HIP_Y, LEGS };
+export function reindeerGeos() { return { body: bodyGeo(false), leg: legGeo() }; }
+
 export function buildTeam(mat) {
   const group = new THREE.Group();
   const normals = TEAM.filter((s) => !s.rudolph);
@@ -56,13 +68,7 @@ export function buildTeam(mat) {
   const rud = new THREE.Mesh(bodyGeo(true), mat);
   rud.castShadow = true;
   rud.matrixAutoUpdate = false;
-  const legGeo = merge([
-    xf(sph(0.034, C.reindeer, FELT, 8, 6), [0, -0.01, 0], null, [0.75, 1.3, 1]),
-    xf(cyl(0.018, 0.026, 0.13, 7, C.reindeer, FELT), [0, -0.075, 0]),
-    xf(cyl(0.02, 0.018, 0.035, 7, C.muzzle, FELT), [0, -0.145, 0.002]),
-    xf(sph(0.021, C.reindeerDark, FELT, 8, 6), [0, -0.158, 0.006], null, [1, 0.6, 1.2]),
-  ]);
-  const legs = new THREE.InstancedMesh(legGeo, mat, TEAM.length * 4);
+  const legs = new THREE.InstancedMesh(legGeo(), mat, TEAM.length * 4);
   legs.castShadow = true;
   legs.frustumCulled = false;
   group.add(bodies, rud, legs);

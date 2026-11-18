@@ -195,6 +195,8 @@ export function createAudio(ctx) {
   return {
     start,
     sfx,
+    /** wave 2: { bpm, meter, start, spb, now } in AudioContext seconds, or null; phase = ((now - start) / spb) mod 1 */
+    beat() { try { const b = music && music.beat; return b && ac ? { ...b, now: ac.currentTime } : null; } catch (e) { return null; } },
     setMusicLevel,
     toggleMute,
     get muted() { return muted; },

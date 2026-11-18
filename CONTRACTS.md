@@ -130,3 +130,11 @@ Procedural Web Audio only (no files). `start()` (on the first gesture), `sfx(nam
 - `npx vite build` must succeed (other agents' modules may still be stubs; that's fine).
 - Screenshots: `python3 tools/shot.py <prefix> '[["step",60,"a"]]' 'play&reveal=all&at=-14,0&view=follow'` writes `shots/<prefix>_a.png`, then look at it with Read. **Chrome runs one at a time (lock) on a 2-CPU box: keep it to a handful of runs, ≤ 150 steps each.** URL flags: `play`, `reveal=all`, `at=x,z`, `view=high|close|follow`, `spirit=n`.
 - No console errors. Check `stats()` draw calls and triangles against your budget.
+
+## Wave 2 additions (see WAVE2.md)
+- Build order: audio → city → world → life → progress → minigames → **house** → tasks → ui → calendar → net → finale.
+- `ctx.house` (src/house): `{ OPTIONS, DEFAULT, owned, style, isOpen, decorate() → Promise<style>, setStyle(style) }`.
+- `audio.beat()` → `{ bpm, meter, start, spb, now } | null` (AudioContext seconds; phase = ((now − start) / spb) mod 1).
+- `finale/reindeer.js` exports `REINDEER_RIG` and `reindeerGeos()` for a standalone reindeer (door 15).
+- `life.holdVehicle(kind) → release()` hides one ambient vehicle (e.g. the tram during Tram Conductor). Added by the lead after the perf pass merges; until then guard with `ctx.life.holdVehicle?.(...)`.
+- Wave-2 doors are behind `?w2` until release (`W2` flag in src/progress/doors.js). Test with `?w2`.

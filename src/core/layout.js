@@ -128,6 +128,15 @@ export const DOOR_SPOTS = {
   6: { district: 'market', x: -3.4, z: 2.4 }, // ornament hunt — Mr Pine the decorator
   7: { district: 'hill', x: -2.6, z: -8.6 }, // sled race — Coach Sasha
   8: { district: 'market', x: 3.9, z: -0.4 }, // cookie baking — Baker Bea (by the bakery stall)
+  // wave 2 (WAVE2.md §Layout); shared givers stand where their doll already stands
+  9: { district: 'lakeside', x: 10.4, z: 4.2 },   // Figure Skating: Ilse (door 3's doll)
+  10: { district: 'market', x: -0.8, z: -0.35 },  // Your Own House: Mayor Tinsel (door 24's doll)
+  11: { district: 'market', x: 0, z: 5.0 },       // Tram Conductor: Conductor Clem at the south tram stop
+  12: { district: 'market', x: -3.55, z: -1.0 },  // Gift Wrapping: Auntie Noor by the west stall
+  13: { district: 'park', x: -2.2, z: 10.6 },     // Snowman Contest: Pip (door 2's doll)
+  14: { district: 'lakeside', x: 19.3, z: -2.8 }, // Ferris Wheel Gnomes: Otto at the ticket booth
+  15: { district: 'park', x: 6.25, z: 8.25 },     // The Lost Reindeer: Elf Pepper beside the Reindeer Rest
+  16: { district: 'hill', x: -2.6, z: -8.6 },     // Sledge Hill Race II: Coach Sasha (door 7's doll)
   24: { district: 'market', x: MARKET.tree.x, z: MARKET.tree.z + 1.5 },
 };
 
@@ -137,4 +146,41 @@ export const ARENAS = {
   ornaments: { x: 0, z: 0, r: 5.6 }, // whole plaza
   sled: { top: { x: -1.0, z: -15.2 }, bottom: { x: -1.0, z: -8.4 } },
   cookies: { x: 4.4, z: -0.4, r: 1.2 },
+  skate: { x: 14.6, z: 1.6, rx: 3.5, rz: 2.5 }, // usable ellipse inside the ice; no colliders inside
+  giftwrap: { x: -3.75, z: 0.2, heading: Math.PI / 2, cam: { x: -2.55, y: 1.75, z: 0.2 }, target: { x: -3.85, y: 0.82, z: 0.2 } },
+  snowman: { x: -4.45, z: 12.25, r: 1.0, build: { x: -4.5, z: 12.8 } }, // rolling lawn west of Pip
+  // sled2 reuses ARENAS.sled
+};
+
+// ---------------------------------------------------------------- Wave 2 (doors 9–16), WAVE2.md §Layout
+/** Tram Conductor stops in the tram's travel order (clockwise from the south stop). pos = where the tram's centre stops
+ *  on TRAM_LOOP; wait = two passenger spots on the plaza side (checked clear). */
+export const TRAM_STOPS = [
+  { id: 'park', name: 'Park Gate', pos: [0, 6.05], wait: [[-0.6, 5.3], [0.6, 5.3]] },
+  { id: 'holly', name: 'Holly Lane', pos: [-7.05, 0], wait: [[-6.35, -0.5], [-6.35, 0.5]] },
+  { id: 'hill', name: 'Sledge Hill', pos: [0, -6.05], wait: [[-0.6, -5.3], [0.6, -5.3]] },
+  { id: 'lake', name: 'Frostmere', pos: [7.05, 0], wait: [[6.35, -0.5], [6.35, 0.5]] },
+];
+
+/** Door 10: the player's cottage = the cream north-row townhouse at x −13.6 (shortest house, h 2.1, teal door, roofline
+ *  lights on; not a task house). Find it with city.residential.houses.find(h => |h.x − x| < .01 && |h.z − z| < .01). */
+export const HOUSE = {
+  x: -13.6, z: -2.6, heading: 0, w: 1.5, d: 1.3, h: 2.1, // front wall at z −1.95, faces +z (the street)
+  door: { x: -13.3, z: -1.75 }, // where the player stands (interact spot)
+  snowman: { x: -14.15, z: -1.74 }, // decoration snowman (collider r 0.15 while shown; walkers pass 0.5 away)
+  neighbour: { x: -15.4, z: -2.6, h: 2.55 }, // next door (north row, not a task house): stretch only
+};
+
+/** Door 15: Santa's Reindeer Rest (heading: open front faces (sin h, cos h), i.e. towards the camera) and Clover's trail. */
+export const REINDEER = {
+  rest: { x: 7.0, z: 8.6, heading: 0.3 }, // clear radius 0.75; nearest: tree (6.6, 9.48), ring road 1.2 north
+  find: { x: 15.3, z: 2.3 }, // Clover on the ice
+  trail: [[6.5, 8.0], [5.0, 7.6], [2.8, 7.3], [1.0, 7.0], [0.4, 6.3], [0.5, 5.3], [1.0, 4.3], [2.9, 3.9], [4.6, 4.4],
+    [5.4, 3.6], [5.7, 2.3], [5.95, 0.9], [7.4, 0.3], [8.6, 0.15], [9.7, 0.3], [10.8, 0.4], [12.4, 0.5], [14.0, 1.4]],
+};
+
+/** Door 14: where the four Ferris-wheel gnomes hide (all checked clear; each sits 0.2–0.4 beyond the nearest collider). */
+export const GNOMES = {
+  booth: { x: 19.55, z: -3.45 }, // Ferris ticket booth (wheel collider rect x 17.25…19.75, z −4.2…−3.2)
+  hide: [[12.8, -6.3, 'behind the cocoa hut'], [12.55, 1.2, 'at the end of the pier'], [20.0, 1.55, 'behind the snowman'], [18.3, -4.6, 'behind the Ferris wheel']],
 };

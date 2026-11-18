@@ -5,8 +5,10 @@
 
 const reward = (slot, key, label) => ({ id: `${slot}:${key}`, slot, key, label });
 
-const SOON = ['Figure Skating', 'Your Own House', 'Tram Conductor', 'Gift Wrapping', 'Snowman Contest', 'Ferris Wheel Gnomes',
-  'The Lost Reindeer', 'Sledge Hill Race II', 'Carol Singing', 'Postcard Day', 'Hot Cocoa Delivery', 'Snowball Fight II',
+// Wave 2 doors (9–16) are built behind ?w2 until release; flip W2 to true when they ship (WAVE2.md §Release).
+const W2 = typeof location !== 'undefined' && /[?&]w2(&|=|$)/.test(location.search || '');
+
+const SOON = ['Carol Singing', 'Postcard Day', 'Hot Cocoa Delivery', 'Snowball Fight II',
   'Light-up Puzzle', 'Skating Show', 'Letters to Santa'];
 
 export const DOORS = [
@@ -18,7 +20,15 @@ export const DOORS = [
   { n: 6, title: 'Ornament Hunt', giver: 'Mr Pine', district: 'market', kind: 'minigame', game: 'ornaments', reward: reward('coat', 'navy', 'Navy coat'), available: true, blurb: 'Five knitted ornaments are hidden around Market Square.' },
   { n: 7, title: 'Sledge Hill Race', giver: 'Coach Sasha', district: 'hill', kind: 'minigame', game: 'sled', reward: reward('hat', 'elf', 'Elf hat'), available: true, blurb: 'Race a wooden sled down Sledge Hill, collecting stars.' },
   { n: 8, title: 'Cookie Bakery', giver: 'Baker Bea', district: 'market', kind: 'minigame', game: 'cookies', reward: reward('coat', 'gingerbread', 'Gingerbread coat'), available: true, blurb: 'Cut, bake and decorate Christmas cookies with Baker Bea.' },
-  ...SOON.map((title, i) => ({ n: 9 + i, title, giver: '', district: '', kind: 'task', available: false, blurb: 'Coming soon!' })),
+  { n: 9, title: 'Figure Skating', giver: 'Ilse', district: 'lakeside', kind: 'minigame', game: 'skate', reward: reward('coat','icy','Ice-blue coat'), available: W2, blurb: "Glide glowing patterns across Frostmere Lake in time with the music." },
+  { n: 10, title: 'Your Own House', giver: 'Mayor Tinsel', district: 'market', kind: 'task', task: 'house', reward: reward('scarf','holly','Holly scarf'), available: W2, blurb: "The Mayor has a cottage on Holly Lane just for you. Make it cosy!" },
+  { n: 11, title: 'Tram Conductor', giver: 'Conductor Clem', district: 'market', kind: 'minigame', game: 'tram', reward: reward('hat', 'conductor', "Conductor's cap"), available: W2, blurb: "Drive the festive tram and stop smoothly for every passenger." },
+  { n: 12, title: 'Gift Wrapping', giver: 'Auntie Noor', district: 'market', kind: 'minigame', game: 'giftwrap', reward: reward('hat','bow','Ribbon bow'), available: W2, blurb: "Wrap presents with Auntie Noor: paper, folds, tape and a bow." },
+  { n: 13, title: 'Snowman Contest', giver: 'Pip', district: 'park', kind: 'minigame', game: 'snowman', reward: reward('coat','snowy','Snowy coat'), available: W2, blurb: "Roll, stack and dress the best snowman in Pinecone Park." },
+  { n: 14, title: 'Ferris Wheel Gnomes', giver: 'Otto', district: 'lakeside', kind: 'task', task: 'gnomes', reward: reward('hat','gnome','Gnome hat'), available: W2, blurb: "The Ferris wheel gnomes are hiding round the lake. Round them up!" },
+  { n: 15, title: 'The Lost Reindeer', giver: 'Elf Pepper', district: 'park', kind: 'task', task: 'reindeer', reward: reward('scarf','jingle','Jingle-bell scarf'), available: W2, blurb: "Follow glowing hoofprints to find Clover, one of Santa's reindeer." },
+  { n: 16, title: 'Sledge Hill Race II', giver: 'Coach Sasha', district: 'hill', kind: 'minigame', game: 'sled2', reward: reward('coat','midnight','Midnight coat'), available: W2, blurb: "A night race down Sledge Hill through lantern gates and bells." },
+  ...SOON.map((title, i) => ({ n: 17 + i, title, giver: '', district: '', kind: 'task', available: false, blurb: 'Coming soon!' })),
   { n: 24, title: 'Christmas Eve', giver: 'Mayor Tinsel', district: 'market', kind: 'finale', available: false, blurb: 'Place the star on the big tree and welcome Santa to Tinselby.' },
 ];
 

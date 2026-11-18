@@ -154,6 +154,8 @@ export function createMusic(ac, graph) {
 
   return {
     tick, setLevel, playSpecial, out,
+    /** wave 2: current song timing for beat-synced games (start may lie slightly in the future) */
+    get beat() { return cur ? { bpm: cur.song.bpm, meter: cur.song.meter, start: cur.start, spb: cur.spb } : null; },
     get level() { return level; },
     get song() { return cur ? cur.song.name : null; },
   };
