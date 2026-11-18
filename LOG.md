@@ -76,3 +76,4 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - 05:25 IST: RELEASED rides (tram, carriage, Ferris wheel, carousel, skating, sledging) + photo mode. Full playthrough on clean HEAD: 0 fails, 0 console errors. Pushed main.
 - 05:35 IST: wave-3 batch A spawned: Doors (Sonnet), Props & Wardrobe (Fable), Tasks (Sonnet), Finale (Opus), Carols (Opus), Presents (Opus). Batch B (UI & Net, Calendar data, Cocoa, Pack) when two of A finish.
 - 06:10 IST: wave-3 Tasks (Sonnet) done (post/lanterns/letters, 78 checks 0 fails with Doors hooks). Held uncommitted: depends on Fable props.js exports + Doors hooks (commit in release order). Needs: tasks.reindeer.hop() (Doors), Pepper door-22 lines + Percy back line (Doors), follow-camera framing for small props (polish).
+- 06:40 IST: Props & Wardrobe (Fable) + Tasks committed; clean HEAD builds. Spawning batch B.
