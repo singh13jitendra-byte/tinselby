@@ -15,7 +15,7 @@ export const GIVERS = {
 
 export const LINES = {
   1: {
-    accept: "Evening, {name}! The three houses with wreaths are still dark. Could you switch their lights on?",
+    accept: "Hello, {name}! The three houses with wreaths are still dark. Could you switch their lights on?",
     remind: "Look for the wreath doors on Holly Lane, {name}. {left} to go!",
     done: "Holly Lane is twinkling! Thank you, {name}. Merry Christmas!",
     after: "Doesn't the lane look cosy now, {name}? Thank you again!",
@@ -39,7 +39,7 @@ export const LINES = {
     remind: "The cable car's right behind me. Up you go, {name}!",
     carrying: "Carry that star to the big tree in Market Square, {name}. There's a cushion waiting for it!",
     after: "That star's in good hands now, {name}. Thank you! Mind the sledges!",
-    locked: "Evening, {name}! I'll need your help soon. {next} is waiting for you first.",
+    locked: "Hello, {name}! I'll need your help soon. {next} is waiting for you first.",
   },
   5: {
     accept: "{name}! Snowball fight! Hit the kids behind the forts, but not our snowman. Ready?",
@@ -55,7 +55,7 @@ export const LINES = {
     replay: "Found them again! Well spotted, {name}.",
     retry: "A few are still hiding. Try again any time, {name}!",
     again: "I've hidden them somewhere new, {name}. Off you go!",
-    locked: "Good evening, {name}! I'm still hiding ornaments. Pop back after you've helped {next}.",
+    locked: "Hi there, {name}! I'm still hiding ornaments. Pop back after you've helped {next}.",
   },
   7: {
     accept: "Ready to race, {name}? Steer down Sledge Hill, grab the gold stars and dodge the gnomes!",

@@ -204,6 +204,11 @@ export function createWardrobe(ctx, data) {
       tray.setStyle(game.state.style);
       wrap.hidden = false;
       tray.show();
+      // in game the wardrobe pieces (door rewards) are what changes: on short screens open scrolled to them
+      requestAnimationFrame(() => { try {
+        const sc = wrap.querySelector('.tb-scroll'), secs = wrap.querySelectorAll('.tb-sec');
+        if (sc && secs[1] && sc.scrollHeight > sc.clientHeight + 8) sc.scrollTop = secs[1].offsetTop - sc.offsetTop - 6;
+      } catch (e) { /* */ } });
       restore = true;
       player.controllable = false;
       ctx.input.enabled = false;

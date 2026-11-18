@@ -86,6 +86,8 @@ export function createOverlays(ctx, root) {
     toasts.replaceChildren();
     for (const o of live.values()) o.life = Math.min(o.life, 0);
   });
+  // a mini-game owns the screen: giver bubbles fade out (toasts from the game itself still show)
+  game.on('minigame:start', () => { for (const o of live.values()) o.life = Math.min(o.life, 0); });
   const v = new THREE.Vector3();
   function updateBubbles(dt) {
     const W = window.innerWidth, H = window.innerHeight;

@@ -22,7 +22,11 @@ export function createProgress(ctx = {}, opts = {}) {
   const key = opts.key || SAVE_KEY;
   const silent = !!opts.silent;
   let quiet = false;
-  if (!opts.storage && params.has('reset')) wipe(storage, key);
+  if (!opts.storage && params.has('reset')) {
+    wipe(storage, key);
+    // a full reset also forgets the name/look (ui profile) and the shared-town id, so the entry screen starts fresh
+    for (const k of ['tinselby.profile', 'tinselby.net.v1']) { try { storage.removeItem?.(k); } catch (e) { /* */ } }
+  }
   const loaded = load(storage, key);
   let S = loaded.save;
   if (loaded.corrupt && !silent) console.warn('[progress] save was unreadable; starting fresh');

@@ -32,20 +32,22 @@ export function createMiniGames(ctx) {
       return new Promise((resolve) => {
         const prevPhase = game.state.phase === 'minigame' ? 'play' : game.state.phase;
         game.state.phase = 'minigame';
-        let lastResult = null;
+        let bestRun = null; // best completed run this visit: "Play again" then quitting must not lose a won door
         const run = () => {
           const mg = makeSession(def, opts, (result) => {
-            lastResult = result;
-            showResults(def, result, () => { mg._dispose(); run(); }, () => {
-              mg._dispose();
+            if (result.completed && (!bestRun || result.stars > bestRun.stars || (result.stars === bestRun.stars && result.score > bestRun.score))) bestRun = result;
+            const finish = () => {
               active = null;
               game.state.phase = prevPhase;
               player.controllable = true;
               ctx.input.enabled = true;
               cam.setMode('follow');
-              game.emit('minigame:end', { id, ...result });
-              resolve({ id, ...result });
-            });
+              const out = bestRun && !result.completed ? { ...bestRun, quit: result.quit } : result;
+              game.emit('minigame:end', { id, ...out });
+              resolve({ id, ...out });
+            };
+            if (result.quit) { mg._dispose(); finish(); return; } // ✕ leaves straight away, no results card
+            showResults(def, result, () => { mg._dispose(); run(); }, () => { mg._dispose(); finish(); });
           });
           active = mg;
           game.emit('minigame:start', { id });
@@ -58,7 +60,6 @@ export function createMiniGames(ctx) {
           }
         };
         run();
-        void lastResult;
       });
     },
     /** Abort the running game (counts as not completed). */

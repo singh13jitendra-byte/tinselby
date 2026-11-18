@@ -23,6 +23,14 @@ export function createCards(ctx, data, { wear, tint, modalOpen }) {
 
   /** spec: { kind, icon (html), iconColor, kicker, title, sub, buttons: [{label, cls, fn}], ms } */
   function push(spec) { queue.push(spec); pump(); }
+  // a card already on screen steps aside when a mini-game, the finale or a panel takes over, and comes back later
+  function park() {
+    if (!active || canShow() || active.classList.contains('out')) return;
+    const a = active; active = null;
+    clearTimeout(a._timer);
+    a.remove();
+    queue.unshift(a._spec);
+  }
   function pump() {
     if (active || !queue.length || !canShow()) return;
     const spec = queue.shift();
@@ -57,6 +65,7 @@ export function createCards(ctx, data, { wear, tint, modalOpen }) {
     active = el;
     if (spec.sound) sfx(spec.sound);
     const timer = spec.ms ? setTimeout(close, spec.ms) : 0;
+    el._spec = spec; el._timer = timer;
   }
 
   function rewardIcon(r) {
@@ -124,6 +133,7 @@ export function createCards(ctx, data, { wear, tint, modalOpen }) {
   const who = (list, verb) => (list.length === 1 ? `${list[0]} ${verb}` : `${list[0]} and ${list.length - 1} other${list.length > 2 ? 's' : ''} ${verb}`);
 
   function update() {
+    park();
     if (!active && queue.length) pump();
     const now = performance.now();
     if (now - lastNet > 4500 && (pend.join.length || pend.leave.length)) {

@@ -95,7 +95,7 @@ export function createEntry(ctx, root, data) {
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     try { ctx.audio?.sfx?.('ui'); } catch (er) { /* */ }
-    if (renaming && !returning) { if (!input.value.trim()) { input.focus(); input.classList.remove('nope'); void input.offsetWidth; input.classList.add('nope'); return; } showStep('style'); input.blur(); return; }
+    if (renaming) { if (!input.value.trim()) { input.focus(); input.classList.remove('nope'); void input.offsetWidth; input.classList.add('nope'); return; } if (returning) { start(); return; } showStep('style'); input.blur(); return; }
     start();
   });
   $('.tb-style-toggle').addEventListener('click', () => { try { ctx.audio?.sfx?.('ui'); } catch (er) { /* */ } showStep('style'); });

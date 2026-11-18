@@ -359,3 +359,6 @@
   .tb-card-btns { flex-direction: row; }
   .tb-nettoasts { top: calc(66px + var(--safe-t)); }
 }
+
+/* scroll cue on short screens: the tray's bottom fades so more options read as "below" */
+.tb-scroll { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent); mask-image: linear-gradient(#000 calc(100% - 26px), transparent); padding-bottom: 22px; }
