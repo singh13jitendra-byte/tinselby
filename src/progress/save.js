@@ -25,7 +25,18 @@ export function blankSave() {
     rewards: [], // reward ids
     best: {}, // gameId → { score, stars, plays }
     daily: { last: '', streak: 0, claims: 0 },
+    house: null, // wave 2: { wreath, lights, door, snowman } (option keys), null until the player decorates
+    wave: 8, // highest available door the player has been told about (new saves: progress sets lastAvailable())
   };
+}
+
+/** House style keys (WAVE2.md §Doors agent): only these four, each value /^[a-z]{1,12}$/, anything else is dropped. */
+export const HOUSE_KEYS = ['wreath', 'lights', 'door', 'snowman'];
+export function cleanHouse(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const out = {};
+  for (const k of HOUSE_KEYS) if (typeof v[k] === 'string' && /^[a-z]{1,12}$/.test(v[k])) out[k] = v[k];
+  return Object.keys(out).length ? out : null;
 }
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
@@ -64,6 +75,9 @@ export function normalize(raw) {
     s.daily.streak = Math.max(0, int(raw.daily.streak, 0));
     s.daily.claims = Math.max(0, int(raw.daily.claims, 0));
   }
+  s.house = cleanHouse(raw.house);
+  // saves from before wave 2 have no `wave`: they were told about doors 1–8
+  s.wave = raw.wave === undefined || !Number.isFinite(+raw.wave) ? 8 : Math.max(0, Math.min(24, int(raw.wave, 8)));
   return s;
 }
 

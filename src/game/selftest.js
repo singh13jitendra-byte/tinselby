@@ -1,4 +1,4 @@
-// Headless logic test for wave 1: plays Advent doors 1–8 by teleporting the player next to givers / spots and emitting
+// Headless logic test: plays Advent doors 1–8 (1–16 with ?w2) by teleporting the player next to givers / spots and emitting
 // 'interact', then checks door states, rewards, wardrobe unlocks, festive levels, the daily gift and persistence.
 // Run in the page: await window.__tinselby.ctx.tasks.selfTest()   (best with ?capture&play&noshots)
 // Options: { reset: true } wipes progress first (default); { finale: true } also force-opens door 24 and places the
@@ -8,12 +8,13 @@
 import { createProgress } from '../progress/index.js';
 import { memoryStorage, SAVE_KEY } from '../progress/save.js';
 
-const EXPECT_LEVEL = [0, 1, 1, 2, 2, 3, 3, 4, 4];
+const EXPECT_LEVEL = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
 const isStub = (def) => !def || def.intro === 'Coming soon' || /Stub game/.test(String(def.start));
 
 export async function runSelfTest(ctx, { reset = true, finale = false } = {}) {
   const { game, player, layout, interact, engine, colliders } = ctx;
   const progress = ctx.progress, tasks = ctx.tasks, S = game.state;
+  const W = progress.lastAvailable(); // 16 with ?w2, else 8
   const { HILL, MARKET, RESIDENTIAL, PARK, LAKE } = layout;
   const log = [], fails = [];
   const events = {};
@@ -35,13 +36,20 @@ export async function runSelfTest(ctx, { reset = true, finale = false } = {}) {
     return cur;
   }
   const giverAt = (n) => { const g = tasks.giverPos(n); return [g.x + 0.32, g.z + 0.22]; };
+  const spotOf = (n) => 'giver-' + tasks.givers[n].id; // shared dolls: the doll's own door id
+  // helpers handed to the wave-2 activities' selfTest (WAVE2.md §Activity interface)
+  const T = {
+    talk: (n) => go(...giverAt(n), spotOf(n)),
+    go, step, tick, check,
+    teleport: (x, z) => { const p = near(x, z); player.teleport(p.x, p.z); step(3); },
+  };
   const waitRide = async () => { for (let i = 0; i < 600 && tasks.state.riding; i++) { step(1); await tick(); } step(3); };
   const expectLevel = (k, label) => check(S.spirit === EXPECT_LEVEL[k] && progress.level() === EXPECT_LEVEL[k], `${label}: festive level ${EXPECT_LEVEL[k]} (spirit ${S.spirit}, level ${progress.level()})`);
   function afterDoor(n) {
     const d = progress.door(n);
     check(progress.state(n) === 'done', `door ${n} done (state ${progress.state(n)})`);
     if (d.reward) check(progress.rewards.has(d.reward.id) && progress.wardrobe.unlocked(d.reward.slot).includes(d.reward.key), `door ${n} reward ${d.reward.id} owned + unlocked`);
-    if (n < 8) check(progress.state(n + 1) === 'open' && progress.current() === n + 1, `door ${n + 1} opened (current ${progress.current()})`);
+    if (n < W) check(progress.state(n + 1) === 'open' && progress.current() === n + 1, `door ${n + 1} opened (current ${progress.current()})`);
     expectLevel(n, `after door ${n}`);
   }
 
@@ -57,8 +65,9 @@ export async function runSelfTest(ctx, { reset = true, finale = false } = {}) {
 
     // ---------------------------------------------------------------- fresh state
     check(progress.current() === 1, 'fresh save: current door 1');
-    check(progress.state(1) === 'open' && [2, 3, 4, 5, 6, 7, 8].every((n) => progress.state(n) === 'locked'), 'door 1 open, 2–8 locked');
-    check([9, 15, 23].every((n) => progress.state(n) === 'soon') && progress.state(24) === 'locked', 'doors 9–23 soon, 24 locked');
+    check(progress.state(1) === 'open' && Array.from({ length: W - 1 }, (_, i) => i + 2).every((n) => progress.state(n) === 'locked'), `door 1 open, 2–${W} locked`);
+    check(Array.from({ length: 23 - W }, (_, i) => W + 1 + i).every((n) => progress.state(n) === 'soon') && progress.state(24) === 'locked', `doors ${W + 1}–23 soon, 24 locked`);
+    check(progress.house.get() === null && progress.wave === W, `fresh save: no house style, wave ${W}`);
     check(S.spirit === 0 && progress.level() === 0, 'festive level 0');
     check(progress.wardrobe.unlocked('hat').join() === 'bobble,earflap,earmuffs,none', 'only default hats unlocked');
     check(progress.wardrobe.unlocked('hair').length === 5 && progress.wardrobe.unlocked('outfit').length === 4, 'character keys always unlocked');
@@ -112,21 +121,42 @@ export async function runSelfTest(ctx, { reset = true, finale = false } = {}) {
     await go(MARKET.tree.x + 0.3, MARKET.tree.z + 1.55);
     check(!interact.current || interact.current.id !== 'tree-star', '"Place the star" (door 24) not offered in wave 1');
 
-    // ---------------------------------------------------------------- doors 5–8: mini-games
+    // ---------------------------------------------------------------- doors 5–W: mini-games and (wave 2) task activities
     const stubs = [];
-    for (const n of [5, 6, 7, 8]) {
-      const gameId = progress.door(n).game;
+    const instantPlay = (n) => async (id) => {
+      const r = { id, score: 10 * n, stars: 2, text: '', quit: false, completed: true };
+      ctx.progress.recordMiniGame(id, r);
+      return r;
+    };
+    for (let n = 5; n <= W; n++) {
+      const meta = progress.door(n);
+      if (meta.kind === 'task') {
+        // wave-2 task doors (10 house, 14 gnomes, 15 reindeer) run their activity's own selfTest
+        const act = tasks.activities?.[meta.task];
+        if (!check(!!act, `door ${n}: activity ${meta.task} exists`)) continue;
+        stubs.push(`${meta.task}:activity`);
+        await act.selfTest(T);
+        step(2);
+        afterDoor(n);
+        if (n === 10) {
+          const hs = progress.house.get();
+          check(hs && Object.keys(hs).length === 4, 'door 10: house style saved (' + JSON.stringify(hs) + ')');
+          check(S.phase === 'play' && !ctx.house?.isOpen, 'door 10: back in play, panel closed');
+        }
+        if (n === 14) {
+          const left = act.visibleCount ? act.visibleCount() : window.__w2?.gnomes?.state?.visible;
+          if (typeof left === 'number') check(left === 0, `door 14: no gnome left visible (${left})`);
+          else log.push('skip  door 14: gnome visibility (the activity exposes no visibleCount)');
+        }
+        if (n === 15) check(tasks.reindeer.atRest === true, 'door 15: Clover is in the Reindeer Rest (tasks.reindeer.atRest)');
+        continue;
+      }
+      const gameId = meta.game;
       const def = ctx.minigames?.get?.(gameId);
       const stub = isStub(def);
       stubs.push(`${gameId}:${stub ? 'stub' : 'real'}`);
-      if (!stub) {
-        ctx.minigames.play = async (id) => {
-          const r = { id, score: 10 * n, stars: 2, text: '', quit: false, completed: true };
-          ctx.progress.recordMiniGame(id, r);
-          return r;
-        };
-      }
-      await go(...giverAt(n), 'giver-' + n);
+      if (!stub) ctx.minigames.play = instantPlay(n);
+      await go(...giverAt(n), spotOf(n));
       check(tasks.pendingGame && tasks.pendingGame.n === n, `door ${n}: ${tasks.givers[n].who} starts ${gameId}`);
       for (let i = 0; i < 60 && tasks.pendingGame; i++) step(1);
       const t0 = performance.now();
@@ -143,15 +173,23 @@ export async function runSelfTest(ctx, { reset = true, finale = false } = {}) {
       if (realPlay) ctx.minigames.play = realPlay;
       afterDoor(n);
       check(progress.best(gameId) != null, `door ${n}: best score recorded for ${gameId}`);
+      if (n === 9) {
+        // shared giver: Ilse (door 3's doll) now offers a replay of door 9
+        { const [x, z] = giverAt(9); T.teleport(x, z); }
+        check(interact.current && interact.current.label === 'Play again with Ilse', `shared giver: "Play again with Ilse" after door 9 (${interact.current && interact.current.label})`);
+        check(tasks.givers[9] === tasks.givers[3] && tasks.givers[13] === tasks.givers[2] && tasks.givers[16] === tasks.givers[7] && tasks.givers[10] === tasks.givers[24], 'shared dolls: givers[9/10/13/16] are the dolls of 3/24/2/7');
+      }
     }
 
     // ---------------------------------------------------------------- wave end
-    check(progress.current() === null && progress.doneCount() === 8, 'all 8 doors done, no current door');
+    check(progress.current() === null && progress.doneCount() === W, `all ${W} doors done, no current door`);
     check(events['wave:end'] === 1, 'wave:end fired once (' + events['wave:end'] + ')');
-    check(progress.state(9) === 'soon' && progress.state(24) === 'locked', 'door 9 soon, door 24 still locked');
-    check(events['door:complete'] === 8 && events['reward:grant'] === 8 && events['door:open'] === 7, `events: door:complete ${events['door:complete']}, reward:grant ${events['reward:grant']}, door:open ${events['door:open']}`);
+    check(progress.state(W + 1) === 'soon' && progress.state(24) === 'locked', `door ${W + 1} soon, door 24 still locked`);
+    check(events['door:complete'] === W && events['reward:grant'] === W && events['door:open'] === W - 1, `events: door:complete ${events['door:complete']}, reward:grant ${events['reward:grant']}, door:open ${events['door:open']}`);
     const owned = progress.rewards.owned();
-    check(['scarf:candycane', 'hat:santa', 'coat:plum', 'hat:reindeer', 'scarf:gold', 'coat:navy', 'hat:elf', 'coat:gingerbread'].every((id) => owned.includes(id)), 'all 8 door rewards owned');
+    const wantRewards = ['scarf:candycane', 'hat:santa', 'coat:plum', 'hat:reindeer', 'scarf:gold', 'coat:navy', 'hat:elf', 'coat:gingerbread'];
+    if (W >= 16) wantRewards.push('coat:icy', 'scarf:holly', 'hat:conductor', 'hat:bow', 'coat:snowy', 'hat:gnome', 'scarf:jingle', 'coat:midnight');
+    check(wantRewards.every((id) => owned.includes(id)), `all ${W} door rewards owned`);
     step(1);
     check(tasks.objective && tasks.objective.id === 'daily', 'objective → daily gift at the Advent board');
 
@@ -167,6 +205,23 @@ export async function runSelfTest(ctx, { reset = true, finale = false } = {}) {
     check(events['door:complete'] === doneBefore && progress.state(5) === 'done', 'replay: no new door:complete');
     check(progress.stars(5) === 3 && progress.best('snowball').score >= 999, `replay: best kept (stars ${progress.stars(5)}, best ${JSON.stringify(progress.best('snowball'))})`);
 
+    // shared giver with two done mini-games (Sasha: doors 7 + 16) asks which one to replay (ui.choose stubbed to the first option)
+    if (W >= 16) {
+      const calls = [];
+      const ui = ctx.ui, hadChoose = ui && Object.prototype.hasOwnProperty.call(ui, 'choose'), realChoose = ui && ui.choose;
+      if (ui) ui.choose = async (o) => { calls.push(o); return o.options[0].value; };
+      ctx.minigames.play = async (id) => { const r = { id, score: 50, stars: 1, text: '', quit: false, completed: true }; ctx.progress.recordMiniGame(id, r); return r; };
+      T.teleport(...giverAt(16));
+      check(interact.current && interact.current.label === 'Play again with Coach Sasha', 'Sasha (doors 7 + 16 done) offers "Play again" (' + (interact.current && interact.current.label) + ')');
+      game.emit('interact'); await tick(); step(2);
+      for (let i = 0; i < 60 && tasks.pendingGame; i++) step(1);
+      for (let i = 0; i < 20 && (tasks.playingDoor || tasks.choosing); i++) await tick(10);
+      check(!ui || (calls.length === 1 && calls[0].title === 'Coach Sasha' && calls[0].options.length === 2 && calls[0].options[0].value === 7), 'ui.choose asked Sasha which door (' + JSON.stringify(calls[0] && calls[0].options) + ')');
+      if (ui) { if (hadChoose) ui.choose = realChoose; else delete ui.choose; }
+      if (realPlay) ctx.minigames.play = realPlay;
+      check(progress.state(16) === 'done' && events['door:complete'] === W, 'choose → replay: no new door:complete');
+    }
+
     // daily gift on the live save
     const reward = progress.daily.claim();
     check(reward && reward.id === 'scarf:berry' && progress.rewards.has('scarf:berry') && events['daily:claim'] === 1, 'daily claim → Berry scarf');
@@ -179,16 +234,39 @@ export async function runSelfTest(ctx, { reset = true, finale = false } = {}) {
     try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { /* private mode */ }
     let parsed = null;
     try { parsed = JSON.parse(raw); } catch (e) { /* */ }
-    check(parsed && parsed.v === 1 && Object.keys(parsed.doors).length === 8, 'save JSON: v1 with 8 doors');
+    check(parsed && parsed.v === 1 && Object.keys(parsed.doors).length === W, `save JSON: v1 with ${W} doors`);
+    check(parsed && parsed.wave === W && (W < 10 || (parsed.house && parsed.house.wreath)), `save JSON: wave ${W}${W >= 10 ? ' + house style' : ''}`);
     const p2 = createProgress({}, { storage: memoryStorage({ [SAVE_KEY]: raw || '' }), silent: true });
-    check(p2.playerId === progress.playerId && p2.doneCount() === 8 && p2.current() === null && p2.level() === 4, 'reload: same player, 8 doors, level 4');
-    check(p2.state(9) === 'soon' && p2.state(24) === 'locked' && p2.rewards.owned().length === owned.length + 1, 'reload: states + rewards');
+    check(p2.playerId === progress.playerId && p2.doneCount() === W && p2.current() === null && p2.level() === 4, `reload: same player, ${W} doors, level 4`);
+    check(p2.state(W + 1) === 'soon' && p2.state(24) === 'locked' && p2.rewards.owned().length === owned.length + 1, 'reload: states + rewards');
+    check(p2.wave === W && JSON.stringify(p2.house.get()) === JSON.stringify(progress.house.get()), `reload: wave ${p2.wave}, house style ${JSON.stringify(p2.house.get())}`);
     check(p2.best('snowball')?.stars === 3 && p2.stars(5) === 3 && !p2.daily.available && p2.daily.streak === 1, 'reload: best scores + daily');
     check(p2.wardrobe.unlocked('coat').includes('gingerbread') && !p2.wardrobe.unlocked('coat').includes('forest'), 'reload: wardrobe');
     const bad = createProgress({}, { storage: memoryStorage({ [SAVE_KEY]: '{not json' }), silent: true });
     check(bad.doneCount() === 0 && bad.current() === 1, 'corrupt save → fresh start');
     const junk = createProgress({}, { storage: memoryStorage({ [SAVE_KEY]: JSON.stringify({ v: 7, doors: { 1: { stars: 9 }, x: 1, 30: {}, 2: 'bad' }, rewards: ['hat:santa', 5], best: { sled: 'no' }, daily: { last: 'yesterday' } }) }), silent: true });
     check(junk.doneCount() === 1 && junk.stars(1) === 3 && junk.rewards.has('hat:santa') && junk.best('sled') === null && junk.daily.available, 'future/junk save read field by field');
+
+    // wave 2: an old-format save (doors 1–8 done, no `wave`) hears about the new doors exactly once
+    {
+      const old = JSON.parse(JSON.stringify(parsed || {}));
+      for (let n = 9; n <= 24; n++) delete old.doors[n];
+      delete old.wave; delete old.house;
+      old.rewards = (old.rewards || []).filter((id) => !/icy|holly|conductor|bow|snowy|gnome|jingle|midnight/.test(id));
+      const store = memoryStorage({ [SAVE_KEY]: JSON.stringify(old) });
+      const fake = () => { const h = {}, seen = []; return { seen, h, state: { phase: 'play', style: null }, emit(e, d) { seen.push([e, d]); }, on(e, f) { (h[e] = h[e] || []).push(f); return () => {}; } }; };
+      const run = async (g, p) => { (g.h['game:start'] || []).forEach((f) => f({ name: 'T' })); await tick(160); const ev = g.seen.filter(([e]) => e === 'doors:new'); p._dispose(); return ev; };
+      const g1 = fake(), pa = createProgress({ game: g1 }, { storage: store, newDoorsDelay: 60 });
+      const wave0 = pa.wave, ev1 = await run(g1, pa);
+      const g2 = fake(), pb = createProgress({ game: g2 }, { storage: store, newDoorsDelay: 60 });
+      const ev2 = await run(g2, pb);
+      if (W >= 16) {
+        check(wave0 === 8 && ev1.length === 1 && ev1[0][1].from === 9 && ev1[0][1].to === 16, `old save (no wave): doors:new ${JSON.stringify(ev1.map((e) => e[1]))} once`);
+        check(pb.wave === 16 && ev2.length === 0, 'old save: not told again after a reload');
+      } else check(ev1.length === 0 && wave0 === 8, 'old save without ?w2: no doors:new card');
+      const fresh = fake(), pf = createProgress({ game: fresh }, { storage: memoryStorage(), newDoorsDelay: 60 });
+      check(pf.wave === W && (await run(fresh, pf)).length === 0, 'brand-new save: wave = lastAvailable, no card');
+    }
 
     // daily streak logic with a fake clock (separate in-memory save)
     let day = new Date(2026, 11, 1, 10);

@@ -4,10 +4,12 @@
 //
 // Events: door:open {n}, door:complete {n, stars, score}, reward:grant {id, slot, key, label} (door rewards only),
 // daily:claim {reward, streak}, wave:end {n, done}, spirit:change {value, max} (also on load), plus the extras
-// progress:change {} (anything changed: refresh UI), progress:reset {}, daily:available {} (a new day began mid-session).
+// progress:change {} (anything changed: refresh UI; {house:true} when the house style was saved), progress:reset {},
+// daily:available {} (a new day began mid-session), doors:new {from, to} (wave 2: a returning save is told once that more
+// doors opened; `wave` in the save is the highest door it has been told about).
 import { STYLE_OPTIONS, DEFAULT_STYLE } from '../core/player.js';
 import { DOORS, FINALE_DOOR, door, doorForGame, DEFAULT_UNLOCKED, GATED_SLOTS, DAILY_REWARDS, DAILY_TREATS, REWARDS, festiveLevel } from './doors.js';
-import { SAVE_KEY, blankSave, defaultStorage, load, store, wipe, dayKey, prevDay } from './save.js';
+import { SAVE_KEY, blankSave, defaultStorage, load, store, wipe, dayKey, prevDay, cleanHouse } from './save.js';
 
 export { DOORS, REWARDS, DAILY_REWARDS, festiveLevel };
 const SPIRIT_MAX = 4;
@@ -29,6 +31,9 @@ export function createProgress(ctx = {}, opts = {}) {
   }
   const loaded = load(storage, key);
   let S = loaded.save;
+  /** Highest door number that is playable in this build (16 with ?w2, else 8); the finale door never counts. */
+  const lastAvailable = () => DOORS.reduce((m, d) => (d.available && d.kind !== 'finale' && d.n > m ? d.n : m), 0);
+  if (loaded.fresh) S.wave = lastAvailable(); // brand-new players never see the "new doors" card
   if (loaded.corrupt && !silent) console.warn('[progress] save was unreadable; starting fresh');
 
   const now = () => (api._clock ? api._clock() : opts.clock ? opts.clock() : new Date());
@@ -211,6 +216,20 @@ export function createProgress(ctx = {}, opts = {}) {
     },
   };
 
+  // ---------------------------------------------------------------- your house (wave 2, door 10)
+  const house = {
+    /** Saved style { wreath, lights, door, snowman } or null (never decorated). */
+    get: () => (S.house ? { ...S.house } : null),
+    set(style) {
+      const clean = cleanHouse(style);
+      if (!clean) return null;
+      S.house = clean;
+      persist();
+      changed({ house: true });
+      return { ...clean };
+    },
+  };
+
   // ---------------------------------------------------------------- profile (name + style, for "Welcome back")
   const profile = {
     get name() { return S.profile.name || ''; },
@@ -223,6 +242,7 @@ export function createProgress(ctx = {}, opts = {}) {
     },
   };
 
+  let dailyTimer = null, waveTimer = null;
   const api = {
     get playerId() { return S.playerId; },
     doors: DOORS,
@@ -241,11 +261,16 @@ export function createProgress(ctx = {}, opts = {}) {
     wardrobe,
     daily,
     profile,
+    house,
+    lastAvailable,
+    /** Highest door the player has been told about (doors:new fires while this is below lastAvailable()). */
+    get wave() { return S.wave; },
     save() { persist(); },
     /** Debug: wipe the save and start over (new playerId). */
     reset() {
       wipe(storage, key);
       S = blankSave();
+      S.wave = lastAvailable();
       persist();
       syncSpirit(true);
       emit('progress:reset', {});
@@ -273,12 +298,26 @@ export function createProgress(ctx = {}, opts = {}) {
       profile.set({ name: typeof name === 'string' ? name : undefined, style: style || game.state?.style });
       syncSpirit(true);
     });
+    // wave 2: a returning save hears once that new doors opened (1.5 s after the game starts), then remembers it
+    game.on?.('game:start', () => {
+      if (S.wave >= lastAvailable() || doneCount() === 0) { if (doneCount() === 0 && S.wave < lastAvailable()) { S.wave = lastAvailable(); persist(); } return; }
+      waveTimer = setTimeout(() => {
+        waveTimer = null;
+        const to = lastAvailable();
+        if (S.wave >= to) return;
+        emit('doors:new', { from: S.wave + 1, to });
+        S.wave = to;
+        persist();
+      }, opts.newDoorsDelay ?? 1500);
+    });
     let wasAvail = daily.available;
-    setInterval(() => {
+    dailyTimer = setInterval(() => {
       const a = daily.available;
       if (a && !wasAvail) { emit('daily:available', {}); changed({ daily: true }); }
       wasAvail = a;
     }, 30000);
   }
+  /** Stop the timers (tests that build extra non-silent instances). */
+  api._dispose = () => { clearInterval(dailyTimer); clearTimeout(waveTimer); };
   return api;
 }
