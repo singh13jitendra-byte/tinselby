@@ -38,3 +38,4 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - Running total: 11 agents; Chrome lock will queue — builders told to prefer logic tests.
 - 11:40 IST: Server restart stopped all 11 agents mid-work (~11:26). Files intact; resumed all 11 via SendMessage. Perf agent's city/ edits are no longer in the working tree (it may have reverted them while testing variants) — check its report.
 - Wardrobe (Fable) committed: 8 pieces. For the wave-2 UI agent: jingle swatch = scarf:red hex, holly ≈ green, snowy ≈ cream → add dots/rings or SPECIAL_TINT; SHORT labels + HAT_TINT per WAVE2 §UI.
+- 12:30 IST: Perf pass committed: market high view 662k → 465k, entry+tray 714k → 500k, follow 505k → 388k; look unchanged. Remaining big costs: givers/player (~54–70k, buildCharacter, no LOD) and the Advent board (16k) — candidates for a later pass. Added life.holdVehicle (hidden vehicle still moves along its path and still blocks cars; it is only hidden).
