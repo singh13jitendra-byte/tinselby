@@ -1,0 +1,34 @@
+/* Ferris wheel + carousel rides (src/rides/ferris.js, carousel.js): Hop off + View buttons, hint line. */
+.rw-ui { position: absolute; inset: 0; pointer-events: none; z-index: 40; opacity: 0; transition: opacity .35s ease; }
+.rw-ui.rw-in { opacity: 1; }
+.rw-bar {
+  position: absolute; display: flex; gap: 12px; align-items: center;
+  right: calc(16px + var(--safe-r)); bottom: calc(18px + var(--safe-b));
+}
+#ui .rw-bar button { pointer-events: auto; touch-action: manipulation; }
+.rw-hop { min-height: 60px; min-width: 136px; padding: 0 22px 0 16px; font-size: 20px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.rw-view { min-height: 60px; min-width: 60px; padding: 0 16px 0 12px; font-size: 17px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.rw-ico { width: 24px; height: 24px; display: inline-grid; place-items: center; flex: none; }
+.rw-ico svg { width: 24px; height: 24px; display: block; }
+.rw-hop .rw-ico svg { transform: rotate(180deg); } /* the arrow points down: "get down" */
+.rw-hop.rw-busy { opacity: 0.75; filter: saturate(0.7); }
+.rw-hint {
+  position: absolute; left: 50%; bottom: calc(96px + var(--safe-b)); transform: translateX(-50%);
+  font: 600 15px/1.2 var(--font); color: var(--cream); background: rgba(43, 52, 82, 0.62); border-radius: 999px;
+  padding: 8px 16px; white-space: nowrap; opacity: 0; transition: opacity .4s ease;
+}
+.rw-hint.rw-show { opacity: 1; }
+/* portrait phones: buttons sit a little higher (home indicator) and the pair stretches across the lower right */
+body.tb-portrait .rw-bar { bottom: calc(26px + var(--safe-b)); }
+body.tb-portrait .rw-hint { bottom: calc(104px + var(--safe-b)); max-width: 86vw; white-space: normal; text-align: center; }
+/* short landscape phones: tighter margins */
+@media (max-height: 430px) and (orientation: landscape) {
+  .rw-bar { bottom: calc(12px + var(--safe-b)); right: calc(14px + var(--safe-r)); gap: 10px; }
+  .rw-hop, .rw-view { min-height: 54px; }
+  .rw-view .rw-lbl { display: none; }
+  .rw-view { min-width: 54px; padding: 0; }
+  .rw-hint { bottom: calc(80px + var(--safe-b)); }
+}
+/* while a wheel / carousel ride owns the screen, "go to door N" pointers step aside too (the HUD pill and the arrow
+   toasts; hud.js .tb-ride hides the rest of the HUD); plain toasts still show */
+#ui:has(> .rw-ui) .tb-hintpill, #ui:has(> .rw-ui) .tb-toast.has-arrow { opacity: 0; visibility: hidden; pointer-events: none; }

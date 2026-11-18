@@ -228,7 +228,7 @@ function buildCutaway(K, stallFolds, carousel) {
     const live = shown && p && (phase === 'play' || phase === 'minigame') && !cam?.shotActive;
     for (const f of folds) {
       let cut = 0;
-      if (live) {
+      if (live && !(f.kind === 'carousel' && CAROUSEL?.rider != null)) { // never fold the carousel under its rider
         const dx = p.x - f.x, dz = p.z - f.z;
         const along = dx * VX + dz * VZ, lat = Math.abs(dx * -VZ + dz * VX);
         const a = sm(ramp((along + 0.35 - f.near) / 0.6)) * sm(ramp((f.far - along) / 0.8));
@@ -536,28 +536,56 @@ function buildCarousel(K, pos) {
   const fold = new THREE.Group(); // cut-away scale lives here (the reveal owns the rotor's own scale)
   rotor.add(fold);
   fold.add(mesh);
-  // horses: instanced, bobbing on their poles
+  // horses: instanced, bobbing on their poles. Scaled up a little so a seated player doll fits the saddle; each pole
+  // runs through the horse's neck (horse shifted back along its heading) so a rider sits behind the pole.
   const hg = horseGeo();
   const horses = new THREE.InstancedMesh(hg, engine.mat, NH);
   horses.castShadow = true;
+  horses.frustumCulled = false; // instance bounds come from the start pose; a rider's eye sits right next to them
   fold.add(horses);
   K.G.market.group.root.add(rotor);
   K.G.market.group.node(rotor, [x, 0, z], { delay: 0.5, dur: 0.6 });
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s1 = new THREE.Vector3(1, 1, 1), v = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
-  K.updates.push((dt, t) => {
-    if (!rotor.visible) return;
-    rotor.rotation.y += dt * 0.42;
-    for (let k = 0; k < NH; k++) {
+  const HS = 1.22, POLE_X = 0.085; // horse scale, pole position in horse-local x (forward)
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sH = new THREE.Vector3(HS, HS, HS), v = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+  const AMBIENT = 0.42;
+  let bobPh = 0;
+  const api = {
+    x, z, R, RH, NH, rotor, fold, horses, HS,
+    /** Rotor speed (rad/s) and the ride's speed control: fn(dt) that sets api.speed (null = idle at AMBIENT). */
+    speed: AMBIENT, ambient: AMBIENT, driver: null,
+    /** Index of the horse a player rides (the cut-away fold stays off while set), or null. */
+    rider: null,
+    /** Saddle top in horse-local (unscaled) space; horse-local +x is the horse's heading. */
+    saddle: new THREE.Vector3(-0.035, 0.092, 0),
+    get shown() { return K.G.market.group.state === 'shown' && rotor.visible; },
+    /** Horse k's height above the rotor floor (bobs with the rotation: horses stand still when the carousel stops). */
+    bob(k) { return 0.64 + Math.sin(bobPh + k * 2.1) * 0.08; },
+    /** Horse k's matrix in rotor (fold) space. */
+    horseLocal(k, out) {
       const a = (k / NH) * TAU;
-      v.set(Math.sin(a) * RH, 0.62 + Math.sin(t * 2.2 + k * 2.1) * 0.08, Math.cos(a) * RH);
-      q.setFromAxisAngle(up, a);
-      m4.compose(v, q, s1);
-      horses.setMatrixAt(k, m4);
-    }
+      q.setFromAxisAngle(up, a); // horse-local +x → (cos a, 0, −sin a): the tangent the rotor carries it along
+      v.set(Math.sin(a) * RH - Math.cos(a) * POLE_X * HS, api.bob(k), Math.cos(a) * RH + Math.sin(a) * POLE_X * HS);
+      return out.compose(v, q, sH);
+    },
+    /** World matrix of horse k. */
+    horseMatrix(k, out) { fold.updateWorldMatrix(true, false); return api.horseLocal(k, out).premultiply(fold.matrixWorld); },
+  };
+  K.updates.push((dt) => {
+    if (!rotor.visible) return;
+    if (api.driver) api.driver(dt);
+    else api.speed += (AMBIENT - api.speed) * (1 - Math.exp(-dt * 0.8));
+    rotor.rotation.y += dt * api.speed;
+    bobPh += dt * 2.2 * (api.speed / AMBIENT);
+    for (let k = 0; k < NH; k++) horses.setMatrixAt(k, api.horseLocal(k, m4));
     horses.instanceMatrix.needsUpdate = true;
   });
+  CAROUSEL = api;
   return fold;
 }
+
+/** The carousel the free-play ride (src/rides/carousel.js) drives; null until the market is built. */
+let CAROUSEL = null;
+export const getCarousel = () => CAROUSEL;
 
 function horseGeo() {
   const g = [];
