@@ -21,3 +21,6 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - 05:32 IST: `?spirit` retired in favour of `?doors=N`. tools/playthrough.py rewritten for wave 1 (selfTest doors 1–8, each mini-game start/quit/cleanup, phone layouts).
 - 05:34 IST: The cloud environment restarted and killed running processes (my background capture, the agents' Chrome runs). Files intact. Asked the UI and sled agents to resume.
 - Holding the GitHub push until UI + sled are in and the e2e passes, so the live site never shows a half-built wave.
+- 06:15 IST: Calendar & UI (Opus) and Sled (Opus) done and committed. All 8 wave-1 builders are in. Sled is two short heats (Pine Run + Cable Car Run, times added) because a wall of the hill's pines splits the slope; good call, kept it. Town Spirit chip now never shows less than your own doors (it read "0" offline).
+- e2e: all 4 mini-games start, quit and leave the scene clean (76 → 76 children), no console errors.
+- Spawned Sonnet QA (report-only) and Fable visual polish (cookie close-up bloom, morning contrast, board readability). Haiku small fixes after the QA report.
