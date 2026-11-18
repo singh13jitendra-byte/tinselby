@@ -9,11 +9,12 @@ const cyl = (rt, rb, h, c, k = KNIT, seg = 12) => part(new THREE.CylinderGeometr
 /** Character style options shown in the "Change style" tray. Keys are stored in game.state.style.
  * coat / scarf values are CSS colours (candycane: a CSS stripe gradient for swatches), hat / hair / outfit values are labels.
  * Wave 1 rewards (Advent doors + daily gifts, gated by ctx.progress.wardrobe): coat plum, navy, gingerbread, forest;
- * hat santa, reindeer, elf; scarf candycane, gold, berry, sky, mint. Character keys (hair, hairColor, skin, outfit) are never gated. */
+ * hat santa, reindeer, elf; scarf candycane, gold, berry, sky, mint. Character keys (hair, hairColor, skin, outfit) are never gated.
+ * Wave 2 rewards (doors 9–16): coat icy, snowy, midnight; hat conductor, bow, gnome; scarf holly, jingle (accents live in the geometry). */
 export const STYLE_OPTIONS = {
-  coat: { red: '#b5332e', teal: '#4b8f8b', cream: '#ecdcc0', mustard: '#d59f3c', green: '#6f9463', plum: '#7b3b63', navy: '#34486e', gingerbread: '#a3653a', forest: '#2f5e3e' },
-  hat: { bobble: 'Bobble beanie', earflap: 'Ear-flap hat', earmuffs: 'Earmuffs', none: 'No hat', santa: 'Santa hat', reindeer: 'Reindeer hat', elf: 'Elf hat' },
-  scarf: { green: '#5d8a58', red: '#b5332e', white: P.snow, striped: 'striped', candycane: 'repeating-linear-gradient(135deg,#b5332e 0 6px,#f5f1ea 6px 12px)', gold: '#e3aa3a', berry: '#9c2f55', sky: '#86b4d8', mint: '#9fd3b4' },
+  coat: { red: '#b5332e', teal: '#4b8f8b', cream: '#ecdcc0', mustard: '#d59f3c', green: '#6f9463', plum: '#7b3b63', navy: '#34486e', gingerbread: '#a3653a', forest: '#2f5e3e', icy: '#a9cfe0', snowy: '#f3efe6', midnight: '#26305a' },
+  hat: { bobble: 'Bobble beanie', earflap: 'Ear-flap hat', earmuffs: 'Earmuffs', none: 'No hat', santa: 'Santa hat', reindeer: 'Reindeer hat', elf: 'Elf hat', conductor: "Conductor's cap", bow: 'Ribbon bow', gnome: 'Gnome hat' },
+  scarf: { green: '#5d8a58', red: '#b5332e', white: P.snow, striped: 'striped', candycane: 'repeating-linear-gradient(135deg,#b5332e 0 6px,#f5f1ea 6px 12px)', gold: '#e3aa3a', berry: '#9c2f55', sky: '#86b4d8', mint: '#9fd3b4', holly: '#3f7a4a', jingle: '#b5332e' },
   hair: { none: 'Classic', tousled: 'Tousled', bob: 'Bob', bunches: 'Bunches', long: 'Long' },
   hairColor: { brown: '#7a4a2c', dark: '#3a2820', ginger: '#c2632b', blonde: '#dfb562' },
   skin: { light: P.skin, tan: '#deb08a', brown: '#a8714e', deep: '#6f4a33' },
@@ -51,7 +52,7 @@ const FACE = 0.8; // half-width (radians) of the face opening in hair shells (fa
 function addHair(g, style, col, skin, covered, hat) {
   const t0 = covered ? 1.0 : 0; // shells start just above the brim line when a hat covers the crown
   const ears = (r = 0.022) => { for (const sx of [-1, 1]) g.push(xf(sph(r, skin, FELT, 6, 4), [sx * 0.084, 0.257, -0.004], null, [0.55, 1, 0.8])); };
-  const showEars = hat !== 'earflap' && hat !== 'earmuffs' && hat !== 'reindeer' && hat !== 'elf';
+  const showEars = hat !== 'earflap' && hat !== 'earmuffs' && hat !== 'reindeer' && hat !== 'elf' && hat !== 'gnome';
   if (style === 'bob' || style === 'long') {
     const long = style === 'long';
     // back + sides down to the chin (bob) or the shoulders (long), open at the face; fringe across the forehead
@@ -128,6 +129,87 @@ function festiveHat(g, hat, skin) {
   }
 }
 
+// ---------------------------------------------------------------- wave 2 wardrobe (doors 9–16; each piece ≤ 400 tris)
+const FUR = '#fbf7f0', GOLD = '#e8b640';
+const octa = (c, k, s) => xf(part(new THREE.OctahedronGeometry(1), c, k), [0, 0, 0], null, s);
+/** A point in a scarf tail's local frame (y runs 0 → −len down the tail) moved to doll space. */
+const tailPt = (pos, rot, x, y, z) => { _v.set(x, y, z).applyEuler(_e.set(rot[0], rot[1], rot[2])); return [pos[0] + _v.x, pos[1] + _v.y, pos[2] + _v.z]; };
+/** Body cone of each outfit: [radius at y, y of the hem roll, hem radius, y0 + span used for coat decorations]. */
+const BODY = {
+  coat: { r: (y) => 0.083 - ((y - 0.0655) / 0.125) * 0.031, hemY: 0.068, hemR: 0.081, y0: 0.084, span: 0.082, slope: 0.24 },
+  duffle: { r: (y) => 0.089 - ((y - 0.043) / 0.15) * 0.035, hemY: 0.044, hemR: 0.087, y0: 0.066, span: 0.1, slope: 0.23 },
+  dress: { r: (y) => 0.094 - ((y - 0.071) / 0.118) * 0.044, hemY: 0.073, hemR: 0.092, y0: 0.09, span: 0.06, slope: 0.36 },
+  jumper: { r: (y) => 0.074 - ((y - 0.0855) / 0.105) * 0.018, hemY: 0.088, hemR: 0.072, y0: 0.102, span: 0.02, slope: 0.17 },
+};
+/** Coat accents: icy = fluffy white hem lumps, snowy = coal felt buttons (non-coat outfits), midnight = gold star beads. */
+function coatAccents(g, key, outfit) {
+  const B = BODY[outfit];
+  if (key === 'icy') {
+    for (let i = 0; i < 7; i++) { const a = (i / 7) * TAU + 0.45; g.push(xf(sph(0.0175, FUR, FELT, 4, 2), [Math.sin(a) * (B.hemR + 0.004), B.hemY + (i % 2 ? 0.004 : -0.003), Math.cos(a) * (B.hemR + 0.004)])); }
+  } else if (key === 'snowy' && outfit !== 'coat') {
+    const coal = '#2a2623';
+    if (outfit === 'duffle') for (const sx of [-1, 1]) { const a = sx * 0.62, r = B.r(0.075) + 0.008; g.push(xf(sph(0.0085, coal, FELT, 6, 4), [Math.sin(a) * r, 0.077, Math.cos(a) * r])); }
+    else for (const y of outfit === 'dress' ? [0.095, 0.117, 0.139] : [0.102, 0.122, 0.142]) g.push(xf(sph(0.009, coal, FELT, 6, 4), [0, y, B.r(y) + (outfit === 'jumper' && y > 0.13 ? 0.007 : 0.002)]));
+  } else if (key === 'midnight') {
+    // little four-point sparkles sewn flat onto the coat, front and back (clear of the placket and the arms)
+    for (const [a, t, k] of [[0.5, 0.2, 1], [-0.45, 0.85, 0.8], [-0.9, 0.1, 0.85], [2.45, 0.25, 1], [-2.4, 0.8, 0.8], [3.2, 0.0, 0.85]]) {
+      const y = B.y0 + t * B.span, r = B.r(y) + 0.0025, at = [Math.sin(a) * r, y, Math.cos(a) * r], rot = [-B.slope, a, 0];
+      g.push(xf(octa(GOLD, GLOSS, [0.015 * k, 0.005 * k, 0.003]), at, rot));
+      g.push(xf(octa(GOLD, GLOSS, [0.005 * k, 0.015 * k, 0.003]), at, rot));
+    }
+  }
+}
+/** Scarf accents: holly = berry beads on the fringe + two felt leaves on the knot, jingle = three gold bells down each tail. */
+function scarfAccents(g, key, tails) {
+  if (key === 'holly') {
+    const berry = '#c8322e', leaf = '#1d4427';
+    for (const [pos, rot, len] of tails) for (let i = -1; i <= 1; i++) g.push(xf(sph(0.0085, berry, GLOSS, 5, 3), tailPt(pos, rot, i * 0.014, -len - 0.025, 0)));
+    for (const sx of [-1, 1]) g.push(xf(octa(leaf, FELT, [0.027, 0.012, 0.005]), [0.046 + sx * 0.021, 0.2, 0.073], [-0.45, sx * 0.3, sx * 0.5]));
+    for (const [x, y, z] of [[0.046, 0.199, 0.079], [0.039, 0.207, 0.075], [0.053, 0.207, 0.075]]) g.push(xf(sph(0.0068, berry, GLOSS, 5, 3), [x, y, z]));
+  } else if (key === 'jingle') {
+    tails.forEach(([pos, rot, len], ti) => {
+      const side = ti ? -1 : 1; // the back tail flies out behind: its bells sit on the upper face
+      for (const [x, y, z] of [[-0.008, -len * 0.4, 0.012], [0.008, -len * 0.68, 0.012], [0, -len - 0.014, 0.003]]) g.push(xf(sph(0.0108, GOLD, GLOSS, 6, 4), tailPt(pos, rot, x, y, z * side)));
+    });
+  }
+}
+/** Wave 2 reward hats: conductor (navy felt cap, gloss visor, gold band + badge), bow (satin ribbon bow on a headband), gnome (tall floppy felt cone). */
+function wave2Hat(g, hat, skin, hairStyle) {
+  if (hat === 'conductor') {
+    const navy = '#2c3d63', lean = (y) => -0.006 - (y - 0.3) * 0.1, tilt = [-0.1, 0, 0];
+    g.push(xf(frustum(0.091, 0.0905, 0.036, navy, FELT, 14), [0, 0.316, lean(0.316)], tilt)); // band
+    g.push(xf(frustum(0.0935, 0.093, 0.012, GOLD, GLOSS, 14), [0, 0.309, lean(0.309)], tilt));
+    g.push(xf(frustum(0.105, 0.091, 0.022, navy, FELT, 14), [0, 0.344, lean(0.344)], tilt)); // the crown flares out a little
+    g.push(xf(halfN(0.105, navy, FELT, 12, 3), [0, 0.355, lean(0.355)], tilt, [1, 0.2, 1]));
+    g.push(xf(part(new THREE.CylinderGeometry(0.08, 0.08, 0.006, 8, 1, false, -1.15, 2.3), '#1f2433', GLOSS), [0, 0.3085, 0.029], [0.1, 0, 0])); // stiff visor (short, so the eyes stay visible from the follow camera)
+    g.push(xf(sph(0.0105, GOLD, GLOSS, 6, 4), [0, 0.326, lean(0.326) + 0.0925]));
+    if (!hairStyle) for (const sx of [-1, 1]) g.push(xf(sph(0.022, skin, FELT, 6, 4), [sx * 0.084, 0.257, -0.004], null, [0.55, 1, 0.8]));
+  } else if (hat === 'bow') {
+    const red = '#c4362f', dark = '#a32a25';
+    const R = hairStyle === 'bob' || hairStyle === 'long' ? 0.106 : 0.097, a = 0.58;
+    g.push(xf(torusN(R, 0.006, dark, FELT, 4, 10, Math.PI), [0, 0.268, -0.004]));
+    const at = [Math.sin(a) * (R + 0.02), 0.268 + Math.cos(a) * (R + 0.02), 0.004], rot = [0.05, 0.25, -a + 0.1];
+    const b = [];
+    for (const sx of [-1, 1]) {
+      b.push(xf(sph(0.034, red, GLOSS, 8, 5), [sx * 0.036, 0.008, 0], [0, 0, sx * 0.3], [1.1, 0.72, 0.42])); // loop
+      b.push(xf(boxp(0.021, 0.046, 0.007, red, GLOSS), [sx * 0.021, -0.03, 0.004], [0, 0, sx * 0.55])); // tail
+    }
+    b.push(xf(sph(0.015, dark, GLOSS, 6, 4), [0, 0.002, 0.005], null, [0.9, 1.15, 1]));
+    for (const p of b) g.push(xf(p, at, rot));
+  } else if (hat === 'gnome') {
+    const red = '#b5332e';
+    g.push(xf(torusN(0.096, 0.009, shade(red, 0.84), FELT, 4, 12), [0, 0.288, -0.006], [Math.PI / 2 - 0.06, 0, 0]));
+    let p = onBase(g, frustum(0.064, 0.097, 0.09, red, FELT, 14), 0.09, [0, 0.284, -0.006], [-0.06, 0, 0.04]);
+    g.push(xf(sph(0.064, red, FELT, 8, 4), p));
+    p = onBase(g, frustum(0.036, 0.064, 0.075, red, FELT, 12), 0.075, p, [-0.2, 0, -0.3]);
+    g.push(xf(sph(0.036, red, FELT, 8, 4), p));
+    p = onBase(g, frustum(0.016, 0.036, 0.066, red, FELT, 10), 0.066, p, [0.05, 0, -1.0]);
+    g.push(xf(sph(0.016, red, FELT, 6, 4), p));
+    p = onBase(g, coneN(0.016, 0.05, red, FELT, 8), 0.05, p, [0.2, 0, -2.0]);
+    g.push(xf(sph(0.008, red, FELT, 5, 3), p));
+  }
+}
+
 /** Outfit bodies other than the classic coat: duffle (long, toggles, hood, pockets), dress (A-line, cream bands), jumper (turtleneck, chest band). */
 function outfitBody(g, outfit, coat, trimCol, isCream) {
   if (outfit === 'duffle') {
@@ -187,13 +269,14 @@ export function buildCharacter(mat, style = DEFAULT_STYLE, opts = {}) {
   const striped = scarfKey === 'striped';
   const candy = scarfKey === 'candycane';
   const scarf = striped || candy ? STYLE_OPTIONS.scarf.red : STYLE_OPTIONS.scarf[scarfKey] || scarfKey || P.green;
-  const isCream = s.coat === 'cream';
+  const snowy = s.coat === 'snowy', icy = s.coat === 'icy', midnight = s.coat === 'midnight';
+  const isCream = s.coat === 'cream' || snowy; // snowy: red hat, brown mitts like cream, but coal buttons
   const ging = s.coat === 'gingerbread';
   const hatCol = isCream ? STYLE_OPTIONS.coat.red : '#f0e4cc';
   const trim = striped ? P.snow : scarf; // hat brim / pom accents echo the scarf
   const brimCol = scarfKey === 'white' && !isCream ? coat : new THREE.Color(trim).equals(new THREE.Color(hatCol)) ? STYLE_OPTIONS.coat.mustard : trim;
   const mitt = isCream ? '#8a5a3c' : '#f0e4cc';
-  const button = isCream || s.coat === 'mustard' ? '#7a4f33' : '#f6e7c4';
+  const button = snowy ? '#2a2623' : midnight ? GOLD : isCream || s.coat === 'mustard' ? '#7a4f33' : '#f6e7c4';
   const skin = opts.skin || STYLE_OPTIONS.skin[s.skin] || P.skin;
   const hair = opts.hair || STYLE_OPTIONS.hairColor[s.hairColor] || '#7a4a2c';
   const cheek = !opts.skin && s.skin === 'deep' ? '#b4574f' : !opts.skin && s.skin === 'brown' ? '#c96d64' : '#e9938f';
@@ -212,11 +295,12 @@ export function buildCharacter(mat, style = DEFAULT_STYLE, opts = {}) {
     // --- coat: flared knit body, rounded shoulders, rolled hem, button placket
     g.push(xf(cyl(0.052, 0.083, 0.125, coat, KNIT, 14), [0, 0.128, 0]));
     g.push(xf(sph(0.054, coat, KNIT, 12, 6), [0, 0.186, 0], null, [1, 0.5, 1]));
-    g.push(xf(torusN(0.081, 0.013, ging ? icing : shade(coat, 0.86), KNIT, 6, 16), [0, 0.068, 0], [Math.PI / 2, 0, 0]));
+    g.push(xf(torusN(0.081, icy ? 0.016 : 0.013, ging ? icing : icy ? FUR : shade(coat, 0.86), icy ? FELT : KNIT, 6, 16), [0, 0.068, 0], [Math.PI / 2, 0, 0]));
     g.push(xf(boxp(0.016, 0.112, 0.006, ging ? icing : shade(coat, 0.84)), [0, 0.128, 0.0685], [-0.24, 0, 0]));
     const gum = ['#c8322e', '#3f8f4f', '#c8322e'];
-    [0.098, 0.128, 0.158].forEach((y, i) => g.push(xf(sph(0.0095, ging ? gum[i] : button, GLOSS, 6, 4), [0, y, 0.0795 - (y - 0.098) * 0.24])));
-  } else outfitBody(g, outfit, coat, ging ? icing : null, isCream);
+    [0.098, 0.128, 0.158].forEach((y, i) => g.push(xf(sph(0.0095, ging ? gum[i] : button, snowy ? FELT : GLOSS, 6, 4), [0, y, 0.0795 - (y - 0.098) * 0.24])));
+  } else outfitBody(g, outfit, coat, ging ? icing : icy ? FUR : null, isCream);
+  if (icy || snowy || midnight) coatAccents(g, s.coat, outfit);
   // --- scarf: chunky ring, a knot, one tail in front and one flying out behind (reads from the follow camera)
   if (candy) for (let i = 0; i < 8; i++) g.push(xf(xf(torusN(0.058, 0.024, i % 2 ? P.snow : scarf, KNIT, 8, 2, TAU / 8 + 0.01), [0, 0, 0], [0, 0, (i / 8) * TAU]), [0, 0.193, 0], [Math.PI / 2, 0, 0]));
   else g.push(xf(torusN(0.058, 0.024, scarf, KNIT, 8, 16), [0, 0.193, 0], [Math.PI / 2, 0, 0]));
@@ -224,6 +308,7 @@ export function buildCharacter(mat, style = DEFAULT_STYLE, opts = {}) {
   g.push(xf(sph(0.024, scarf, KNIT, 8, 6), [0.046, 0.186, 0.052]));
   scarfTail(g, scarf, [0.045, 0.186, 0.066], [-0.22, 0, 0.14], 0.085, striped || candy ? P.snow : null);
   scarfTail(g, scarf, [-0.03, 0.2, -0.062], [1.05, 0, -0.25], 0.105, striped || candy ? P.snow : null);
+  if (scarfKey === 'holly' || scarfKey === 'jingle') scarfAccents(g, scarfKey, [[[0.045, 0.186, 0.066], [-0.22, 0, 0.14], 0.085], [[-0.03, 0.2, -0.062], [1.05, 0, -0.25], 0.105]]);
   // --- head: big felt ball, bead eyes, rosy cheeks, a little smile
   g.push(xf(sph(0.085, skin, FELT, 18, 12), [0, 0.265, 0]));
   for (const sx of [-1, 1]) {
@@ -275,6 +360,14 @@ export function buildCharacter(mat, style = DEFAULT_STYLE, opts = {}) {
   } else if (s.hat === 'santa' || s.hat === 'reindeer' || s.hat === 'elf') {
     hairCap();
     festiveHat(g, s.hat, skin);
+  } else if (s.hat === 'conductor' || s.hat === 'gnome') {
+    hairCap();
+    wave2Hat(g, s.hat, skin, hairStyle);
+  } else if (s.hat === 'bow') {
+    // the bow sits on a headband: hair stays uncovered (classic hair loses its bunches so the bow has room)
+    if (hairStyle) addHair(g, hairStyle, hair, skin, false, s.hat);
+    else { hairCap(); g.push(xf(halfN(0.091, hair, KNIT, 14, 6), [0, 0.268, -0.006], [-0.25, 0, 0])); }
+    wave2Hat(g, s.hat, skin, hairStyle);
   } else if (hairStyle) {
     addHair(g, hairStyle, hair, skin, false, s.hat);
   } else {
@@ -290,7 +383,7 @@ export function buildCharacter(mat, style = DEFAULT_STYLE, opts = {}) {
   body.add(bodyMesh);
 
   // sleeves + mittens (duffle: colourful mittens; jumper: ribbed cuffs; gingerbread: icing cuffs)
-  const cuffCol = ging ? icing : outfit === 'jumper' ? shade(coat, 0.8) : outfit === 'duffle' ? '#e0782c' : shade(mitt, 0.9);
+  const cuffCol = ging ? icing : icy ? FUR : outfit === 'jumper' ? shade(coat, 0.8) : outfit === 'duffle' ? '#e0782c' : shade(mitt, 0.9);
   const mittCol = outfit === 'duffle' ? '#3d6db0' : mitt;
   const thumbCol = outfit === 'duffle' ? '#e0782c' : mitt;
   const armGeo = merge([
@@ -299,6 +392,7 @@ export function buildCharacter(mat, style = DEFAULT_STYLE, opts = {}) {
     xf(cyl(0.028, 0.028, 0.016, cuffCol, KNIT, 8), [0, -0.072, 0]),
     xf(sph(0.028, mittCol, KNIT, 10, 7), [0, -0.094, 0], null, [1, 1.12, 1]),
     xf(sph(0.012, thumbCol, KNIT, 6, 4), [0, -0.088, 0.024]),
+    ...(icy ? [0, 1, 2].map((i) => xf(sph(0.0145, FUR, FELT, 4, 2), [Math.sin(i * 2.094 + 0.5) * 0.026, -0.072 + (i % 2 ? 0.003 : -0.003), Math.cos(i * 2.094 + 0.5) * 0.026])) : []), // fluffy cuff (low-poly lumps keep the doll ≤ 4.5k)
   ]);
   const arms = [-1, 1].map((sx) => {
     const piv = new THREE.Group();
