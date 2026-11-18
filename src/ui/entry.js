@@ -1,32 +1,25 @@
-// Entry screen: knitted title, name input, Enter button and the "Change style" tray with a live 3D preview.
-import { STYLE_OPTIONS, DEFAULT_STYLE } from '../core/player.js';
-import { createPreview } from './preview.js';
-import { ICONS } from './icons.js';
+// Entry screen: knitted title, then
+//   first visit:  name → pick your character (style tray) → Enter Tinselby
+//   returning:    "Welcome back, {name}!" → Continue (or Change style / use a different name)
+import { cleanName } from '../core/names.js';
+import { createStyleTray } from './wardrobe.js';
+import { loadProfile, saveProfile, validStyle } from './profile.js';
 
-const KEY = 'tinselby.profile';
-const HAT_SHORT = { bobble: 'Bobble', earflap: 'Ear-flap', earmuffs: 'Earmuffs', none: 'None' };
-const SWATCH = { striped: 'repeating-linear-gradient(45deg,#b8302d 0 7px,#f5f1ea 7px 14px)' };
-
-function load() {
-  try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); if (v && typeof v === 'object') return v; } catch (e) { /* private mode */ }
-  return {};
-}
-function save(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) { /* ignore */ } }
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export function createEntry(ctx, root) {
+export function createEntry(ctx, root, data) {
   const { game, engine } = ctx;
-  const saved = load();
-  const style = { ...DEFAULT_STYLE };
-  if (saved.style) for (const k of Object.keys(STYLE_OPTIONS)) if (saved.style[k] in STYLE_OPTIONS[k]) style[k] = saved.style[k];
+  const saved = loadProfile();
+  const progName = (() => { try { return ctx.progress?.name || ctx.progress?.profile?.name || ''; } catch (e) { return ''; } })();
+  const knownName = saved.name || progName ? cleanName(saved.name || progName, '') : '';
+  const returning = !!knownName;
+  let style = validStyle(saved.style, data);
 
   const el = document.createElement('div');
   el.className = 'tb-entry';
   const NB = 17;
   const bulbs = Array.from({ length: NB }, (_, i) => `<i style="--i:${i};--y:${(Math.sin((i / (NB - 1)) * Math.PI) * 14).toFixed(1)}px"></i>`).join('');
   const letters = [...'Tinselby'].map((c, i) => `<b class="${i % 2 ? 'cr' : 'rd'}" style="--r:${((i * 37) % 7 - 3) * 1.2}deg">${c}</b>`).join('');
-  const swatches = (k) => Object.entries(STYLE_OPTIONS[k]).map(([id, c]) => `<button class="tb-swatch" data-k="${k}" data-v="${id}" aria-label="${k} ${id}" style="--c:${SWATCH[id] || c}"></button>`).join('');
-  const chips = Object.keys(STYLE_OPTIONS.hat).map((id) => `<button class="tb-chipbtn" data-k="hat" data-v="${id}">${HAT_SHORT[id] || id}</button>`).join('');
   el.innerHTML = `
     <div class="tb-entry-head fade-in">
       <div class="tb-garland" aria-hidden="true">${bulbs}</div>
@@ -35,75 +28,97 @@ export function createEntry(ctx, root) {
     </div>
     <div class="tb-entry-body">
       <form class="knit-card tb-entry-card fade-in" autocomplete="off">
-        <label class="tb-label" for="tb-name">What should Tinselby call you?</label>
-        <input id="tb-name" class="tb-input" type="text" maxlength="18" placeholder="Your name" enterkeyhint="go" spellcheck="false" value="${esc((saved.name || '').slice(0, 18))}" />
-        <button type="submit" class="knit-btn tb-enter">Enter Tinselby</button>
-        <button type="button" class="knit-btn cream tb-style-toggle" aria-expanded="false">Change style</button>
-      </form>
-      <div class="knit-card tb-tray fade-in" hidden>
-        <div class="tb-preview"><canvas></canvas></div>
-        <div class="tb-choices">
-          <div class="tb-row"><span class="tb-rowlab">Coat</span><div class="tb-opts">${swatches('coat')}</div></div>
-          <div class="tb-row"><span class="tb-rowlab">Hat</span><div class="tb-opts">${chips}</div></div>
-          <div class="tb-row"><span class="tb-rowlab">Scarf</span><div class="tb-opts">${swatches('scarf')}</div></div>
-          <div class="tb-row tb-row-end"><button type="button" class="knit-btn cream tb-random">${ICONS.dice}<span>Randomise</span></button><button type="button" class="knit-btn green tb-done">Done</button></div>
+        <div class="tb-back-hello" ${returning ? '' : 'hidden'}>
+          <div class="tb-hello">Welcome back, <span class="tb-hello-name">${esc(knownName)}</span>!</div>
+          <div class="tb-hello-sub">${helloSub()}</div>
         </div>
-      </div>
+        <div class="tb-namebox" ${returning ? 'hidden' : ''}>
+          <label class="tb-label" for="tb-name">What should Tinselby call you?</label>
+          <input id="tb-name" class="tb-input" type="text" maxlength="18" placeholder="Your name" enterkeyhint="next" spellcheck="false" value="${esc(knownName)}" />
+        </div>
+        <button type="submit" class="knit-btn tb-enter">${returning ? 'Continue' : 'Next: choose your look'}</button>
+        <button type="button" class="knit-btn cream tb-style-toggle" ${returning ? '' : 'hidden'}>Change style</button>
+        <button type="button" class="tb-link tb-rename" ${returning ? '' : 'hidden'}>Not ${esc(knownName)}? Use another name</button>
+      </form>
     </div>`;
   root.appendChild(el);
 
   const $ = (s) => el.querySelector(s);
+  const body = $('.tb-entry-body');
   const form = $('.tb-entry-card');
   const input = $('#tb-name');
-  const tray = $('.tb-tray');
-  const toggle = $('.tb-style-toggle');
-  let preview = null;
+  const enterBtn = $('.tb-enter');
+  let renaming = !returning;
+  let step = 'name'; // 'name' | 'style'
 
-  function refresh() {
-    el.querySelectorAll('[data-k]').forEach((b) => b.classList.toggle('on', style[b.dataset.k] === b.dataset.v));
-    preview?.setStyle(style);
+  function helloSub() {
+    try {
+      const done = data.doneCount();
+      const cur = data.current();
+      if (cur) return done ? `${done} door${done === 1 ? '' : 's'} opened so far · Door ${cur} is waiting` : `Door ${cur} is waiting for you`;
+      if (done) return `${done} doors opened · new doors are coming soon`;
+    } catch (e) { /* stub */ }
+    return 'Tinselby missed you';
   }
-  function openTray(open) {
-    tray.hidden = !open;
-    toggle.setAttribute('aria-expanded', String(open));
-    toggle.textContent = open ? 'Hide style' : 'Change style';
-    el.classList.toggle('tray-open', open);
-    if (open && !preview) { preview = createPreview(ctx, $('.tb-preview canvas')); refresh(); }
+
+  const tray = createStyleTray(ctx, data, {
+    style,
+    primary: returning ? 'Continue' : 'Enter Tinselby',
+    back: true,
+    onChange: (s) => { style = s; },
+    onPrimary: (s) => { style = s; start(); },
+    onBack: () => showStep('name'),
+  });
+  tray.hide();
+  body.appendChild(tray.el);
+
+  function showStep(s) {
+    step = s;
+    const st = s === 'style';
+    el.classList.toggle('tray-open', st);
+    form.hidden = st;
+    if (st) { tray.show(); tray.el.classList.remove('fade-in'); void tray.el.offsetWidth; tray.el.classList.add('fade-in'); }
+    else { tray.hide(); }
   }
-  el.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-k]');
-    if (b) { style[b.dataset.k] = b.dataset.v; refresh(); try { ctx.audio?.sfx?.('ui'); } catch (er) { /* */ } }
-  });
-  toggle.addEventListener('click', () => openTray(tray.hidden));
-  $('.tb-done').addEventListener('click', () => openTray(false));
-  $('.tb-random').addEventListener('click', () => {
-    for (const k of Object.keys(STYLE_OPTIONS)) {
-      const ks = Object.keys(STYLE_OPTIONS[k]);
-      style[k] = ks[Math.floor(Math.random() * ks.length)];
-    }
-    refresh();
-    try { ctx.audio?.sfx?.('pop'); } catch (er) { /* */ }
-  });
+  function currentName() {
+    const raw = renaming ? input.value : knownName;
+    return cleanName(raw);
+  }
+  function start() {
+    const name = currentName();
+    saveProfile({ name, style });
+    input.blur();
+    try { ctx.net?.setName?.(name); } catch (e) { /* net may still be starting */ }
+    game.emit('game:start', { name, style: { ...style } });
+  }
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const name = input.value.trim().slice(0, 18) || 'Traveller';
-    save({ name, style });
-    input.blur();
-    game.emit('game:start', { name, style: { ...style } });
+    try { ctx.audio?.sfx?.('ui'); } catch (er) { /* */ }
+    if (renaming && !returning) { if (!input.value.trim()) { input.focus(); input.classList.remove('nope'); void input.offsetWidth; input.classList.add('nope'); return; } showStep('style'); input.blur(); return; }
+    start();
   });
-  game.on('ui:escape', () => { if (!tray.hidden) openTray(false); });
-  refresh();
+  $('.tb-style-toggle').addEventListener('click', () => { try { ctx.audio?.sfx?.('ui'); } catch (er) { /* */ } showStep('style'); });
+  $('.tb-rename').addEventListener('click', () => {
+    renaming = true;
+    $('.tb-back-hello').hidden = true;
+    $('.tb-namebox').hidden = false;
+    $('.tb-rename').hidden = true;
+    input.value = '';
+    enterBtn.textContent = 'Continue';
+    input.focus();
+  });
+  game.on('ui:escape', () => { if (step === 'style') showStep('name'); });
 
-  const offUpdate = engine.addUpdate((dt) => { if (preview && !tray.hidden) preview.render(dt); }, 200);
   let gone = false;
   function hide() {
     if (gone) return;
     gone = true;
-    offUpdate();
-    const done = () => { el.remove(); preview?.dispose(); preview = null; };
+    tray.hide();
+    const done = () => el.remove();
     if (engine.capture) { done(); return; } // headless capture: no fade
     el.classList.add('tb-leaving');
     setTimeout(done, 600);
   }
-  return { el, hide, openTray, style };
+  return { el, hide, showStep, get style() { return style; }, returning, tray };
 }

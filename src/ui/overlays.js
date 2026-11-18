@@ -20,17 +20,41 @@ export function createOverlays(ctx, root) {
   portrait.innerHTML = `<div class="knit-card tb-portrait-card"><div class="tb-portrait-phone">${ICONS.phone}</div><div class="tb-portrait-txt">Turn your phone sideways</div><div class="tb-portrait-sub">Tinselby is best in landscape</div></div>`;
   root.append(bubbles, toasts, banner, skip, portrait);
 
-  // ---- toasts
-  function toast(text, ms = 2800) {
+  // ---- toasts (pass {x, z} to add a live arrow pointing at that spot)
+  const arrows = []; // {el, x, z, t}
+  function toast(text, ms = 2800, opts = {}) {
     if (!text) return;
     const t = document.createElement('div');
     t.className = 'tb-toast knit-card';
-    t.textContent = text;
+    if (Number.isFinite(opts.x) && Number.isFinite(opts.z)) {
+      t.classList.add('has-arrow');
+      const a = document.createElement('span');
+      a.className = 'tb-toast-arrow';
+      a.innerHTML = ICONS.arrow;
+      const s = document.createElement('span');
+      s.textContent = text;
+      t.append(a, s);
+      arrows.push({ el: a, x: opts.x, z: opts.z, toast: t });
+    } else t.textContent = text;
     toasts.appendChild(t);
     while (toasts.children.length > 2) toasts.firstChild.remove();
     setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, ms);
   }
-  game.on('ui:toast', ({ text, ms }) => toast(text, ms));
+  game.on('ui:toast', ({ text, ms, x, z }) => toast(text, ms, { x, z }));
+  function updateArrows() {
+    for (let i = arrows.length - 1; i >= 0; i--) {
+      const a = arrows[i];
+      if (!a.toast.isConnected) { arrows.splice(i, 1); continue; }
+      a.el.style.transform = `rotate(${screenAngle(a.x, a.z).toFixed(3)}rad)`;
+    }
+  }
+  /** Angle (clockwise from screen-up) from the player to a world spot, using the camera's ground yaw. */
+  function screenAngle(x, z) {
+    const p = ctx.player.pos, yaw = cam.yaw;
+    const dx = x - p.x, dz = z - p.z;
+    const f = dx * -Math.sin(yaw) + dz * -Math.cos(yaw), r = dx * Math.cos(yaw) + dz * -Math.sin(yaw);
+    return Math.atan2(r, f);
+  }
 
   // ---- speech bubbles (anchored above the speaker when a world pos is given)
   const live = new Map(); // who → {el, pos, until}
@@ -95,11 +119,6 @@ export function createOverlays(ctx, root) {
     clearTimeout(bannerTimer);
     bannerTimer = setTimeout(() => { banner.hidden = true; }, 3000);
   });
-  game.on('task:complete', ({ id }) => {
-    const left = game.state.spiritMax - game.state.spirit;
-    if (id === 'star') return;
-    toast(left > 1 ? `Festive Spirit +1! Tinselby feels merrier.` : 'Festive Spirit +1! Now, the star for the big tree!', 3200);
-  });
 
   // ---- cinematic skip: tap / key during a skippable shot
   let shotT = 0;
@@ -109,9 +128,10 @@ export function createOverlays(ctx, root) {
 
   function update(dt) {
     updateBubbles(dt);
+    updateArrows();
     shotT = cam.shotSkippable ? shotT + dt : 0;
     const showSkip = shotT > 0.6 && game.state.phase !== 'entry';
     if (skip.hidden === showSkip) skip.hidden = !showSkip;
   }
-  return { toast, say, update };
+  return { toast, say, update, screenAngle };
 }

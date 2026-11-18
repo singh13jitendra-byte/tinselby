@@ -14,6 +14,18 @@ export const ICONS = {
   soundOff: svg('<path d="M4 9.5h4L13 5v14l-5-4.5H4z" fill="currentColor" fill-opacity=".25"/><path d="M17 9.5l5 5m0-5l-5 5"/>'),
   dice: svg('<rect x="4" y="4" width="16" height="16" rx="4" fill="currentColor" fill-opacity=".15"/><circle cx="9" cy="9" r="1.1" fill="currentColor"/><circle cx="15" cy="15" r="1.1" fill="currentColor"/><circle cx="15" cy="9" r="1.1" fill="currentColor"/><circle cx="9" cy="15" r="1.1" fill="currentColor"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/>'),
   phone: svg('<rect x="7" y="2.5" width="10" height="19" rx="2.5" fill="currentColor" fill-opacity=".15"/><path d="M11 18.5h2"/>'),
+  calendar: svg('<rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="currentColor" fill-opacity=".18"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><rect x="7" y="12.5" width="3" height="2.6" rx=".6" fill="currentColor"/><rect x="14" y="12.5" width="3" height="2.6" rx=".6" fill="currentColor" fill-opacity=".45"/><rect x="10.5" y="16" width="3" height="2.4" rx=".6" fill="currentColor" fill-opacity=".45"/>'),
+  jumper: svg('<path d="M9 3.5h6l1.2 1.6L21 7.5l-1.6 6-2.4-.8V20.5H7v-7.8l-2.4.8L3 7.5l4.8-2.4z" fill="currentColor" fill-opacity=".2"/><path d="M9.2 3.6c.6 1.6 1.6 2.4 2.8 2.4s2.2-.8 2.8-2.4M7 16.5h10M9.5 10.5l1.2 1.4 1.3-1.4 1.3 1.4 1.2-1.4"/>'),
+  snowflake: svg('<path d="M12 2.5v19M3.8 7.25l16.4 9.5M3.8 16.75l16.4-9.5M9.4 4.1L12 6.6l2.6-2.5M9.4 19.9L12 17.4l2.6 2.5M3.6 10.3l3.5.8-1 3.4M20.4 13.7l-3.5-.8 1-3.4M3.9 13.6l3.2-1.6M20.1 10.4l-3.2 1.6"/>'),
+  people: svg('<circle cx="9" cy="8" r="3.2" fill="currentColor" fill-opacity=".2"/><circle cx="16.5" cy="9" r="2.6" fill="currentColor" fill-opacity=".2"/><path d="M3.5 19.5c.4-3.6 2.6-5.6 5.5-5.6s5.1 2 5.5 5.6M14.6 14.2c.6-.3 1.2-.4 1.9-.4 2.4 0 4.1 1.7 4.4 4.8"/>'),
+  lock: svg('<rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="currentColor" fill-opacity=".25"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2.5"/>'),
+  close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
+  candle: svg('<rect x="8.5" y="10" width="7" height="11" rx="1.5" fill="currentColor" fill-opacity=".25"/><path d="M12 10V8.2"/><path d="M12 2.8c1.8 1.9 2.2 3 2.2 3.8a2.2 2.2 0 0 1-4.4 0c0-.8.4-1.9 2.2-3.8z" fill="currentColor"/>'),
+  arrow: svg('<path d="M12 3l7 9h-4v9h-6v-9H5z" fill="currentColor" fill-opacity=".9" stroke-width="1.6"/>'),
+  check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+  back: svg('<path d="M15 5l-7 7 7 7"/>'),
+  sparkle: svg('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill="currentColor" fill-opacity=".3"/><path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/>'),
+  sleigh: svg('<path d="M3 15.5h13.5c2 0 3.5-1.5 3.5-3.5V9"/><path d="M5 15.5c-1.5 0-2.2-1-2-2.4L4 8h7l1.5 4h5" fill="currentColor" fill-opacity=".2"/><path d="M2.5 19h15c1.6 0 2.9-.9 3.5-2.5M7 15.5V19M14 15.5V19"/>'),
 };
 
 /** A knitted star for the Festive Spirit meter (filled or empty). */

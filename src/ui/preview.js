@@ -1,12 +1,22 @@
-// Live rotating 3D preview of the player's knitted doll for the entry screen's style tray.
-// Its own small WebGLRenderer + lights, sharing the yarn material (ctx.engine.mat).
+// Live rotating 3D preview of the player's knitted doll for the style tray (entry screen + in-game wardrobe).
+// One small WebGLRenderer for the whole session (created lazily, reused so we never churn GL contexts), sharing the
+// yarn material (ctx.engine.mat). mount(container) moves its canvas into whichever tray is showing.
 import * as THREE from 'three';
 import { buildCharacter } from '../core/player.js';
 import { P } from '../core/yarn.js';
 import { cyl, sph, xf, merge, FELT } from '../core/prims.js';
 
-export function createPreview(ctx, canvas) {
+let shared = null;
+
+/** The session's single preview (null if WebGL is unavailable). */
+export function sharedPreview(ctx) {
+  if (shared === null) shared = createPreview(ctx) || false;
+  return shared || null;
+}
+
+export function createPreview(ctx) {
   const { engine } = ctx;
+  const canvas = document.createElement('canvas');
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: !!engine.capture });
@@ -36,8 +46,8 @@ export function createPreview(ctx, canvas) {
   scene.add(ped);
   const turn = new THREE.Group();
   scene.add(turn);
-  let ch = null;
-  let angle = 0.5;
+  let ch = null, lastKey = '';
+  let angle = 0.5, spinT = 0;
 
   function size() {
     const w = canvas.clientWidth || 140, h = canvas.clientHeight || 180;
@@ -51,21 +61,30 @@ export function createPreview(ctx, canvas) {
   }
 
   return {
+    canvas,
+    mount(container) { if (container && canvas.parentNode !== container) container.appendChild(canvas); },
     setStyle(style) {
+      const k = JSON.stringify(style);
+      if (k === lastKey && ch) return;
+      lastKey = k;
       if (ch) turn.remove(ch.group);
-      ch = buildCharacter(engine.mat, style);
+      try { ch = buildCharacter(engine.mat, style); } catch (e) { console.error('[ui] preview', e); ch = null; return; }
       turn.add(ch.group);
+      spinT = 0.35; // a little hop when something changes
     },
     render(dt) {
+      if (!canvas.isConnected) return;
       size();
       angle += dt * 0.9;
       turn.rotation.y = angle;
+      if (spinT > 0) { spinT = Math.max(0, spinT - dt); turn.position.y = Math.sin((1 - spinT / 0.35) * Math.PI) * 0.03; }
       if (ch) ch.animate(dt, 0);
       renderer.render(scene, camera);
     },
     dispose() {
       renderer.dispose();
       try { renderer.forceContextLoss(); } catch (e) { /* ignore */ }
+      if (shared && shared.canvas === canvas) shared = null;
     },
   };
 }
