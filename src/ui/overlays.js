@@ -1,4 +1,4 @@
-// Toasts, speech bubbles, district banners, "tap to skip" hint and the portrait overlay.
+// Toasts, speech bubbles, district banners and the "tap to skip" hint. (Portrait is a first-class layout now: no rotate overlay.)
 import * as THREE from 'three';
 import { ICONS } from './icons.js';
 
@@ -15,10 +15,7 @@ export function createOverlays(ctx, root) {
   skip.className = 'tb-skip';
   skip.textContent = 'Tap to skip';
   skip.hidden = true;
-  const portrait = document.createElement('div');
-  portrait.className = 'tb-portrait';
-  portrait.innerHTML = `<div class="knit-card tb-portrait-card"><div class="tb-portrait-phone">${ICONS.phone}</div><div class="tb-portrait-txt">Turn your phone sideways</div><div class="tb-portrait-sub">Tinselby is best in landscape</div></div>`;
-  root.append(bubbles, toasts, banner, skip, portrait);
+  root.append(bubbles, toasts, banner, skip);
 
   // ---- toasts (pass {x, z} to add a live arrow pointing at that spot)
   const arrows = []; // {el, x, z, t}
@@ -91,6 +88,7 @@ export function createOverlays(ctx, root) {
   const v = new THREE.Vector3();
   function updateBubbles(dt) {
     const W = window.innerWidth, H = window.innerHeight;
+    const toastsBottom = W < H && live.size && toasts.children.length ? toasts.getBoundingClientRect().bottom : 0;
     for (const [who, b] of live) {
       b.life -= dt;
       if (b.life <= 0 && !b.el.classList.contains('out')) {
@@ -102,8 +100,12 @@ export function createOverlays(ctx, root) {
         const behind = v.z > 1;
         let x = (v.x * 0.5 + 0.5) * W, y = (-v.y * 0.5 + 0.5) * H;
         const bw = b.el.offsetWidth || 220, bh = b.el.offsetHeight || 60;
-        x = Math.max(bw / 2 + 10, Math.min(W - bw / 2 - 10, behind ? W / 2 : x));
-        y = Math.max(bh + (H <= 380 ? 112 : 70), Math.min(H - 20, behind ? H * 0.4 : y));
+        // keep clear of the top HUD (two rows + goal chip in portrait) and of the joystick / button row at the bottom
+        let top = W < H ? 176 : H <= 380 ? 112 : 70;
+        const bottom = W < H ? 180 : 20;
+        if (W < H && toastsBottom) top = Math.max(top, toastsBottom + 22); // portrait: toasts share the column, sit below them
+        x = Math.max(bw / 2 + 8, Math.min(W - bw / 2 - 8, behind ? W / 2 : x));
+        y = Math.max(bh + top, Math.min(H - bottom, behind ? H * 0.4 : y));
         b.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
       }
     }

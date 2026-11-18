@@ -327,18 +327,6 @@
 .tb-skip { position: absolute; left: 50%; bottom: calc(18px + var(--safe-b)); transform: translateX(-50%); font: 600 14px/1 var(--font); color: var(--cream); background: rgba(30, 34, 60, 0.55); padding: 10px 18px; border-radius: 999px; animation: fadeIn .4s ease both; }
 .tb-skip[hidden] { display: none; }
 
-/* ------------------------------------------------------------------ portrait overlay (phones) */
-.tb-portrait { display: none; position: fixed; inset: 0; z-index: 50; place-items: center; background: radial-gradient(circle at 50% 40%, #3a4670, #1e2540); pointer-events: auto; }
-@media (orientation: portrait) and (pointer: coarse), (orientation: portrait) and (max-width: 600px) {
-  .tb-portrait { display: grid; }
-}
-.tb-portrait-card { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; width: min(80vw, 320px); }
-.tb-portrait-phone { width: 76px; height: 76px; color: var(--red); animation: tbRotate 2.4s ease-in-out infinite; }
-.tb-portrait-phone svg { width: 100%; height: 100%; }
-.tb-portrait-txt { font: 700 24px/1.15 var(--font); }
-.tb-portrait-sub { font: 500 14px/1.3 var(--font); opacity: .75; }
-@keyframes tbRotate { 0%, 25% { transform: rotate(0); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
-
 /* small landscape phones: tighten the HUD */
 @media (max-height: 430px) {
   .tb-task { font-size: 13px; max-width: 28vw; min-height: 40px; }
@@ -383,4 +371,103 @@
   .tb-cards { left: calc(152px + var(--safe-l)); transform: none; width: min(440px, calc(100vw - 172px - var(--safe-l) - var(--safe-r))); bottom: calc(86px + var(--safe-b)); }
   .tb-bubble { max-width: min(260px, 52vw); padding: 7px 12px 9px; }
   .tb-bubble-txt { font-size: 14px; }
+}
+
+/* ================================================================== PORTRAIT (phones held upright, tablets, narrow windows)
+   Same breakpoint as cam.isPortrait / body.tb-portrait (src/core/camera.js). Landscape rules above stay untouched. */
+@media (orientation: portrait) {
+  /* ---- entry: title + name card in the upper half, the town shows below; the style tray stacks preview over options */
+  .tb-entry { justify-content: flex-start; padding-top: calc(5vh + var(--safe-t)); gap: clamp(10px, 2.2vh, 20px); }
+  .tb-welcome { font-size: clamp(15px, 4.4vw, 28px); }
+  .tb-word { font-size: clamp(44px, 15vw, 96px); }
+  .tb-garland { gap: clamp(8px, 2.6vw, 20px); }
+  .tb-entry .knit-sub { font-size: 12px; letter-spacing: .14em; }
+  .tb-entry-body { flex-direction: column; width: 100%; }
+  .tb-entry-card { width: min(380px, 100%); }
+  .tb-entry.tray-open { padding-top: calc(10px + var(--safe-t)); }
+  .tb-entry.tray-open .tb-word { font-size: clamp(30px, 10vw, 56px); }
+  .tb-entry.tray-open .tb-welcome { display: none; }
+  .tb-entry.tray-open .tb-entry-body { flex: 1 1 auto; min-height: 0; align-items: stretch; }
+  .tb-tray { flex-direction: column; width: min(560px, 100%); max-height: 100%; padding: 12px 12px; gap: 8px; align-self: center; }
+  .tb-preview { width: clamp(140px, 44vw, 220px); height: clamp(140px, 23vh, 230px); }
+  .tb-choices { flex: 1 1 auto; }
+  .tb-presets { gap: 8px; }
+  .tb-preset { min-height: 56px; font-size: 16px; padding-right: 10px; }
+  .tb-preset svg { width: 44px; height: 44px; }
+  .tb-rowlab { width: 60px; font-size: 10px; }
+  .tb-swatch { width: 44px; height: 44px; }
+  .tb-chipbtn { min-height: 44px; padding: 0 12px; }
+  .tb-row-end .knit-btn { min-height: 50px; }
+  .tb-primary { flex: 1; padding: 12px 18px; }
+
+  /* ---- HUD: row 1 = Town Spirit / online chips (left) + round buttons (right); row 2 = door chip; row 3 = goal chip + hint */
+  .tb-tr { top: calc(10px + var(--safe-t)); right: calc(10px + var(--safe-r)); gap: 6px; }
+  .tb-tr .knit-btn.round { width: 46px; height: 46px; }
+  .tb-tr .knit-btn.round svg { width: 23px; height: 23px; }
+  .tb-tc {
+    top: calc(10px + var(--safe-t)); left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); transform: none; max-width: none;
+    flex-direction: column-reverse; align-items: flex-start; gap: 10px;
+  }
+  .tb-chips { min-height: 46px; align-items: center; flex-wrap: wrap; max-width: calc(100% - 4 * 46px - 3 * 6px - 8px); }
+  .tb-door { max-width: 100%; min-height: 42px; font-size: 14.5px; }
+  .tb-tl { top: calc(118px + var(--safe-t)); left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); gap: 6px; }
+  .tb-task { max-width: 100%; min-height: 42px; font-size: 14px; padding-right: 14px; }
+  .tb-task-ico { width: 32px; height: 32px; }
+  .tb-hintpill { max-width: 62vw; }
+  .tb-framing .tb-tl { opacity: 0; }
+
+  .tb-joy { left: calc(20px + var(--safe-l)); bottom: calc(24px + var(--safe-b)); width: 132px; height: 132px; }
+  .tb-act {
+    right: calc(14px + var(--safe-r)); bottom: calc(30px + var(--safe-b)); min-height: 64px; font-size: 16.5px;
+    max-width: calc(100vw - 190px - var(--safe-l) - var(--safe-r)); padding: 9px 18px 9px 9px;
+  }
+  .tb-act-ico { width: 44px; height: 44px; }
+
+  /* ---- toasts, bubbles, net toasts, skip: clamp inside the narrow width, clear of the HUD rows and the thumb zone */
+  .tb-toasts { top: calc(212px + var(--safe-t)); width: 92vw; }
+  .tb-toast { font-size: 14px; padding: 9px 14px; }
+  .tb-toast.has-arrow { padding: 7px 14px 7px 7px; }
+  .tb-nettoasts { top: calc(170px + var(--safe-t)); right: calc(10px + var(--safe-r)); }
+  .tb-nettoast { max-width: 38vw; }
+  .tb-bubble { max-width: min(320px, 80vw); }
+  .tb-bubble-txt { font-size: 15px; }
+  .tb-bubble.free { bottom: calc(186px + var(--safe-b)); }
+  .tb-skip { bottom: calc(176px + var(--safe-b)); }
+  .tb-banner { top: 27%; }
+
+  /* ---- reward / daily / wave cards: full width (≤ 92vw), above the joystick + interact row */
+  .tb-cards { bottom: calc(176px + var(--safe-b)); width: min(470px, 92vw); }
+  .tb-card { padding: 10px 12px; gap: 10px; }
+  .tb-card-ico { width: 50px; height: 50px; }
+  .tb-card-ico svg { width: 34px; height: 34px; }
+  .tb-card-title { font-size: 17px; }
+  .tb-card-sub { font-size: 13px; }
+  .tb-card-btns .knit-btn { padding: 9px 14px; font-size: 14.5px; }
+  .tb-card.wave { width: min(520px, 92vw); padding: 12px 14px; flex-wrap: wrap; }
+  .tb-card.wave .tb-card-ico { width: 58px; height: 58px; }
+  .tb-card.wave .tb-card-title { font-size: 18px; }
+  .tb-card.wave .tb-card-btns { flex-basis: 100%; }
+
+  /* ---- in-game wardrobe: a full-width bottom sheet */
+  .tb-modal { place-items: end center; padding: calc(60px + var(--safe-t)) 0 0; }
+  .tb-modal .tb-tray {
+    width: 100%; max-width: 640px; max-height: min(74vh, 100%); border-radius: 24px 24px 0 0;
+    padding: 18px calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l));
+  }
+  .tb-modal .tb-preview { height: clamp(120px, 17vh, 180px); width: clamp(120px, 34vw, 180px); }
+  .tb-modal-close { right: calc(12px + var(--safe-r)); top: -22px; }
+  .tb-modal-title { left: calc(16px + var(--safe-l)); top: -16px; }
+  @keyframes tbSheetIn { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .tb-modal .tb-tray { animation: tbSheetIn .3s cubic-bezier(.3, 1.2, .5, 1) both; }
+}
+/* small portrait phones (360×740 and below): a touch tighter */
+@media (orientation: portrait) and (max-width: 374px) {
+  .tb-tr .knit-btn.round { width: 44px; height: 44px; }
+  .tb-chips { min-height: 44px; max-width: calc(100% - 4 * 44px - 3 * 6px - 6px); }
+  .tb-chip { padding: 3px 8px 3px 5px; font-size: 12px; }
+  .tb-tl { top: calc(114px + var(--safe-t)); }
+  .tb-door { font-size: 13.5px; }
+  .tb-joy { width: 124px; height: 124px; left: calc(16px + var(--safe-l)); }
+  .tb-act { max-width: calc(100vw - 172px - var(--safe-l) - var(--safe-r)); font-size: 15.5px; }
+  .tb-rowlab { width: 52px; }
 }

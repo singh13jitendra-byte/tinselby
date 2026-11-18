@@ -45,6 +45,19 @@ const CSS = `
 .fin-end .stitch i { width: 12px; height: 12px; border-radius: 50%; background: var(--gold); box-shadow: 0 2px 0 rgba(0,0,0,.15); }
 .fin-end .stitch i:nth-child(2n) { background: var(--red); } .fin-end .stitch i:nth-child(3n) { background: var(--green); }
 @keyframes finEnd { from { opacity: 0; transform: translate(-50%, -40%) scale(.7); } to { opacity: 1; transform: translate(-50%, -50%); } }
+/* portrait phones: wrap the long lines inside the narrow width, keep the tag clear of the bottom thumb zone */
+@media (orientation: portrait) {
+  .fin-label { white-space: normal; width: max-content; max-width: 90vw; text-align: center; top: calc(14px + var(--safe-t)); }
+  .fin-count { top: 40%; }
+  .fin-count span { font-size: min(30vh, 52vw); }
+  .fin-count .back { -webkit-text-stroke: min(2.6vh, 4.4vw) var(--cream); }
+  .fin-xmas { white-space: normal; width: 92vw; top: 24%; }
+  .fin-xmas.out { top: 19%; }
+  .fin-xmas .knit-title { font-size: clamp(44px, 15vw, 96px); line-height: 1.02; }
+  .fin-tag { right: 50%; bottom: calc(12vh + var(--safe-b)); transform: translateX(50%) rotate(-4deg); animation-name: finTagP; }
+  @keyframes finTagP { from { opacity: 0; transform: translateX(50%) translateY(30px) rotate(8deg) scale(.6); } to { opacity: 1; transform: translateX(50%) rotate(-4deg); } }
+  .fin-end { width: 90vw; padding: 24px 20px 22px; }
+}
 `;
 
 export function createOverlay(root) {

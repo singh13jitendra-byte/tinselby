@@ -7,7 +7,7 @@ Live: https://tinselby-sepia.vercel.app/
 ## Play
 
 - **Desktop:** WASD or arrow keys to walk (or click where to go), **E / Space** to interact, **C** to switch the camera view, **M** to mute.
-- **Phone:** play in landscape. Tap to walk or use the joystick, and tap the big button to interact.
+- **Phone:** play in portrait or landscape. Tap to walk or use the joystick, and tap the big button to interact.
 
 The four tasks can be done in any order:
 

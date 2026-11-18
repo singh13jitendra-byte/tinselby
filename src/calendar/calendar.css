@@ -129,3 +129,39 @@
   .cal-dtitle { font-size: 13px; }
   .cal-go { min-height: 40px; padding: 6px 12px; font-size: 14px; }
 }
+
+/* portrait (phones upright, tablets): 4 columns × 6 rows filling the height, header chips wrap, detail strip stacks */
+@media (orientation: portrait) {
+  .cal-wrap { padding: calc(10px + var(--safe-t)) calc(8px + var(--safe-r)) calc(10px + var(--safe-b)) calc(8px + var(--safe-l)); }
+  .cal-panel { width: min(720px, 100%); height: 100%; max-height: 980px; padding: 12px 12px; gap: 8px; }
+  .cal-head { flex-wrap: wrap; row-gap: 8px; }
+  .cal-title { flex: 1; min-width: 0; }
+  .cal-title h2 { font-size: 21px; }
+  .cal-stats { order: 3; flex-basis: 100%; justify-content: flex-start; gap: 5px; }
+  .cal-chip { min-height: 30px; font-size: 12.5px; padding: 3px 10px 3px 6px; }
+  .cal-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(6, minmax(58px, 1fr)); gap: 7px; }
+  .cal-door { padding: 6px 7px 5px; border-radius: 12px; gap: 2px; }
+  .cal-door.s-done { padding-left: 17px; }
+  .cal-door.s-done::before { width: 10px; }
+  .cal-n { font-size: 19px; }
+  .cal-t { font-size: 11.5px; }
+  .cal-g { font-size: 10px; }
+  .cal-badge { top: 5px; right: 5px; }
+  .cal-badge.done .cal-glyph { display: none; } /* the stars (or the tick) are enough on a narrow tile */
+  .cal-stars { font-size: 11px; }
+  .cal-badge.open { font-size: 9.5px; padding: 3px 5px; }
+  .cal-detail { flex-wrap: wrap; gap: 8px; padding: 8px 10px; font-size: 13.5px; }
+  .cal-dtxt { flex-basis: 100%; }
+  .cal-go { width: 100%; justify-content: center; min-height: 48px; }
+}
+@media (orientation: portrait) and (min-width: 600px) {
+  .cal-grid { gap: 10px; }
+  .cal-n { font-size: 24px; }
+  .cal-t { font-size: 14px; }
+  .cal-g { font-size: 12px; }
+  .cal-badge.done .cal-glyph { display: grid; }
+  .cal-stars { font-size: 13px; }
+  .cal-go { width: auto; }
+  .cal-dtxt { flex-basis: auto; flex: 1; }
+  .cal-detail { flex-wrap: nowrap; }
+}

@@ -19,10 +19,11 @@ export function createHintArrow(ctx, models) {
       arrow.visible = k > 0.02;
       if (!arrow.visible || d < 1e-3) return;
       const ux = dx / d, uz = dz / d;
-      const r = 0.42 + Math.sin(t * 4) * 0.04;
+      const pt = cam.portrait || 0, big = 1 + 0.3 * pt; // portrait views sit further back: a bigger, wider chevron
+      const r = (0.42 + Math.sin(t * 4) * 0.04) * (1 + 0.15 * pt);
       arrow.position.set(player.pos.x + ux * r, player.pos.y + 0.025, player.pos.z + uz * r);
       arrow.rotation.y = Math.atan2(-ux, -uz);
-      arrow.scale.setScalar(k * (1 + Math.sin(t * 4) * 0.06));
+      arrow.scale.setScalar(k * big * (1 + Math.sin(t * 4) * 0.06));
     },
   };
 }

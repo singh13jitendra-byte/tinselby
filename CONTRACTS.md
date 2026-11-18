@@ -1,6 +1,6 @@
 # Tinselby — module contracts
 
-A 5-minute browser game in Three.js. The player types a name, optionally restyles a knitted character, enters **Tinselby**, a small knitted/felted city that pops up out of a giant book. They help the city get ready for Christmas with 4 light tasks; then Santa lands and the Christmas Eve countdown + fireworks finale plays. **Christmas only — no New Year wishes anywhere.** It must run on desktop and on phones (landscape).
+A 5-minute browser game in Three.js. The player types a name, optionally restyles a knitted character, enters **Tinselby**, a small knitted/felted city that pops up out of a giant book. They help the city get ready for Christmas with 4 light tasks; then Santa lands and the Christmas Eve countdown + fireworks finale plays. **Christmas only — no New Year wishes anywhere.** It must run on desktop and on phones (portrait and landscape).
 
 **Look:** knitted and needle-felted miniature diorama, twilight, warm glowing windows, string lights, cotton snow, tilt-shift macro blur. Reference images: `/mnt/user-data/uploads/*.jpg` (view a few with the Read tool before modelling).
 
@@ -108,7 +108,6 @@ Tasks (quest givers built with `buildCharacter`, with a glowing star marker bobb
 UI (DOM in `ctx.uiRoot`, using classes from `src/core/theme.css`; mobile-first, landscape):
 - Entry screen: title "Welcome to Tinselby", subtitle "A cosy knitted Christmas town", name input, Enter button, Change style tray (coat / hat / scarf from `STYLE_OPTIONS`, randomise, live rotating preview: render `buildCharacter` into a small separate WebGL canvas or a corner of the main view), saved to localStorage (try/catch).
 - HUD: Festive Spirit meter (4 knitted hearts or stars) top-centre, current task chip, interact button (large, bottom-right), on-screen joystick (bottom-left, touch devices only), camera toggle and mute buttons (top-right), toasts and speech bubbles.
-- Portrait overlay on phones: "Turn your phone sideways".
 - Tap during a skippable cinematic → `cam.skip()`.
 
 ## §Finale (`createFinale(ctx)`) + §Camera shots (`src/camera/shots.js`)
@@ -138,3 +137,7 @@ Procedural Web Audio only (no files). `start()` (on the first gesture), `sfx(nam
 - `finale/reindeer.js` exports `REINDEER_RIG` and `reindeerGeos()` for a standalone reindeer (door 15).
 - `life.holdVehicle(kind) → release()` hides one ambient vehicle (e.g. the tram during Tram Conductor). Added by the lead after the perf pass merges; until then guard with `ctx.life.holdVehicle?.(...)`.
 - Wave-2 doors are behind `?w2` until release (`W2` flag in src/progress/doors.js). Test with `?w2`.
+
+## Portrait (18 Nov)
+- `ctx.cam.portrait` 0..1 (smoothed), `ctx.cam.isPortrait`, `ctx.cam.aspect`; `playShot({ portrait: { keep, lift } | false })`, `cam.setShotPortrait(name, opts)`; `<body>` gets `tb-portrait`/`tb-landscape`; event `view:orientation {portrait}`.
+- Mini-games: `src/minigames/view.js` (`aspectK`, `zoomOut`, `isPortrait`); games that handle aspect themselves pass `portrait: false` to their shots.

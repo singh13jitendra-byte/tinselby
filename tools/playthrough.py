@@ -3,7 +3,7 @@
 
   desktop: entry screen → name → Enter → selfTest (plays doors 1–8 headless) → calendar / wardrobe / wave-end
   mini-games: each of the 4 real games starts (?mg=<id>&mgauto), runs a little, quits, and must leave the scene clean
-  phone: landscape HUD, tap-to-walk, portrait hint
+  phone: landscape HUD, tap-to-walk, rotate to portrait (HUD, camera framing, tap mapping) and back
 
 Writes shots/e2e_*.png and prints console errors. Uses the shared Chrome lock.
 Usage: python3 tools/playthrough.py [desktop|games|phone ...]   (default: all)"""
@@ -100,7 +100,28 @@ with sync_playwright() as p:
         ready(mp, BASE + '&play&doors=3')
         shot(mp, 'phone_hud', 40)
         mp.touchscreen.tap(422, 150); shot(mp, 'phone_tapwalk', 20)
-        mp.set_viewport_size({'width': 390, 'height': 844}); shot(mp, 'phone_portrait', 5)
+        # portrait is a first-class layout: rotate mid-play, the HUD stays up, no rotate overlay, the camera re-frames
+        CAMQ = """(() => { const c = window.__tinselby.ctx, v = c.player.pos.clone(); v.y += 0.3; v.project(c.engine.camera);
+          const vis = (s) => { const e = document.querySelector(s); return !!e && e.getClientRects().length > 0; };
+          return JSON.stringify({ p: c.cam.portrait, fov: c.engine.camera.fov, sx: (v.x + 1) / 2, sy: (1 - v.y) / 2,
+            hud: vis('.tb-hud') && vis('.tb-tr') && vis('.tb-door'), joy: vis('.tb-joy'), overlay: !!document.querySelector('.tb-portrait-card'),
+            body: document.body.className, tris: window.__tinselby.stats().tris }); })()"""
+        mp.set_viewport_size({'width': 390, 'height': 844}); mp.evaluate('new Promise(r => requestAnimationFrame(() => setTimeout(r, 50)))')  # let the resize event land before stepping
+        shot(mp, 'phone_portrait', 40)
+        q = json.loads(mp.evaluate(CAMQ)); print('  portrait camera', q)
+        check(q['hud'] and q['joy'], 'portrait: HUD + joystick visible')
+        check(not q['overlay'], 'portrait: no rotate overlay')
+        check('tb-portrait' in q['body'], 'portrait: body.tb-portrait set')
+        check(q['p'] > 0.9 and q['fov'] > 40, f'portrait: camera re-framed (portrait {q["p"]:.2f}, fov {q["fov"]:.1f})')
+        check(0.25 < q['sx'] < 0.75 and 0.45 < q['sy'] < 0.72, f'portrait: player on screen, a bit below centre ({q["sx"]:.2f}, {q["sy"]:.2f})')
+        check(q['tris'] < 560000, f'portrait: triangles {q["tris"]}')
+        mp.touchscreen.tap(195, 330); mp.evaluate('window.__tinselby.step(1/30,2)')
+        tt = mp.evaluate('(() => { const t = window.__tinselby.ctx.input.tapTarget, p = window.__tinselby.ctx.player.pos; return t ? t.z - p.z : null; })()')
+        check(tt is not None and tt < 0, 'portrait: tap above the player walks forward (north)')
+        mp.set_viewport_size({'width': 844, 'height': 390}); mp.evaluate('new Promise(r => requestAnimationFrame(() => setTimeout(r, 50)))')  # let the resize event land before stepping
+        mp.evaluate('window.__tinselby.step(1/30,60)')  # the director blends back over ~1.5 s
+        q = json.loads(mp.evaluate(CAMQ))
+        check(q['p'] < 0.03 and abs(q['fov'] - 32) < 1.0 and 'tb-landscape' in q['body'], f'back to landscape: camera + layout restored (portrait {q["p"]:.3f}, fov {q["fov"]:.1f})')
         c.close()
     b.close()
 

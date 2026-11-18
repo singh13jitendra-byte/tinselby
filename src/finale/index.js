@@ -21,6 +21,10 @@ export function createFinale(ctx) {
   ctx.teasers = teasers;
   const seq = createSequence(ctx, rig, trail, overlay, sfx, pxScale);
   installGameplayShots(ctx);
+  // portrait framing for the finale's cinema rig (see src/core/camera.js PORTRAIT): keep more of the 16:9 width so the
+  // sleigh, Santa and the player stay in the narrow frame (the camera pulls back up to 2.2× along each pose's view line)
+  ctx.cam.setShotPortrait?.('cinema', { keep: 0.75, lift: 0 });
+  ctx.cam.setShotPortrait?.('cinemaOut', { keep: 0.75, lift: 0 });
 
   game.on('tree:starPlaced', () => {
     if (seq.running) return;
