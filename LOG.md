@@ -55,3 +55,4 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - ~18:30 IST: server restart (~18:30) stopped all 5 agents; 19:42 IST resumed all (eye view, ornament hints, cable car, QA, Fable polish).
 - 20:10 IST: Eye view (Opus) committed + HUD eye icon (lead). Holly Lane occlusion fixed. Open: lake cocoa hut (12.8,-5.4) hides a player behind it → needs a fold in src/city/lakeside.js (assign with QA fixes).
 - 20:30 IST: Ornament hints (Sonnet) committed. Open: bigger sparkle beam not yet seen on screen (QA/Fable check); follow camera occluded by carousel/stall roofs in the market during the hunt (eye view helps; consider a market occluder fade later).
+- 20:45 IST: Fable wave-2 polish committed (+ REINDEER.rest x 7.0→7.35).
