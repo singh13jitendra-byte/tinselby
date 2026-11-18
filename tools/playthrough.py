@@ -12,7 +12,8 @@ from playwright.sync_api import sync_playwright
 
 BASE = 'file:///home/claude/tinselby/dist/index.html?capture&net=off&tod=17.5'
 PARTS = set(sys.argv[1:]) or {'desktop', 'games', 'phone'}
-GAMES = ['ornaments', 'cookies', 'snowball', 'sled']
+GAMES = ['ornaments', 'cookies', 'snowball', 'sled', 'skate', 'tram', 'giftwrap', 'snowman', 'sled2']
+W2_GAMES = {'skate', 'tram', 'giftwrap', 'snowman', 'sled2'}
 lock = open('/tmp/tinselby-chrome.lock', 'w'); fcntl.flock(lock, fcntl.LOCK_EX)
 errs, fails = [], []
 
@@ -76,7 +77,7 @@ with sync_playwright() as p:
     if 'games' in PARTS:
         for gid in GAMES:
             pg = b.new_page(viewport={'width': 1280, 'height': 720}); pg.set_default_timeout(300000); attach(pg, gid)
-            ready(pg, BASE + f'&play&doors=8&mg={gid}&mgauto')
+            ready(pg, BASE + f'&play&doors={16 if gid in W2_GAMES else 8}&mg={gid}&mgauto' + ('&w2' if gid in W2_GAMES else ''))
             base_children = pg.evaluate('window.__tinselby.ctx.engine.scene.children.length')
             pg.wait_for_function('window.__tinselby.ctx.minigames.active', timeout=60000)
             pg.wait_for_function(f'window.__tinselby.ctx.game.state.phase === "minigame"', timeout=60000)
