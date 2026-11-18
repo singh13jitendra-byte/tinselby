@@ -4,13 +4,38 @@
 // adapters fall back to the static DOORS export (pure data, no side effects).
 import { DISTRICTS, DOOR_SPOTS } from '../core/layout.js';
 import { STYLE_OPTIONS } from '../core/player.js';
-import { DOORS, DEFAULT_UNLOCKED, GATED_SLOTS } from '../progress/doors.js';
+import { DOORS, DEFAULT_UNLOCKED, GATED_SLOTS, WISH_REWARDS } from '../progress/doors.js';
 
 export { GATED_SLOTS };
 
 const PREP = { residential: 'on', lakeside: 'by', hill: 'on', park: 'in', market: 'in' };
 const safe = (fn, fb) => { try { const v = fn(); return v === undefined ? fb : v; } catch (e) { return fb; } };
 const num = (v) => (Number.isFinite(+v) ? Math.max(0, Math.floor(+v)) : 0);
+
+// ---- Christmas Eve clock (WAVE3.md §Progress). progress.eve is used when it is there; this is the same computation.
+const pad2 = (v) => String(v).padStart(2, '0');
+const dayKeyOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+/** Whole days from key a to key b (YYYY-MM-DD), by UTC arithmetic so daylight saving never shifts it. */
+const dayDiff = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 864e5);
+/** season = this year once the month is July or later, else last year; Eve = 24 Dec of that season. */
+function eveFor(today) {
+  const y = +today.slice(0, 4);
+  const season = +today.slice(5, 7) >= 7 ? y : y - 1;
+  const day = `${season}-12-24`;
+  const isEve = today >= day;
+  return { season, day, isEve, isAfter: today >= `${season}-12-25`, sleeps: isEve ? 0 : dayDiff(today, day) };
+}
+/** Local today as a key, honouring the same test flags as progress: ?date=YYYY-MM-DD, ?eve (24 Dec), ?xmas (26 Dec). */
+function testToday() {
+  const q = (typeof location !== 'undefined' && location.search) || '';
+  const d = q.match(/[?&]date=(\d{4}-\d{2}-\d{2})(?=&|$)/);
+  if (d) return d[1];
+  const real = dayKeyOf(new Date());
+  const season = eveFor(real).season;
+  if (/[?&]eve(?=&|=|$)/.test(q)) return `${season}-12-24`;
+  if (/[?&]xmas(?=&|=|$)/.test(q)) return `${season}-12-26`;
+  return real;
+}
 
 export function createData(ctx) {
   const pr = () => ctx.progress || {};
@@ -34,11 +59,50 @@ export function createData(ctx) {
         const s = safe(() => pr().state?.(n), null);
         if (s === 'locked' || s === 'open' || s === 'done' || s === 'soon') return s;
       }
+      // door 24 (Christmas Eve): open on 24 Dec once door 4 is done, else locked (WAVE3.md §Progress)
+      if (n === 24) return data.eve().isEve && data.state(4) === 'done' ? 'open' : 'locked';
       const d = data.door(n);
       if (!d || !d.available) return 'soon';
+      // after Christmas every door is open for replay (the one-by-one unlock is lifted)
+      if (data.eve().isAfter) return 'open';
       const cur = data.current();
       if (cur == null) return 'done';
       return n < cur ? 'done' : n === cur ? 'open' : 'locked';
+    },
+    /** Christmas Eve clock: { season, day, isEve, isAfter, sleeps } (progress.eve, or the same computation). */
+    eve() {
+      const p = safe(() => pr().eve, null);
+      if (p && typeof p.day === 'string' && typeof p.isEve === 'boolean') {
+        return { season: num(p.season), day: p.day, isEve: p.isEve, isAfter: !!p.isAfter, sleeps: num(p.sleeps) };
+      }
+      return eveFor(testToday());
+    },
+    /** "3 sleeps" / "1 sleep" / "Tonight!" */
+    sleepsText(k) {
+      const s = num(k);
+      return s === 0 ? 'Tonight!' : s === 1 ? '1 sleep' : `${s} sleeps`;
+    },
+    /** Door 24's gift: the wish piece's label, else "A surprise from Santa". */
+    giftLabel() {
+      const id = safe(() => pr().wish?.get?.(), null);
+      if (id) {
+        const opts = safe(() => pr().wish?.options, null);
+        const r = (Array.isArray(opts) ? opts : []).find((o) => o && o.id === id) || WISH_REWARDS.find((o) => o.id === id);
+        if (r?.label) return r.label;
+      }
+      return 'A surprise from Santa';
+    },
+    /** True from 25 Dec (local) on: the Christmas-mode calendar. */
+    isChristmas() { return !!data.eve().isAfter; },
+    /** Status line for door 24's tile: locked "Opens on Christmas Eve · 3 sleeps", open "Tonight!", done the gift label. */
+    door24Text() {
+      const s = data.state(24);
+      if (s === 'done') return data.giftLabel();
+      if (s === 'open') return data.eve().isAfter ? 'Play any time' : 'Tonight!';
+      if (s !== 'locked') return '';
+      const e = data.eve();
+      if (e.isEve) return 'Help Bram bring the star to the tree first';
+      return `Opens on Christmas Eve · ${data.sleepsText(e.sleeps)}`;
     },
     doneCount() {
       const v = safe(() => pr().doneCount?.(), undefined);
@@ -132,6 +196,8 @@ export function createData(ctx) {
     rewardLabel(slot, key) {
       const d = data.doors().find((x) => x?.reward?.slot === slot && x.reward.key === key);
       if (d?.reward?.label) return d.reward.label;
+      const w = WISH_REWARDS.find((x) => x.slot === slot && x.key === key);
+      if (w) return w.label;
       const v = STYLE_OPTIONS[slot]?.[key];
       const nice = key.charAt(0).toUpperCase() + key.slice(1);
       if (slot === 'hat') return typeof v === 'string' && !v.startsWith('#') ? v : `${nice} hat`;
