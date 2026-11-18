@@ -89,7 +89,7 @@ game.on('game:start', ({ name, style }) => {
 // ---------------------------------------------------------------- test / capture hooks
 // ?capture  → manual stepping via window.__tinselby.step(dt, n)
 // ?play     → skip the entry screen (name "Tester")      ?at=x,z → teleport after start
-// ?view=high|close|follow                                ?spirit=n → pretend n tasks are done
+// ?view=high|close|follow                                ?doors=n → doors 1..n done (progress module)
 // ?reveal=all → reveal every district immediately
 window.__tinselby = {
   ready: false,
@@ -109,7 +109,8 @@ function applyTestParams() {
   if (params.has('at')) { const [x, z] = params.get('at').split(',').map(Number); player.teleport(x, z); }
   if (params.has('view')) cam.setMode(params.get('view'));
   if (params.has('reveal')) for (const d of layout.DISTRICTS) ctx.city.revealDistrict?.(d.id, true);
-  if (params.has('spirit')) { const n = +params.get('spirit'); for (const id of layout.TASK_ORDER.slice(0, n)) game.completeTask(id); }
+  // ?spirit=n is the old name for ?doors=n (handled by the progress module): festive level n needs doors 1..2n-1
+  if (params.has('spirit') && !params.has('doors')) console.warn('[tinselby] ?spirit is retired, use ?doors=N');
 }
 applyTestParams();
 window.__tinselby.ready = true;

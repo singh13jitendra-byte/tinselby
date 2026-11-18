@@ -31,9 +31,9 @@ Requires Node 18+. Deploys: Vercel builds every push to `main` (Vite preset, `np
 
 ### Test URL flags
 
-`?play` skips the entry screen · `?at=x,z` teleports · `?view=follow|high|close` · `?spirit=n` marks n tasks done · `?reveal=all` reveals every district · `?finale` starts the finale 2 s in (`&fjump=SECONDS` jumps ahead) · `?teaser` shows a sky sleigh early · `?noshots` disables gameplay camera shots · `?capture` steps frames manually via `window.__tinselby.step(dt, n)`.
+`?play` skips the entry screen · `?at=x,z` teleports · `?view=follow|high|close` · `?doors=n` marks Advent doors 1..n done · `?reset` wipes the save · `?tod=HOURS` sets the time of day (`&todspeed=N` speeds it up) · `?net=off|local` disables or fakes the shared town · `?mg=<id>&mgauto` starts a mini-game (ornaments, cookies, snowball, sled) · `?reveal=all` reveals every district · `?finale` starts the finale 2 s in (`&fjump=SECONDS` jumps ahead) · `?teaser` shows a sky sleigh early · `?noshots` disables gameplay camera shots · `?capture` steps frames manually via `window.__tinselby.step(dt, n)`.
 
-`window.__tinselby.ctx.tasks.selfTest()` plays through all four tasks headlessly.
+`await window.__tinselby.ctx.tasks.selfTest({ reset: true })` plays Advent doors 1–8 headlessly (it wipes the save in that browser). `python3 tools/playthrough.py` runs the full end-to-end check in headless Chrome.
 
 ## How it's built
 
