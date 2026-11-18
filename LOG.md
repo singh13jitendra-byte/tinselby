@@ -24,3 +24,6 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - 06:15 IST: Calendar & UI (Opus) and Sled (Opus) done and committed. All 8 wave-1 builders are in. Sled is two short heats (Pine Run + Cable Car Run, times added) because a wall of the hill's pines splits the slope; good call, kept it. Town Spirit chip now never shows less than your own doors (it read "0" offline).
 - e2e: all 4 mini-games start, quit and leave the scene clean (76 → 76 children), no console errors.
 - Spawned Sonnet QA (report-only) and Fable visual polish (cookie close-up bloom, morning contrast, board readability). Haiku small fixes after the QA report.
+- 06:50 IST: Full e2e green: selfTest 106/106, doors 1–8 done, door 24 closed, progress survives reload, all 4 mini-games start/quit cleanly, phone layouts, 0 console errors.
+- Known: the entry screen (low sky camera, whole town in view + style preview) measures 615k–658k triangles (incl. shadow pass) vs the 600k guide. Gameplay views are far lower (100k–375k). Accepting for now since the entry screen is mostly static; revisit if phones stutter there (option: freeze shadow updates during entry).
+- Holding the push for the QA report.
