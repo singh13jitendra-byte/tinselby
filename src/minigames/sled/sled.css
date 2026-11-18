@@ -26,3 +26,11 @@
 .sled-pop.miss { color: #eef2f6; font-size: 22px; }
 @keyframes sledPop { 0% { opacity: 0; transform: translate(-50%, -20%) scale(.7); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); } 100% { opacity: 0; transform: translate(-50%, -110%) scale(1); } }
 .sled-pad.off { opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+
+@media (orientation: portrait) {
+  .sled-pad { width: 104px; height: 104px; font-size: 42px; bottom: calc(28px + var(--safe-b)); }
+  .sled-pad.l { left: calc(14px + var(--safe-l)); }
+  .sled-pad.r { right: calc(14px + var(--safe-r)); }
+  .sled-banner { white-space: normal; width: 88vw; top: 30%; }
+  .sled-pop { font-size: 22px; top: 24%; max-width: 90vw; }
+}

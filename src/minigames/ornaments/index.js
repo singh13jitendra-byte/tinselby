@@ -101,6 +101,7 @@ const CSS = `
 .orn-slot.on{background:rgba(227,170,58,.35)}
 .orn-slot.on span{opacity:1;animation:ornPop .5s ease both}
 @keyframes ornPop{0%{transform:scale(0) rotate(-40deg)}60%{transform:scale(1.5) rotate(10deg)}100%{transform:scale(1) rotate(0)}}
+@media (orientation:portrait){.orn-radar{left:50%;transform:translateX(-50%);top:calc(124px + var(--safe-t,0px));width:min(260px,76vw);padding:6px 12px 8px}.orn-tray{top:calc(194px + var(--safe-t,0px));max-width:92vw;box-sizing:border-box;padding:5px 10px}.orn-slot{width:38px;height:38px}}
 @media (max-height:420px){.orn-radar{top:calc(70px + var(--safe-t,0px));width:128px;padding:5px 9px 7px}.orn-slot{width:28px;height:28px;font-size:16px}}
 `;
 

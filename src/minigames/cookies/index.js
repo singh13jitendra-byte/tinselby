@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { P } from '../../core/yarn.js';
 import { box, rbox, cyl, sph, dot, torus, tube, extrude, flatShape, xf, merge, poly, circlePts, starPts, KNIT, FELT, GLOW, GLOSS } from '../../core/prims.js';
 import { ARENAS } from '../../core/layout.js';
+import { aspectK, zoomOut } from '../view.js';
 
 const TAU = Math.PI * 2;
 const V3 = THREE.Vector3;
@@ -221,6 +222,7 @@ const CSS = `
 .ck-tap{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);pointer-events:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
  min-width:min(54vw,260px);height:86px;border-radius:44px;border:4px dashed rgba(255,255,255,.75);outline:none;cursor:pointer;background:#b8302d;color:#fff;font:800 36px/1 var(--font,system-ui);letter-spacing:.08em;
  box-shadow:0 7px 0 #6e1a18,0 12px 24px rgba(0,0,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:opacity .2s}
+.ck-card{max-width:90vw;box-sizing:border-box}@media (orientation:portrait){.ck-card{padding:12px 20px 14px;top:30%}.ck-fb{top:22%;font-size:clamp(28px,9vw,44px)}}
 .ck-tap small{font:600 12px/1 var(--font,system-ui);letter-spacing:.14em;opacity:.8;text-transform:uppercase}
 .ck-tap:active,.ck-tap.down{transform:translateX(-50%) translateY(5px);box-shadow:0 2px 0 #6e1a18}
 .ck-tap.idle{opacity:.55}
@@ -332,11 +334,15 @@ export default {
     const CLOSE_POST = { bloom: 0.42, glow: 0.6, threshold: 0.35, band: 0.3, falloff: 0.3 };
     const shotOut = new V3(), shotTgt = new V3();
     cam.playShot({
-      name: 'cookies', duration: 900, skippable: false, blendIn: 1.0, blendOut: 0.6, tilt: 0.55, post: CLOSE_POST,
+      name: 'cookies', portrait: false, duration: 900, skippable: false, blendIn: 1.0, blendOut: 0.6, tilt: 0.55, post: CLOSE_POST,
       update(u, out) {
         const sway = Math.sin(G * 0.7) * 0.012;
         out.pos.copy(camPos).add(origin); out.pos.x += sway;
         out.target.copy(camTgt).add(origin);
+        // portrait: pull back along the view ray so counter + oven fit the width, and aim lower so the action
+        // sits above the big TAP button instead of behind it
+        const k = aspectK(1.75, 2.0, 0.9);
+        if (k > 1) { zoomOut(out.pos, out.target, k); out.target.y -= (k - 1) * 0.16; }
       },
     });
 
@@ -648,7 +654,8 @@ export default {
       if (window.__cookies === dbg) delete window.__cookies;
       // ease the camera back out instead of snapping
       const p = camPos.clone().add(origin), t = camTgt.clone().add(origin);
-      cam.playShot({ name: 'cookies-out', duration: 0.7, skippable: false, blendIn: 0.01, blendOut: 0.6, tilt: 0.55, post: CLOSE_POST, update(u, out) { out.pos.copy(p); out.target.copy(t); } });
+      { const k = aspectK(1.75, 2.0, 0.9); if (k > 1) { zoomOut(p, t, k); t.y -= (k - 1) * 0.16; } }
+      cam.playShot({ name: 'cookies-out', portrait: false, duration: 0.7, skippable: false, blendIn: 0.01, blendOut: 0.6, tilt: 0.55, post: CLOSE_POST, update(u, out) { out.pos.copy(p); out.target.copy(t); } });
     });
 
     // ---------------------------------------------------------------- go

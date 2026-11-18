@@ -17,6 +17,7 @@ import { buildCharacter } from '../../core/player.js';
 import { P } from '../../core/yarn.js';
 import { cone, cyl, sph, dot, rbox, torus, tube, extrude, poly, part, xf, merge, KNIT, FELT, GLOW, GLOSS } from '../../core/prims.js';
 import './snowball.css';
+import { aspectK, zoomOut, isPortrait } from '../view.js';
 
 const TAU = Math.PI * 2;
 const DUR = 60;
@@ -157,7 +158,7 @@ export default {
     let shake = 0;
     updateCamera(0);
     cam.playShot({
-      name: 'snowball', duration: 1e6, blendIn: quick ? 0.0001 : 0.9, blendOut: 0.6, skippable: false, tilt: 1.2,
+      name: 'snowball', portrait: false, duration: 1e6, blendIn: quick ? 0.0001 : 0.9, blendOut: 0.6, skippable: false, tilt: 1.2,
       update(u, out) { out.pos.copy(camPos); out.target.copy(camTgt); },
     });
 
@@ -257,7 +258,7 @@ export default {
     }
     function aimAt(ndc, sx, sy) {
       // generous aim assist: snap to the nearest kid on screen; the snowman only if you really tapped him
-      let best = null, bestD = Math.max(touch ? 50 : 38, innerHeight * (touch ? 0.095 : 0.07));
+      let best = null, bestD = Math.max(touch ? 50 : 38, Math.min(innerHeight, isPortrait() ? innerWidth * 1.3 : innerHeight) * (touch ? 0.095 : 0.07));
       for (const k of kids) {
         if (!hittable(k) && k.state !== 'rise') continue;
         for (const hy of [HEAD_Y, CHEST_Y]) {
@@ -661,9 +662,11 @@ export default {
       let ox = 0, oy = 0;
       if (shake > 0) { shake = Math.max(0, shake - dt); const s = shake * 0.07; ox = Math.sin(T * 61) * s; oy = Math.cos(T * 47) * s; }
       // narrower screens (4:3 tablets) step back a little so the outermost pop-up spots stay in frame
-      const back = clamp((1.75 - engine.camera.aspect) * 1.2, 0, 0.55);
-      camPos.set(CAM.x + CAM.off + dx * CAM.follow + ox, CAM.y + oy + back * 0.25, CAM.z + back);
+      // portrait / narrow screens pull back along the view ray so the whole row of forts fits the width (aspectK)
+      camPos.set(CAM.x + CAM.off + dx * CAM.follow + ox, CAM.y + oy, CAM.z);
       camTgt.set(LOOK.x + dx * LOOK.follow, LOOK.y, LOOK.z);
+      const k = aspectK(1.75, 2.1, 0.9);
+      if (k > 1) { zoomOut(camPos, camTgt, k); camPos.y += (k - 1) * 0.35; camTgt.y -= (k - 1) * 0.25; } // lift a little, forts sit mid-screen above the buttons
     }
 
     // ------------------------------------------------------------------ DOM labels
@@ -673,7 +676,13 @@ export default {
     }
     function screenDist(v, sx, sy) { const [x, y, ok] = screenOf(v); return ok ? Math.hypot(x - sx, y - sy) : Infinity; }
     function screenRadius(v, r) { const d = v.distanceTo(engine.camera.position); return (r / (d * Math.tan(THREE.MathUtils.degToRad(engine.camera.fov / 2)))) * innerHeight * 0.5; }
-    function placeAt(node, v) { const [x, y] = screenOf(v); node.style.left = `${x.toFixed(1)}px`; node.style.top = `${y.toFixed(1)}px`; }
+    function placeAt(node, v) {
+      let [x, y] = screenOf(v);
+      const hw = (node.offsetWidth || 60) / 2 + 6; // keep bubbles and pops inside the screen
+      x = clamp(x, hw, Math.max(hw, innerWidth - hw));
+      if (isPortrait()) y = Math.max(y, 130);
+      node.style.left = `${x.toFixed(1)}px`; node.style.top = `${y.toFixed(1)}px`;
+    }
     function label(v, text, cls = '', delay = 0) {
       const n = el('div', 'sb-pop ' + cls, ui);
       n.textContent = text;
@@ -727,7 +736,7 @@ export default {
     function dispose() {
       lastExit = { time: engine.time, pre };
       const lp = camPos.clone(), lt = camTgt.clone();
-      cam.playShot({ name: 'snowball-out', duration: 0.8, blendIn: 0.0001, blendOut: 0.8, skippable: false, tilt: 1.2, update(u, out) { out.pos.copy(lp); out.target.copy(lt); } });
+      cam.playShot({ name: 'snowball-out', portrait: false, duration: 0.8, blendIn: 0.0001, blendOut: 0.8, skippable: false, tilt: 1.2, update(u, out) { out.pos.copy(lp); out.target.copy(lt); } });
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
       showPark();

@@ -2,6 +2,7 @@
 // Run 1 "Pine Run" goes down the west half, run 2 "Cable Car Run" winds through the east half; both start on the
 // hilltop (layout ARENAS.sled.top) and finish under the FINISH arch at the bottom. Steer left/right only.
 // Files: course.js (routes, sampling, obstacle probing, item layout), race.js (simulation), props.js (models).
+import { aspectK } from '../view.js';
 import * as THREE from 'three';
 import { buildCharacter } from '../../core/player.js';
 import { RUN_DEFS, FINISH, sampleRun, frameAt, pointAt, project, probeObstacles, layoutRun } from './course.js';
@@ -214,7 +215,7 @@ async function startSled(ctx, mg) {
   { const f = frameAt(runs[0].C, 0.6); rig.dir.set(f.tx, 0, f.tz); }
   const wantPos = new THREE.Vector3(), wantTarget = new THREE.Vector3(), tmpDir = { x: 0, z: 0 };
   cam.setMode('close');
-  const shotSpec = { name: 'sled', duration: 1e5, blendIn: 0.001, blendOut: 0.4, skippable: false, tilt: 0.8, update: (u, out) => { out.pos.copy(rig.pos); out.target.copy(rig.target); } };
+  const shotSpec = { name: 'sled', portrait: false, duration: 1e5, blendIn: 0.001, blendOut: 0.4, skippable: false, tilt: 0.8, update: (u, out) => { out.pos.copy(rig.pos); out.target.copy(rig.target); } };
   cam.playShot(shotSpec);
   const trees = obstacles.filter((o) => o.tree);
   const walls = obstacles.filter((o) => !o.tree && o.r < 0.03); // chalet / bench / station outlines
@@ -242,7 +243,7 @@ async function startSled(ctx, mg) {
       // slow sway on the open south-east side (the crowd, the FINISH banner; the hill's pines are to the north)
       rig.orbit += dt;
       const a = 0.75 + Math.sin(rig.orbit * 0.35) * 0.45;
-      wantPos.set(P.x + Math.sin(a) * 2.1, py + 1.1, P.z + Math.cos(a) * 2.1);
+      { const ck = aspectK(1.75, 2, 0.9); wantPos.set(P.x + Math.sin(a) * 2.1 * ck, py + 1.1 + (ck - 1) * 0.8, P.z + Math.cos(a) * 2.1 * ck); }
       wantTarget.set(P.x + 0.15, py + 0.3, P.z);
     } else {
       PR.avgDir(Cr, race.s - 0.15, race.s + 1.5, tmpDir);
@@ -250,7 +251,8 @@ async function startSled(ctx, mg) {
       rig.dir.x += (tmpDir.x - rig.dir.x) * kd; rig.dir.z += (tmpDir.z - rig.dir.z) * kd;
       const l = Math.hypot(rig.dir.x, rig.dir.z) || 1;
       const dx = rig.dir.x / l, dz = rig.dir.z / l;
-      let back = 2.15, up = 1.9;
+      const ak = 1 + (aspectK(1.75, 2.2, 0.9) - 1) * 0.75; // portrait: pull back / up so the lane and gates fit the narrow width
+      let back = 2.15 * ak, up = 1.9 * ak;
       // keep the sled in view: if a pine / wall is near the camera or between it and the sled, come closer and higher
       for (let it = 0; it < 6; it++) {
         if (!camBlocked(P.x - dx * back, py + up, P.z - dz * back, P.x, py + 0.3, P.z)) break;
@@ -518,7 +520,7 @@ async function startSled(ctx, mg) {
     ctx.input.clearTap();
     // hand the camera back smoothly from where the rig is
     const hold = { pos: rig.pos.clone(), target: rig.target.clone() };
-    cam.playShot({ name: 'sled-out', duration: 0.7, blendIn: 0.001, blendOut: 0.7, skippable: false, update: (u, out) => { out.pos.copy(hold.pos); out.target.copy(hold.target); } });
+    cam.playShot({ name: 'sled-out', portrait: false, duration: 0.7, blendIn: 0.001, blendOut: 0.7, skippable: false, update: (u, out) => { out.pos.copy(hold.pos); out.target.copy(hold.target); } });
     if (window.__sled === dbg) { dbg.race = dbg.runs = null; dbg.cleaned = true; }
   });
 

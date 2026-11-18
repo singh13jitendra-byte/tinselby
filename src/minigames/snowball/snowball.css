@@ -78,3 +78,15 @@
   55% { opacity: .9; }
   100% { opacity: 0; transform: translate(-50%, -46%) scale(1); }
 }
+
+/* portrait: big thumb buttons centred low, bubbles/pops scaled for the narrow width */
+@media (orientation: portrait) {
+  .sb-pad { left: 50%; transform: translateX(-50%); bottom: calc(26px + var(--safe-b)); gap: 56px; }
+  #ui .sb-btn { width: 92px; height: 92px; font-size: 36px; }
+  .sb-bubble { font-size: 15px; padding: 7px 11px; max-width: 70vw; }
+  .sb-bubble.kid { font-size: 12.5px; padding: 5px 8px; }
+  .sb-pop { font-size: 24px; }
+  .sb-pop.small { font-size: 15px; }
+  .sb-pop.big { font-size: 38px; }
+  .sb-blob { width: 40vmin; height: 34vmin; }
+}
