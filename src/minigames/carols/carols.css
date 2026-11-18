@@ -1,0 +1,90 @@
+/* Carol Singing overlays (owned by the carols mini-game). Uses theme.css tokens.
+   Landscape / desktop: the three lanes stand on the right (thumb side), the gazebo is framed on the left.
+   Portrait: the lanes fill the bottom half, full width; the gazebo sits in the top half under the HUD. */
+.cr-ui { position: absolute; inset: 0; pointer-events: none; overflow: hidden; font-family: var(--font); --hit-b: calc(58px + var(--safe-b)); }
+.cr-lanes {
+  position: absolute; display: flex; pointer-events: auto; touch-action: none; cursor: pointer;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+  right: calc(12px + var(--safe-r)); width: min(258px, 32vw); top: max(calc(72px + var(--safe-t)), calc(100% - 560px)); bottom: 0;
+}
+.cr-lane {
+  position: relative; flex: 1; margin: 0 3px; border-radius: 22px 22px 0 0; overflow: hidden;
+  background: linear-gradient(to bottom, rgba(43, 52, 82, 0), rgba(43, 52, 82, .2) 26%, rgba(43, 52, 82, .36));
+  outline: 2px dashed rgba(255, 244, 226, .6); outline-offset: -6px; transition: background .1s ease;
+}
+.cr-lane.on { background: linear-gradient(to bottom, rgba(255, 214, 120, 0), rgba(255, 214, 120, .34) 30%, rgba(255, 214, 120, .6)); }
+.cr-probe { position: absolute; left: 0; bottom: var(--hit-b); height: 0; width: 0; }
+.cr-target {
+  position: absolute; left: 50%; bottom: var(--hit-b); width: 64px; height: 64px; margin: 0 0 -32px -32px;
+  filter: drop-shadow(0 4px 0 rgba(60, 30, 20, .28)) drop-shadow(0 8px 14px rgba(0, 0, 0, .25));
+}
+.cr-target svg { width: 100%; height: 100%; display: block; }
+.cr-target.pulse { animation: crPulse .32s ease-out; }
+.cr-target.near { filter: drop-shadow(0 0 10px rgba(255, 214, 120, .95)) drop-shadow(0 4px 0 rgba(60, 30, 20, .28)); }
+.cr-lane.on .cr-target { transform: translateY(3px) scale(.94); }
+@keyframes crPulse { 0% { transform: scale(1.14); } 100% { transform: scale(1); } }
+.cr-key {
+  position: absolute; left: 50%; bottom: calc(var(--hit-b) - 52px); transform: translateX(-50%); min-width: 22px; padding: 2px 6px; border-radius: 6px;
+  background: var(--cream-2); color: var(--ink); font: 700 12px/1.2 var(--font); text-align: center; box-shadow: 0 2px 0 #cdb38a; opacity: .85;
+}
+.cr-note { position: absolute; left: 50%; top: 0; width: 50px; height: 54px; margin: -30px 0 0 -25px; will-change: transform; pointer-events: none; }
+.cr-note svg { position: relative; width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 0 rgba(60, 30, 20, .3)); }
+.cr-tail {
+  position: absolute; left: 50%; bottom: 26px; width: 14px; margin-left: -7px; border-radius: 8px 8px 4px 4px; height: 0;
+  background: repeating-linear-gradient(to bottom, rgba(255, 244, 226, .95) 0 5px, rgba(243, 227, 198, .75) 5px 9px);
+  box-shadow: 0 0 0 2px rgba(58, 42, 36, .55), 0 0 12px rgba(255, 220, 150, .5);
+}
+.cr-note.holding .cr-tail { background: repeating-linear-gradient(to bottom, #ffe6a8 0 5px, #e3aa3a 5px 9px); box-shadow: 0 0 0 2px rgba(138, 90, 20, .7), 0 0 16px rgba(255, 210, 120, .9); }
+.cr-note.hit svg { animation: crHit .34s ease-out forwards; }
+.cr-note.holding svg { animation: crHold .5s ease-in-out infinite alternate; }
+.cr-note.close svg { animation: crClose .4s ease-out forwards; }
+.cr-note.early svg, .cr-note.miss svg { opacity: .42; filter: grayscale(.7); transition: opacity .3s ease; }
+@keyframes crHit { 0% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1.7); opacity: 0; } }
+@keyframes crHold { 0% { transform: scale(1.05); } 100% { transform: scale(1.16); } }
+@keyframes crClose { 0% { transform: rotate(0) scale(1); opacity: .9; } 40% { transform: rotate(-14deg) scale(1.05); } 100% { transform: rotate(10deg) scale(.6); opacity: 0; } }
+.cr-pop {
+  position: absolute; left: 50%; bottom: calc(var(--hit-b) + 44px); transform: translateX(-50%); white-space: nowrap; pointer-events: none;
+  font: 700 19px/1 var(--font); color: #d8f5d2; text-shadow: 0 2px 0 #2b4d30, 0 0 10px rgba(0, 0, 0, .25); animation: crRise .9s ease-out forwards;
+}
+.cr-pop.perfect { color: var(--gold); font-size: 21px; text-shadow: 0 2px 0 #8a5a14, 0 0 12px rgba(255, 210, 120, .7); }
+.cr-pop.close { color: var(--cream); font-size: 16px; text-shadow: 0 2px 0 #6a5a48; }
+.cr-pop.miss, .cr-pop.early { color: rgba(255, 255, 255, .7); font-size: 15px; text-shadow: 0 2px 0 rgba(0, 0, 0, .3); }
+.cr-pop.hold { color: var(--gold); font-size: 16px; bottom: calc(var(--hit-b) + 70px); text-shadow: 0 2px 0 #8a5a14; }
+@keyframes crRise { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.7); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.1); } 30% { transform: translate(-50%, -4px) scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -34px); } }
+.cr-scene { position: absolute; left: 0; top: 0; bottom: 0; right: calc(min(258px, 32vw) + 18px + var(--safe-r)); pointer-events: none; }
+.cr-banner { position: absolute; left: 50%; top: 24%; transform: translate(-50%, -50%); text-align: center; opacity: 0; width: max-content; max-width: 94%; }
+.cr-banner small { display: block; font: 600 13px/1.2 var(--font); letter-spacing: .16em; text-transform: uppercase; color: var(--cream); text-shadow: 0 2px 0 var(--red-dark); margin-bottom: 4px; }
+.cr-banner b { display: block; font: 700 36px/1.05 var(--font); color: var(--cream); text-shadow: 0 4px 0 var(--red-dark), 0 10px 30px rgba(0, 0, 0, .4); }
+.cr-banner.on { animation: crBanner 2.3s ease-out both; }
+@keyframes crBanner { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.25); } 14% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 78% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -66%); } }
+.cr-streak { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); white-space: nowrap; opacity: 0; font: 700 26px/1 var(--font); color: var(--gold); text-shadow: 0 3px 0 #8a5a14, 0 0 16px rgba(255, 210, 120, .7); }
+.cr-streak.on { animation: crBanner 1.5s ease-out both; }
+.cr-hint {
+  position: absolute; left: 50%; bottom: calc(16px + var(--safe-b)); transform: translateX(-50%); max-width: min(360px, 90%); text-align: center;
+  padding: 8px 14px !important; border-radius: 14px !important; outline-offset: -5px !important; font: 600 13px/1.3 var(--font); transition: opacity .8s ease;
+}
+.cr-hint kbd { display: inline-block; min-width: 18px; padding: 1px 5px; margin: 0 1px; border-radius: 6px; background: var(--cream-2); font: 700 12px/1.2 var(--font); text-align: center; box-shadow: 0 2px 0 #cdb38a; }
+.cr-hint.off { opacity: 0; }
+
+@media (orientation: portrait) {
+  .cr-ui { --hit-b: calc(84px + var(--safe-b)); }
+  .cr-lanes { left: calc(8px + var(--safe-l)); right: calc(8px + var(--safe-r)); width: auto; top: 51%; }
+  .cr-lane { margin: 0 4px; }
+  .cr-target { width: 76px; height: 76px; margin: 0 0 -38px -38px; }
+  .cr-note { width: 58px; height: 62px; margin: -34px 0 0 -29px; }
+  .cr-tail { width: 16px; margin-left: -8px; bottom: 30px; }
+  .cr-scene { right: 0; bottom: 49%; top: calc(108px + var(--safe-t)); }
+  .cr-banner { top: 30%; }
+  .cr-banner b { font-size: 28px; }
+  .cr-streak { top: 78%; font-size: 22px; }
+  .cr-hint { bottom: auto; top: 2px; }
+}
+@media (max-height: 420px) and (orientation: landscape) {
+  .cr-ui { --hit-b: calc(50px + var(--safe-b)); }
+  .cr-lanes { top: calc(66px + var(--safe-t)); width: min(236px, 30vw); }
+  .cr-scene { right: calc(min(236px, 30vw) + 18px + var(--safe-r)); }
+  .cr-target { width: 58px; height: 58px; margin: 0 0 -29px -29px; }
+  .cr-note { width: 46px; height: 50px; margin: -28px 0 0 -23px; }
+  .cr-banner b { font-size: 28px; }
+  .cr-hint { font-size: 12px; }
+}
