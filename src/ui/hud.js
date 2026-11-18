@@ -73,13 +73,16 @@ export function createHUD(ctx, root, data, ui) {
   function setHint(h) { hint = h ? { ...h, t: 0 } : null; pill.hidden = !hint; if (hint) { pillTxt.textContent = hint.text; pill.classList.remove('pop'); void pill.offsetWidth; pill.classList.add('pop'); } }
 
   // ---- per-frame sync (only touches the DOM when something changed)
-  let lastLabel = null, lastIcon = null, lastTask = null, lastMuted = null, lastMode = null, lastShow = null, lastJoy = null;
+  let lastLabel = null, lastIcon = null, lastTask = null, lastMuted = null, lastMode = null, lastShow = null, lastJoy = null, lastRide = false;
   let lastDoor = null, lastSpirit = null, lastOnline = null, lastDot = null, slow = 0;
   function update(dt) {
     const modal = ui.modalOpen();
     const show = S.phase === 'play' && !modal;
     if (show !== lastShow) { el.hidden = !show; lastShow = show; }
-    const joyOn = wantJoy && ((S.phase === 'play' && !modal) || (S.phase === 'minigame' && player.controllable));
+    // cable car ride: the eye-level ride shot owns the screen; only the mute button stays (CSS .tb-ride), and the 'Tap to skip' pill lives in overlays
+    const ride = cam.shotName === 'cablecarRide';
+    if (ride !== lastRide) { lastRide = ride; el.classList.toggle('tb-ride', ride); }
+    const joyOn = wantJoy && !ride && ((S.phase === 'play' && !modal) || (S.phase === 'minigame' && player.controllable));
     if (joyOn !== lastJoy) { lastJoy = joyOn; joyLayer.hidden = !joyOn; if (!joyOn) joy?.reset(); }
     if (!show) return;
     // interact button

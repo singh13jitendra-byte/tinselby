@@ -360,6 +360,10 @@
 .tb-hud .tb-tl { transition: opacity .35s ease; }
 .tb-framing .tb-tl { opacity: 0; pointer-events: none; }
 
+/* cable car ride (eye-level ride shot): HUD fades out except the mute button; 'Tap to skip' is a separate overlay */
+.tb-hud .tb-tc, .tb-hud .tb-act, .tb-hud .tb-keys, .tb-hud .tb-tr .knit-btn:not(.tb-mute) { transition: opacity .35s ease; }
+.tb-ride .tb-tl, .tb-ride .tb-tc, .tb-ride .tb-act, .tb-ride .tb-keys, .tb-ride .tb-tr .knit-btn:not(.tb-mute) { opacity: 0; pointer-events: none; }
+
 /* very small landscape phones (e.g. 667x375): keep top-centre clear of top-right, cards clear of the joystick */
 @media (max-height: 380px) and (max-width: 720px) {
   .tb-tc { max-width: 37vw; }

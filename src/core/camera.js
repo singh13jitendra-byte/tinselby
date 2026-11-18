@@ -22,6 +22,8 @@ import * as THREE from 'three';
  *      with the shot (bloom / glow multiply the time-of-day look, threshold is added, band / falloff set the sharp
  *      tilt-shift band in screen heights; see engine.shotPost). The blur amount itself is `tilt`.
  *      Optional portrait: false | { keep, lift } = how the shot adapts to a tall (portrait) screen, see below.
+ *      Optional lens: { w, fov, near } (the shot may mutate it every frame) = the lens (vertical FOV, near clip) the camera lerps
+ *      towards by w × the shot's blend weight; omitted / w = 0 → the normal lens. Used by the cable car ride's cabin view.
  *  - skip()        ends the current skippable shot (tap / any key during a cinematic)
  *  - yaw           current ground yaw used for camera-relative controls
  *
@@ -276,8 +278,16 @@ export function createCameraDirector(engine, game, input = null) {
       look.copy(baseLook).lerp(shotLook, w);
       cam.lookAt(look);
       const eyeFov = EYE.fov + EYE.fovPortrait * p;
-      const fov = cur.fov + (eyeFov - cur.fov) * e * (1 - w);
-      const near = NEAR + (EYE.near - NEAR) * e * (1 - w);
+      let fov = cur.fov + (eyeFov - cur.fov) * e * (1 - w);
+      let near = NEAR + (EYE.near - NEAR) * e * (1 - w);
+      // shot lens hook: shot.lens = { w, fov, near } (mutated by the shot each frame) lerps the lens towards fov / near by
+      // lens.w × the shot's blend weight; shots without a lens (or fields) leave the normal lens untouched
+      const ln = shot && shot.lens;
+      if (ln && w > 0) {
+        const lw = Math.min(1, Math.max(0, ln.w ?? 0)) * w;
+        if (ln.fov != null) fov += (ln.fov - fov) * lw;
+        if (ln.near != null) near += (ln.near - near) * lw;
+      }
       if (Math.abs(cam.fov - fov) > 0.01 || Math.abs(cam.near - near) > 1e-4) { cam.fov = fov; cam.near = near; cam.updateProjectionMatrix(); }
       director.yaw = eyeW > 0.5 && wantEye ? eyeYaw : cur.yaw;
       // shadow box / snow centre: the subject (nudged ahead in portrait, where more ground shows above the player)

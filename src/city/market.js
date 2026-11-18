@@ -6,7 +6,7 @@ import {
   lanternGeos, candyCaneGeos, barrelGeos, basketGeos, litFirGeos, snowmanGeos,
   KNIT, FELT, GLOW, GLOSS, mulberry32,
 } from './kit.js';
-import { spring, squash } from './reveal.js';
+import { spring, squash, squashProps } from './reveal.js';
 
 const TAU = Math.PI * 2;
 /** Stall index of the bakery ("Warm Cookies"): the stall next to layout.DOOR_SPOTS[8] / ARENAS.cookies. */
@@ -19,6 +19,7 @@ export function buildMarket(K) {
 
   const tree = buildTree(K, M.tree);
   // ---------------------------------------------------------------- stalls
+  const stallFolds = [];
   M.stalls.forEach((s, i) => {
     const ry = Math.atan2(-s.x, -s.z);
     const { g, lights, extra } = stallGeos(i, rnd);
@@ -32,10 +33,11 @@ export function buildMarket(K) {
     const pts = [corner(-0.7, -0.38), corner(0.7, -0.38), corner(0.7, 0.44), corner(-0.7, 0.44)];
     for (let k = 0; k < 4; k++) { const a = pts[k], bb = pts[(k + 1) % 4]; colliders.addSegment(a[0], a[1], bb[0], bb[1], 0.04, 'stall'); }
     K.keepCircle(s.x, s.z, 0.95);
+    stallFolds.push({ props: b.props, x: s.x, z: s.z, ry, h: i === BAKERY ? 1.5 : 1.06, min: i === BAKERY ? 0.2 : 0.3 });
   });
 
   // ---------------------------------------------------------------- carousel
-  buildCarousel(K, M.carousel);
+  const carousel = buildCarousel(K, M.carousel);
 
   // ---------------------------------------------------------------- countdown clock
   {
@@ -195,7 +197,54 @@ export function buildMarket(K) {
     // south edge (outside the walk loop): firs, lanterns, gift piles
     for (const sx of [-1, 1]) { fir(sx * 2.45, 5.2, 1.0, sx > 0 ? C.red : C.pine); fir(sx * 4.5, 5.22, 1.2); lantern(sx * 3.5, 5.2, 1.1); gifts(sx * 3.95, 5.15, 4, 0.2); basket(sx * 2.95, 5.25, sx > 0 ? C.gold : C.red, GLOSS); }
   }
+  buildCutaway(K, stallFolds, carousel);
   return { tree };
+}
+
+// ------------------------------------------------------------------ cut-away: stalls and the carousel fold down when the player is behind them
+// The follow camera sits south-south-east (yaw 0.28, 36 deg down), so a prop of height h hides whatever stands within
+// about h / tan(36 deg) beyond it along the view direction (and the canopy of the carousel, floating at 1.4-2.4, hides
+// the ground 0.4-3.3 behind its centre). While the player stands in that shadow the prop squashes towards the ground
+// (stalls via squashProps, the carousel through a scale on its rotor's inner group), eased in and out, same idea as
+// Holly Lane / the lake hut. Eye view fades it all out (the camera is in the market, everything stands tall), and so
+// does any cinematic shot. Walking in front of a prop never touches it: the fold needs the player on the far side.
+function buildCutaway(K, stallFolds, carousel) {
+  const VX = -Math.sin(0.28), VZ = -Math.cos(0.28); // ground direction of the view, camera -> scene
+  const ramp = (x) => Math.min(1, Math.max(0, x));
+  const sm = (x) => x * x * (3 - 2 * x);
+  const folds = stallFolds.map((f) => {
+    // stall footprint (local x ±0.74, z −0.35 … +0.55 incl. the awning) seen along / across the view
+    const ex = Math.cos(f.ry), ez = -Math.sin(f.ry); // local x axis on the ground
+    const c = Math.abs(ex * -VZ + ez * VX), a = Math.abs(ex * VX + ez * VZ);
+    const dep = 0.74 * a + 0.45 * c; // half extent along the view
+    return { ...f, kind: 'stall', near: -0.15, far: dep + f.h / Math.tan(THREE.MathUtils.degToRad(36)) + 0.15, half: 0.74 * c + 0.45 * a, s: 1, applied: 1 };
+  });
+  if (carousel) folds.push({ kind: 'carousel', x: K.layout.MARKET.carousel.x, z: K.layout.MARKET.carousel.z, near: 0.5, far: 3.5, half: 1.35, min: 0.14, s: 1, applied: 1 });
+  K.updates.push((dt) => {
+    const player = K.ctx.player, cam = K.ctx.cam, game = K.ctx.game; // (resolved lazily: they may not exist yet at build time)
+    const shown = K.G.market.group.state === 'shown';
+    const phase = game?.state?.phase;
+    const p = player?.pos, eye = cam?.eye || 0, kd = 1 - Math.exp(-dt * 5);
+    const live = shown && p && (phase === 'play' || phase === 'minigame') && !cam?.shotActive;
+    for (const f of folds) {
+      let cut = 0;
+      if (live) {
+        const dx = p.x - f.x, dz = p.z - f.z;
+        const along = dx * VX + dz * VZ, lat = Math.abs(dx * -VZ + dz * VX);
+        const a = sm(ramp((along + 0.35 - f.near) / 0.6)) * sm(ramp((f.far - along) / 0.8));
+        const l = sm(ramp((f.half + 0.3 - lat) / 0.6));
+        cut = a * l * (1 - eye);
+      }
+      const goal = 1 - cut * (1 - f.min);
+      f.s += (goal - f.s) * kd;
+      if (Math.abs(f.s - goal) < 0.003) f.s = goal;
+      const q = Math.round(f.s * 200) / 200;
+      if (q === f.applied) continue;
+      f.applied = q;
+      if (f.kind === 'carousel') carousel.scale.y = Math.max(q, 0.02);
+      else squashProps(f.props, q);
+    }
+  });
 }
 
 // ------------------------------------------------------------------ the big tree
@@ -484,12 +533,14 @@ function buildCarousel(K, pos) {
   mesh.castShadow = true; mesh.receiveShadow = true;
   mesh.onBeforeShadow = () => { mesh.geometry.drawRange.count = nCast; };
   mesh.onAfterShadow = () => { mesh.geometry.drawRange.count = Infinity; };
-  rotor.add(mesh);
+  const fold = new THREE.Group(); // cut-away scale lives here (the reveal owns the rotor's own scale)
+  rotor.add(fold);
+  fold.add(mesh);
   // horses: instanced, bobbing on their poles
   const hg = horseGeo();
   const horses = new THREE.InstancedMesh(hg, engine.mat, NH);
   horses.castShadow = true;
-  rotor.add(horses);
+  fold.add(horses);
   K.G.market.group.root.add(rotor);
   K.G.market.group.node(rotor, [x, 0, z], { delay: 0.5, dur: 0.6 });
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s1 = new THREE.Vector3(1, 1, 1), v = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
@@ -505,6 +556,7 @@ function buildCarousel(K, pos) {
     }
     horses.instanceMatrix.needsUpdate = true;
   });
+  return fold;
 }
 
 function horseGeo() {

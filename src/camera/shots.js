@@ -4,7 +4,7 @@
 //    crowdPose, pullbackPose, endOrbitPose.
 //  - createCinemaRig(ctx): ONE long playShot whose pose is cross-faded between generators with rig.cut(gen, blend).
 //    (cam.playShot always blends via the follow camera, so back-to-back cinematics use the rig instead.)
-//  - installGameplayShots(ctx): district reveal on first district:enter, cable car follow on cablecar:ride.
+//  - installGameplayShots(ctx): district reveal on first district:enter.
 import * as THREE from 'three';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
@@ -249,8 +249,5 @@ export function installGameplayShots(ctx) {
     const spec = districtRevealShot(ctx, id);
     if (spec) cam.playShot(spec);
   });
-  game.on('cablecar:ride', (d = {}) => {
-    if (game.state.phase !== 'play' || params?.has('noshots')) return;
-    cam.playShot(cableCarShot(ctx, d));
-  });
+  // (the cable car ride shot is started by src/city/cablecar.js itself; cableCarShot stays exported for other callers)
 }
