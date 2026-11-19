@@ -235,6 +235,13 @@ export const FILTERS = [
     env: { vignette: -0.24, bloom: 0.9 },
     swatch: 'linear-gradient(135deg,#efe0c2,#8a6a48)',
   },
+  {
+    // dreamy portrait: much stronger background blur, brighter glow, and on the saved photo the out-of-focus lights
+    // turn into soft round discs (see bokehDiscs)
+    id: 'bokeh', label: 'Bokeh', fx: [['saturate', 1.08], ['brightness', 1.03]], tint: { col: '#ffcf8a', mode: 'soft-light', a: 0.22 },
+    env: { exposure: 1.02, glow: 1.7, bloom: 1.55, vignette: -0.08 }, bokeh: { blur: 1.9, band: 0.55 },
+    swatch: 'radial-gradient(circle at 30% 35%,#fff3c4 0 18%,transparent 19%),radial-gradient(circle at 70% 65%,#ffd27a 0 22%,transparent 23%),linear-gradient(135deg,#7a4a8c,#2b2346)',
+  },
 ];
 export const filterById = (id) => FILTERS.find((f) => f.id === id) || FILTERS[0];
 export const filterCSS = (f) => f.fx.map(([n, v]) => (n === 'hue' ? `hue-rotate(${v}deg)` : `${n}(${v})`)).join(' ') || 'none';
@@ -263,7 +270,67 @@ function matrixOf(fx) {
 }
 
 /** Apply a look to a 2D canvas in place (pixel matrix + blended tint). */
-export function gradeCanvas(cv, f) {
+/** Bokeh: bright spots outside the sharp band (fairy lights, lanterns, windows) become soft round light discs.
+ *  focusY = the sharp band's centre (0 = top, 1 = bottom of the photo), band = its half-height (photo heights). */
+export function bokehDiscs(cv, { focusY = 0.55, band = 0.1 } = {}) {
+  const W = cv.width, H = cv.height;
+  if (!W || !H) return;
+  const S = 6, sw = Math.max(1, Math.round(W / S)), shh = Math.max(1, Math.round(H / S));
+  const sm = document.createElement('canvas'); sm.width = sw; sm.height = shh;
+  const sg = sm.getContext('2d', { willReadFrequently: true });
+  sg.drawImage(cv, 0, 0, sw, shh);
+  const d = sg.getImageData(0, 0, sw, shh).data;
+  const cand = [];
+  for (let y = 1; y < shh - 1; y++) {
+    const away = Math.abs(y / shh - focusY) - band; // how far outside the sharp band
+    if (away <= 0.02) continue;
+    for (let x = 1; x < sw - 1; x++) {
+      const i = (y * sw + x) * 4, r = d[i], g = d[i + 1], b = d[i + 2];
+      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      const sat0 = Math.max(r, g, b) - Math.min(r, g, b);
+      // coloured lights only (fairy lights, lanterns, windows): white snow and falling flakes never make discs
+      if (lum < 165 || sat0 < 46) continue;
+      // a local peak only (light sources, not big bright snow fields)
+      let peak = true, flat = 0;
+      for (let oy = -1; oy <= 1 && peak; oy++) for (let ox = -1; ox <= 1; ox++) {
+        if (!ox && !oy) continue;
+        const j = ((y + oy) * sw + x + ox) * 4, l2 = 0.2126 * d[j] + 0.7152 * d[j + 1] + 0.0722 * d[j + 2];
+        if (l2 > lum) { peak = false; break; }
+        if (l2 > lum - 10) flat++;
+      }
+      if (!peak || flat > 5) continue;
+      const sat = Math.max(r, g, b) - Math.min(r, g, b);
+      if (away < 0.06) continue; // just outside the sharp band stays clean
+      cand.push({ x: (x + 0.5) / sw, y: (y + 0.5) / shh, r, g, b, score: lum + sat * 0.6 + Math.min(1, away * 3) * 40, away });
+    }
+  }
+  cand.sort((a, b) => b.score - a.score);
+  const picked = [], minD = 0.035;
+  for (const c of cand) {
+    if (picked.length >= 45) break;
+    if (picked.some((p) => (p.x - c.x) ** 2 + ((p.y - c.y) * H / W) ** 2 < minD * minD)) continue;
+    picked.push(c);
+  }
+  const g = cv.getContext('2d');
+  g.save();
+  g.globalCompositeOperation = 'screen';
+  for (const c of picked) {
+    const rad = W * (0.024 + Math.min(1, c.away * 2.5) * 0.04);
+    const cx = c.x * W, cy = c.y * H;
+    const col = `${Math.min(255, c.r + 20)},${Math.min(255, c.g + 14)},${Math.min(255, c.b + 6)}`;
+    const gr = g.createRadialGradient(cx, cy, 0, cx, cy, rad);
+    gr.addColorStop(0, `rgba(${col},0.42)`);
+    gr.addColorStop(0.7, `rgba(${col},0.34)`);
+    gr.addColorStop(0.88, `rgba(${col},0.5)`); // brighter rim, like a real lens disc
+    gr.addColorStop(1, `rgba(${col},0)`);
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(cx, cy, rad, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+}
+
+export function gradeCanvas(cv, f, opts) {
+  if (f?.bokeh) { try { bokehDiscs(cv, opts); } catch (e) { console.warn('[photo] bokeh', e); } }
   if (!f || (!f.fx.length && !f.tint)) return;
   const g = cv.getContext('2d', { willReadFrequently: true });
   if (f.fx.length) {

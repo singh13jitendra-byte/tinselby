@@ -477,12 +477,13 @@ export function createPhoto(ctx) {
     tmp.copy(target).project(camera);
     const post = engine.post;
     if (Number.isFinite(tmp.y)) post.focus += (((clamp(tmp.y, -1, 1) + 1) / 2) - post.focus) * e;
-    const tiltK = clamp(1.6 - 0.35 * Math.log(1 + dEff), 0.6, 1.5) * gk * (S.blur ? 1 : 0);
+    const f = filterById(S.filter), fe = f.env || {}, bk = f.bokeh;
+    // the Bokeh look always blurs the background (whatever the depth-blur toggle says), harder and with a slimmer band
+    const tiltK = clamp(1.6 - 0.35 * Math.log(1 + dEff), 0.6, 1.5) * gk * (bk ? bk.blur : S.blur ? 1 : 0);
     post.strength += (tiltK - post.strength) * e;
-    const f = filterById(S.filter), fe = f.env || {};
     const sp = engine.shotPost, d0 = effDir(sp);
     sp.w = 1;
-    sp.band = d0.band + (orb.band * gk - d0.band) * e;
+    sp.band = d0.band + (orb.band * gk * (bk ? bk.band : 1) - d0.band) * e;
     sp.falloff = d0.falloff + (0.34 * gk - d0.falloff) * e;
     sp.bloom = d0.bloom + ((fe.bloom ?? 1) - d0.bloom) * e;
     sp.glow = d0.glow + ((fe.glow ?? 1) - d0.glow) * e;
@@ -501,6 +502,7 @@ export function createPhoto(ctx) {
     if (engine.isMobile) return 0.85;
     return 1;
   }
+  let capFocus = null;
   function capture() {
     const r = engine.renderer, post = engine.post, gl = r.getContext();
     const sh = SHAPES[S.shape].photo;
@@ -526,6 +528,7 @@ export function createPhoto(ctx) {
       if (Number.isFinite(tmp.y)) post.focus = (clamp(tmp.y, -1, 1) + 1) / 2;
       const kh = H / G.h;
       post.band = keep.band * kh; post.falloff = keep.falloff * kh; post.strength = keep.strength * kh;
+      capFocus = { focusY: 1 - post.focus, band: post.band }; // for the Bokeh look's light discs
       const ps = Hr / Math.max(1, screenH * (G.h / H)); // point sprites (snow, fireworks) keep their size in the frame
       for (const [u, v] of pts) u.value = v * ps;
       post.render(engine.scene, camera, engine.time);
@@ -553,7 +556,7 @@ export function createPhoto(ctx) {
     try {
       layout();
       const shot = capture();
-      gradeCanvas(shot, filterById(S.filter));
+      gradeCanvas(shot, filterById(S.filter), capFocus || undefined);
       photoCv = shot;
       await compose();
       return cardCv;
