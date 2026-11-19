@@ -8,7 +8,7 @@
            joystick or covering a button / ✕); ride together on the Ferris wheel, carousel, tram and carriage, each
            via the "Join <name>" prompt AND the people card "Ride together"; budget; back to the big town
   desktop  both pages 1280x720 (mouse): town join, emote + phrase, click doll → card, snowball, gift, budget
-  w4off    no ?w4: selfTest({reset:true}) = 359/0, no social HUD, rides unchanged, no console errors
+  w4off    ?w3 (wave 4 off): selfTest({reset:true}) = 359/0, no social HUD, rides unchanged, no console errors
 
 Build first:  npx vite build --outDir /tmp/p4int2/dist      Served on http://localhost:8791 (P4_DIST / P4_PORT).
 Shots: shots/p4int2_*.png (P4_SHOT = prefix).  P4_STAGES=emotes,people,snow,gift,portrait,budget,reload,ferris,
@@ -636,7 +636,8 @@ def run_pair(b, P, va, vb, touch):
 
 def w4off(b):
     pg = b.new_page(viewport={'width': 1280, 'height': 720}); pg.set_default_timeout(600000); attach(pg, 'w4off')
-    pg.goto(ORIGIN + '/index.html?capture&play&net=local&tod=13'); pg.wait_for_function('window.__tinselby && window.__tinselby.ready', timeout=300000)
+    pg.goto(ORIGIN + '/index.html?capture&play&net=local&tod=13&w3'); pg.wait_for_function(  # W4 is live: ?w3 turns it off
+        'window.__tinselby && window.__tinselby.ready', timeout=300000)
     pg.evaluate('window.__tinselby.step(1/30, 20)')
     check(ev(pg, '!document.querySelector(".tbs-root") && !document.querySelector(".tbs-friends-btn")'), 'w4off: no social HUD in the DOM')
     check(ev(pg, f'!{C}.social.enabled && {C}.net.town === null && {C}.net.send("emote", {{e: "wave"}}) === false'), 'w4off: social disabled, net wave-4 API inert')
