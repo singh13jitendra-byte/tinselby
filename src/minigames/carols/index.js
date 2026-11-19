@@ -29,6 +29,7 @@ const CAROLLER_B = { coat: 'forest', outfit: 'dress', hat: 'earmuffs', scarf: 'g
 // choir slot → doll kind (0 Tilly, 1 caroller A, 2 caroller B); slot order = ARENAS.carols.choir
 const CHOIR_KIND = [0, 1, 2, 2, 1];
 const CHOIR_SCALE = [0.95, 0.98, 0.98, 0.98, 1.0];
+const PLAYER_STEP = 0.08; // the player's own little step at the front of the stage
 const RISER = [0, 0, 0.07, 0.07, 0.14]; // middle / back rows stand on felt risers so their faces clear the front row
 const PLAYER_S = 1.12;
 const SHOULDER_Y = 0.178, ARM_REST = -1.0; // player.js arm pivot height; arms forward holding the songbook
@@ -101,6 +102,7 @@ export default {
       ch.body.add(armPivot);
     }
     const pp = world(A.player[0], A.player[1]);
+    pp.y += PLAYER_STEP; // polish: on a little soloist's step, so the gazebo's rope rail passes your boots, not your chest
     ch.group.position.copy(pp);
     root.add(ch.group);
 
@@ -120,6 +122,8 @@ export default {
       xf(rbox(0.3, 0.14, 0.2, 0.02, '#a8322e', FELT), [0, 0.07, -0.25]),
       xf(box(0.745, 0.012, 0.012, '#e3aa3a', GLOSS), [0, 0.066, 0.072]),
       xf(box(0.305, 0.012, 0.012, '#e3aa3a', GLOSS), [0, 0.136, -0.148]),
+      xf(rbox(0.25, PLAYER_STEP, 0.2, 0.02, '#a8322e', FELT), [A.player[0], PLAYER_STEP / 2, A.player[1]]), // the soloist's step
+      xf(box(0.255, 0.012, 0.012, '#e3aa3a', GLOSS), [A.player[0], PLAYER_STEP - 0.004, A.player[1] + 0.098]),
     ])), engine.mat);
     riser.position.set(A.x, stageY, A.z);
     riser.receiveShadow = true;
@@ -566,11 +570,13 @@ export default {
       const dir = V2.set(A.cam.x - A.target.x, A.cam.y - A.target.y, A.cam.z - A.target.z);
       const d0 = dir.length();
       dir.normalize();
-      // pitch up from the arena's 16° so the view clears the gazebo's rail into the stage (a touch more in portrait)
-      { const p = Math.atan2(dir.y, Math.hypot(dir.x, dir.z)) + 0.17 + 0.07 * por; const h = Math.hypot(dir.x, dir.z) || 1; dir.set((dir.x / h) * Math.cos(p), Math.sin(p), (dir.z / h) * Math.cos(p)); }
+      // pitch up from the arena's 16° so the view clears the gazebo's rail into the stage (more in portrait). Landscape
+      // stays lower (polish): the stage sits below the screen centre there, and a steeper view hid the choir under the roof
+      { const p = Math.atan2(dir.y, Math.hypot(dir.x, dir.z)) + lerp(0.05, 0.24, por); const h = Math.hypot(dir.x, dir.z) || 1; dir.set((dir.x / h) * Math.cos(p), Math.sin(p), (dir.z / h) * Math.cos(p)); }
+      // landscape / desktop: the whole gazebo, roof tip included, fits under the HUD row (the .cr-scene box starts below it)
       const halfW = lerp(1.45, 0.95, por), halfH = lerp(1.0, 0.86, por);
       const d = Math.max(d0, halfW / (tanH * fw), halfH / (tanV * fh));
-      tgt.set(A.target.x, A.target.y + lerp(0, 0.12, por), A.target.z);
+      tgt.set(A.target.x, A.target.y + lerp(0.3, 0.12, por), A.target.z);
       pos.copy(tgt).addScaledVector(dir, d);
       // slide so the subject (the target) lands at screen (sx, sy): camera moves the other way, in its own plane
       const right = V.set(dir.z, 0, -dir.x).normalize(); // camera right (looking along −dir)

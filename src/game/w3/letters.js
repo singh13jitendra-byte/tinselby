@@ -10,7 +10,8 @@ import { letterGeo, mailboxGeo, MAILBOX_FLAG } from './props.js';
 
 const N = LETTERS.flutter.length;
 const FLY = 1.2; // flutter arc seconds
-const SCALE = 1.5; // letters are tiny: show them a little bigger
+const SCALE = 2.3; // letters are tiny: show them bigger (polish: 1.5 still vanished against the snow from the follow camera)
+const HOVER = 0.4; // flutter height above the ground
 const WISHES = [
   { label: 'A cosy Santa coat', value: 'coat:santa' },
   { label: 'A starlight crown', value: 'hat:starlight' },
@@ -73,9 +74,30 @@ export default function create(ctx, env) {
   engine.scene.add(mesh);
   const dummy = new THREE.Object3D();
   const hideM = new THREE.Matrix4().makeScale(0, 0, 0);
+
+  // ---- markers (polish): cream letters on white snow were hard to spot. Each waiting / resting letter gets a soft shadow on
+  // the ground (reads by day) and a gold halo that twinkles behind it (reads at dusk and night). 2 tiny InstancedMeshes
+  // (5 quads each), only while the letters are out.
+  const blobTex = (() => {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+    const cg = cv.getContext('2d'), grd = cg.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.3, 'rgba(255,255,255,0.6)');
+    grd.addColorStop(0.65, 'rgba(255,255,255,0.16)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+    cg.fillStyle = grd; cg.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(cv);
+  })();
+  const markGeo = new THREE.PlaneGeometry(2, 2);
+  const shadeMat = new THREE.MeshBasicMaterial({ map: blobTex, color: '#27304f', transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const haloMat = new THREE.MeshBasicMaterial({ map: blobTex, color: '#ffc65e', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+  const shadeMesh = new THREE.InstancedMesh(markGeo, shadeMat, N), haloMesh = new THREE.InstancedMesh(markGeo, haloMat, N);
+  for (const m of [shadeMesh, haloMesh]) { m.castShadow = false; m.receiveShadow = false; m.frustumCulled = false; m.visible = false; for (let i = 0; i < N; i++) m.setMatrixAt(i, hideM); engine.scene.add(m); }
+  shadeMesh.name = 'w3-letter-shade'; haloMesh.name = 'w3-letter-halo'; haloMesh.renderOrder = 2;
+  const qFlat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+  const mM = new THREE.Matrix4(), mP = new THREE.Vector3(), mS = new THREE.Vector3(), mC = new THREE.Color();
+  for (let i = 0; i < N; i++) haloMesh.setColorAt(i, mC.setScalar(0));
   const L = LETTERS.flutter.map(([a, b], i) => {
     const A = nudge(a), B = nudge(b);
-    return { i, a: A, b: B, state: 'wait', t: 0, x: A.x, y: 0.33, z: A.z, yaw: i, ph: i * 1.3 + 0.4, from: null, delay: 0 };
+    return { i, a: A, b: B, state: 'wait', t: 0, x: A.x, y: HOVER, z: A.z, yaw: i, ph: i * 1.3 + 0.4, from: null, delay: 0 };
   });
 
   // ---- state
@@ -87,7 +109,7 @@ export default function create(ctx, env) {
   const doorOpen = () => { const s = env.ds(n); return s === 'open' || s === 'done'; };
 
   function resetLetters() {
-    for (const l of L) { l.state = 'wait'; l.t = 0; l.x = l.a.x; l.z = l.a.z; l.y = 0.33; l.delay = 0; }
+    for (const l of L) { l.state = 'wait'; l.t = 0; l.x = l.a.x; l.z = l.a.z; l.y = HOVER; l.delay = 0; }
   }
   function setFlag(up, animate) { flagU = up ? 1 : 0; flagAnim = animate ? 0 : -1; pivot.rotation.z = up ? 0 : FLAG_DOWN; }
   function resetAll() { accepted = false; finished = false; wished = false; choosing = false; posting = null; resetLetters(); setFlag(false, false); }
@@ -173,8 +195,10 @@ export default function create(ctx, env) {
       if (posting.flagged && posting.t - posting.at > 0.9) { posting = null; finishTask(); }
     }
     const show = accepted && !finished && revealed() && !hid;
-    if (!show && !(posting)) { if (mesh.visible) mesh.visible = false; return; }
-    mesh.visible = true;
+    if (!show && !(posting)) { if (mesh.visible) { mesh.visible = false; shadeMesh.visible = false; haloMesh.visible = false; } return; }
+    mesh.visible = true; shadeMesh.visible = true; haloMesh.visible = true;
+    const lamp = Math.max(0, Math.min(1, engine.env?.lamp ?? 1)); // 0 broad day … 1 night
+    const camQ = engine.camera.quaternion;
     const px = player.pos.x, pz = player.pos.z;
     mailTop.set(0, 0.62, 0.0); mbGroup.localToWorld(mailTop);
     for (const l of L) {
@@ -183,8 +207,8 @@ export default function create(ctx, env) {
         const base = l.state === 'wait' ? l.a : l.b;
         const w = t * 1.0 + l.ph;
         l.x = base.x + Math.cos(w * 0.7) * 0.15; l.z = base.z + Math.sin(w * 0.9) * 0.15;
-        l.y = 0.325 + Math.sin(t * 1.7 + l.ph) * 0.075;
-        yaw = t * 1.5 + l.ph; tilt = Math.sin(t * 2.3 + l.ph) * 0.4; roll = Math.sin(t * 1.9 + l.ph * 2) * 0.3;
+        l.y = HOVER + Math.sin(t * 1.7 + l.ph) * 0.075;
+        yaw = t * 1.5 + l.ph; tilt = 0.5 + Math.sin(t * 2.3 + l.ph) * 0.35; roll = Math.sin(t * 1.9 + l.ph * 2) * 0.3; // tipped up: the face shows from the follow camera
         if (l.state === 'wait' && playing() && accepted && Math.hypot(px - l.x, pz - l.z) < 1.0) {
           l.state = 'fly'; l.t = 0; l.from = { x: l.x, y: l.y, z: l.z };
           env.sfx('whoosh', l.x, l.z);
@@ -194,7 +218,7 @@ export default function create(ctx, env) {
         const u = Math.min(1, l.t / FLY), e = smooth(u);
         const bx = l.b.x + Math.cos(t * 0.7 + l.ph) * 0.15 * u, bz = l.b.z + Math.sin(t * 0.9 + l.ph) * 0.15 * u;
         l.x = l.from.x + (bx - l.from.x) * e; l.z = l.from.z + (bz - l.from.z) * e;
-        l.y = l.from.y + (0.33 - l.from.y) * e + Math.sin(u * Math.PI) * 0.8;
+        l.y = l.from.y + (HOVER - l.from.y) * e + Math.sin(u * Math.PI) * 0.8;
         yaw = t * 9 + l.ph; tilt = Math.sin(u * 12) * 0.6; roll = Math.sin(u * 9) * 0.5;
         if (u >= 1) { l.state = 'rest'; l.t = 0; }
       } else if (l.state === 'caught') {
@@ -225,8 +249,21 @@ export default function create(ctx, env) {
         dummy.updateMatrix();
         mesh.setMatrixAt(l.i, dummy.matrix);
       } else mesh.setMatrixAt(l.i, hideM);
+      // markers: only for letters still out in the park
+      const out = vis && (l.state === 'wait' || l.state === 'rest' || l.state === 'fly');
+      if (out) {
+        const g = gy(l.x, l.z), h = Math.max(0, l.y), near = 1 / (1 + h * 1.4);
+        const sr = 0.085 * SCALE * (0.75 + 0.5 * (1 - near));
+        shadeMesh.setMatrixAt(l.i, mM.compose(mP.set(l.x, g + 0.03, l.z), qFlat, mS.set(sr, sr, 1)));
+        const tw = 0.75 + 0.25 * Math.sin(t * 4.2 + l.ph * 3);
+        const hr = 0.13 * SCALE * (0.9 + 0.1 * tw);
+        haloMesh.setMatrixAt(l.i, mM.compose(mP.set(l.x, g + l.y, l.z), camQ, mS.set(hr, hr, 1)));
+        haloMesh.setColorAt(l.i, mC.setScalar((0.22 + 0.4 * lamp) * tw));
+      } else { shadeMesh.setMatrixAt(l.i, hideM); haloMesh.setMatrixAt(l.i, hideM); }
     }
     mesh.instanceMatrix.needsUpdate = true;
+    shadeMesh.instanceMatrix.needsUpdate = true; haloMesh.instanceMatrix.needsUpdate = true;
+    if (haloMesh.instanceColor) haloMesh.instanceColor.needsUpdate = true;
   }
 
   const nearestLetter = () => {
@@ -308,8 +345,8 @@ export default function create(ctx, env) {
   };
   act.dispose = () => {
     for (const sp of [...spots, postSpot]) { try { interact.remove(sp); } catch (e) { /* */ } }
-    engine.scene.remove(mesh, mbGroup);
-    lGeo.dispose(); mGeo.dispose(); fGeo.dispose();
+    engine.scene.remove(mesh, mbGroup, shadeMesh, haloMesh);
+    lGeo.dispose(); mGeo.dispose(); fGeo.dispose(); markGeo.dispose(); shadeMat.dispose(); haloMat.dispose(); blobTex.dispose();
   };
   act.hook = { get state() { return act.state; }, catchAll: () => act.catchAll(), post: () => act.post() };
   try { (window.__w3 = window.__w3 || {}).letters = act.hook; } catch (e) { /* no window */ }

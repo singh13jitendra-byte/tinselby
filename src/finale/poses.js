@@ -27,22 +27,34 @@ export function spiritPose(ctx, dur = 6) {
   };
 }
 
-/** Santa's approach: from the east edge of the park, low over the ring road, watching the sleigh swing round the town,
- *  come in over the gate and run low along the lantern runway, then pan with it onto the landing rug.
+/** Santa's approach, seen from the tree end of the lantern runway: just north of the landing rug, above the heads
+ *  of the gathered friends, looking south down the two rows of glowing lanterns to the park gate and the night sky. The
+ *  sleigh swings in over the gate, runs low along the lanterns straight towards us and sets down on the rug in the
+ *  foreground. Portrait: the camera slides closer to the runway's axis, so the lantern rows run up the tall frame.
  *  getSleigh() → Vector3. */
 export function runwayPose(ctx, getSleigh, dur = 8.5) {
   const L = ctx.layout.MARKET.landing;
-  const from = V(3.6, 2.3, 9.8), to = V(2.45, 0.95, 6.3);
-  const land = V(L.x, 0.3, L.z - 0.4);
-  const tgt = V(), s = V();
+  const land = V(L.x, 0.3, L.z - 0.3);
+  const far = V(L.x, 0.75, L.z + 6.6); // a point on the runway, between the lantern rows
+  const from = V(), to = V(), tgt = V(), s = V(), sm = V();
   let init = false;
   return (t, out, dt) => {
+    const p = Math.min(1, Math.max(0, ctx.cam?.portrait ?? 0));
+    // starts on the runway's axis (the lantern rows framed between the two market lamps at the plaza edge), then drifts
+    // east and down beside the rug for the touchdown
+    // Portrait stays on the axis the whole way: the tall frame is only ~15° wide, and head-on the team is narrow enough
+    // to fit while the gate, the lantern rows and the sky stack up above it (no pull-back: the tree is right behind us).
+    from.set(L.x + 0.5 - 0.2 * p, 2.6, L.z - 2.2);
+    to.set(L.x + 1.95 - 1.6 * p, 1.25 + 0.6 * p, L.z - 1.35 - 0.75 * p);
     const k = ss(t / dur);
     s.copy(getSleigh());
-    if (!init) { tgt.copy(s); init = true; }
-    tgt.lerp(s, damp(dt, 4.5));
+    if (!init) { sm.copy(s); init = true; }
+    sm.lerp(s, damp(dt, 4));
     out.pos.lerpVectors(from, to, k);
-    out.target.copy(tgt).lerp(land, ss((t - dur * 0.7) / (dur * 0.3)) * 0.55);
+    // early: hold the lantern rows and let the sleigh swing into the frame; then stay with the sleigh down onto the rug
+    const w = (0.52 + 0.2 * p) + (0.48 - 0.2 * p) * ss((t - dur * 0.3) / (dur * 0.4));
+    tgt.lerpVectors(far, sm, w);
+    out.target.copy(tgt).lerp(land, ss((t - dur * 0.72) / (dur * 0.28)) * 0.6);
   };
 }
 
@@ -54,7 +66,7 @@ export function cloverPose(ctx, getClover) {
   const w = E.cloverWait || { x: 1.55, z: 3.55 };
   // behind Clover, south-east of her waiting spot: outside the townsfolk's crowd rings round the tree (r ≤ 5.6), clear of
   // the carousel (4.2, 2.8) and above the tram rails further south; she walks away from us into the harness
-  const fromP = V(w.x + 0.95, 0.85, w.z + 1.5), toP = V(L.x + 1.9, 0.64, L.z + 2.0);
+  const fromP = V(w.x + 0.95, 1.08, w.z + 1.5), toP = V(L.x + 1.9, 0.86, L.z + 2.0); // polish: a head higher, over the townsfolk standing in front
   const slot = V(L.x + 0.19, 0.24, L.z - 1.52);
   const c = V(), tgt = V();
   let init = false;
@@ -66,6 +78,14 @@ export function cloverPose(ctx, getClover) {
     const k = ss(t / 3.2);
     out.pos.lerpVectors(fromP, toP, k);
     out.target.copy(tgt).lerp(slot, 0.25);
+    // portrait: a tall frame from this low angle was mostly empty rug. Move in on Clover and look higher, so she and the
+    // team sit in the lower third with the tree, the lights and the night sky stacked above them.
+    const por = Math.min(1, Math.max(0, ctx.cam?.portrait ?? 0));
+    if (por > 0) {
+      out.pos.lerp(out.target, 0.24 * por);
+      out.pos.y += 0.2 * por;
+      out.target.y += 0.45 * por;
+    }
   };
 }
 

@@ -562,13 +562,22 @@ export default {
         puff('rise', { x: mugXZ[0] + (Math.random() - 0.5) * 0.03, y: TOP + MS * (FILL_BASE + clamp(S.level, 0, 1) * FILL_H) + 0.02, z: mugXZ[1] + (Math.random() - 0.5) * 0.03, vy: 0.09, life: 1.3, s0: 0.012, s1: 0.034, col: '#f4efe6' });
       }
     }
+    const HQ = new THREE.Quaternion(), HR = new V3(), HF = new V3();
     function hearts(c) {
-      const b = fit.basis ? fit.basis.r : new V3(1, 0, 0);
-      const cx = c.x, cz = c.z, cy = 0.56;
-      for (let i = 0; i < 14; i++) {
-        const a = (i / 14) * TAU;
+      // polish: 22 small beads drawn as one stroke (was 14 big puffs that merged into a blob). The heart faces the camera
+      // as it is right now (so it also reads after a rotate), floats above the customer's hat and a little towards the
+      // camera so the doll never hides its tip; each bead's start height makes up for its delayed start, so the outline
+      // stays a heart while the whole shape drifts up.
+      group.getWorldQuaternion(HQ).invert();
+      HR.setFromMatrixColumn(engine.camera.matrixWorld, 0).applyQuaternion(HQ); HR.y = 0;
+      if (HR.lengthSq() < 1e-6) HR.set(1, 0, 0);
+      HR.normalize();
+      HF.copy(engine.camera.position).sub(group.getWorldPosition(V2)).applyQuaternion(HQ).setY(0).sub(V2.set(c.x, 0, c.z)).normalize();
+      const cx = c.x + HF.x * 0.09, cz = c.z + HF.z * 0.09, cy = 0.63, HN = 22, K = 0.0052, VY = 0.035, GAP = 0.022;
+      for (let i = 0; i < HN; i++) {
+        const a = (i / HN) * TAU;
         const hx = 16 * Math.pow(Math.sin(a), 3), hy = 13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a);
-        puff('rise', { x: cx + b.x * hx * 0.0055, y: cy + hy * 0.0055, z: cz + b.z * hx * 0.0055, vy: 0.035, life: 1.7, t: -i * 0.035, s0: 0.02, s1: 0.024, col: CHEER });
+        puff('rise', { x: cx + HR.x * hx * K, y: cy + hy * K + VY * i * GAP, z: cz + HR.z * hx * K, vy: VY, life: 1.9, t: -i * GAP, s0: 0.0125, s1: 0.0145, col: CHEER });
       }
     }
     function sparkle(x, y, z, col, n = 9, sp = 0.28) {

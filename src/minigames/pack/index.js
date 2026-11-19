@@ -267,8 +267,8 @@ export default {
       const side = sideBtn();
       portrait = isPortrait();
       // free screen fractions: HUD above, DROP pill + next strip below (portrait / desktop) or a side circle (landscape phones)
-      const top = portrait ? 0.2 : side ? 0.2 : 0.15, bot = portrait ? 0.3 : side ? 0.06 : 0.27;
-      const halfW = 0.66, halfH = 0.44, cy = 0.27;
+      const top = portrait ? 0.17 : side ? 0.2 : 0.15, bot = portrait ? 0.24 : side ? 0.06 : 0.27;
+      const halfW = portrait ? 0.57 : 0.66, halfH = 0.44, cy = 0.27; // polish: portrait is width-bound, so a slimmer margin = a bigger sleigh
       const pr = (portrait ? 20 : 16) * D2R;
       const dist = Math.max(halfH / ((1 - top - bot) * th), halfW / (th * asp), 1.0);
       const shift = (top - bot) * dist * th;

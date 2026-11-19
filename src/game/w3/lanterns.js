@@ -9,6 +9,8 @@ const N = LANTERNS.spots.length;
 const NEAR = 0.7; // light radius
 const CHASE_PASSES = 3;
 const FLAME_Y = 0.47; // flame centre height in lanternGeos()
+const SIZE = 1.3; // polish: the lanterns read tiny from the follow camera, so they stand a little taller than the dolls
+const POOL_R = 0.8, HALO_R = 0.2; // warm light pool on the snow / soft halo round the flame (world units, half-size)
 const easeOutBack = (u) => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2); };
 
 export default function create(ctx, env) {
@@ -41,6 +43,38 @@ export default function create(ctx, env) {
   const rot = pts.map((p, i) => (i * 2.399) % (Math.PI * 2)); // quarter-turns would look stamped: golden-angle spread
   pts.forEach((p, i) => { dummy.position.set(p.x, p.y, p.z); dummy.rotation.set(0, rot[i], 0); dummy.scale.setScalar(1); dummy.updateMatrix(); body.setMatrixAt(i, dummy.matrix); });
   body.instanceMatrix.needsUpdate = true;
+  const setBody = (i, sy = 1) => { const p = pts[i]; dummy.position.set(p.x, p.y, p.z); dummy.rotation.set(0, rot[i], 0); dummy.scale.set(SIZE, SIZE * sy, SIZE); dummy.updateMatrix(); body.setMatrixAt(i, dummy.matrix); };
+  for (let i = 0; i < N; i++) setBody(i);
+  let wobbling = false;
+
+  // ---- glow (polish): a warm light pool on the snow under each lit lantern + a soft halo round its flame, and a gentle
+  // "light me" pulse on the unlit ones while the task runs. One additive InstancedMesh (2N quads, 1 draw call, 40 tris),
+  // the same recipe as the city's lamp pools (64 px radial canvas, no real lights).
+  const glowTex = (() => {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+    const cg = cv.getContext('2d'), grd = cg.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.25, 'rgba(255,255,255,0.6)');
+    grd.addColorStop(0.6, 'rgba(255,255,255,0.17)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+    cg.fillStyle = grd; cg.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(cv);
+  })();
+  const glowMat = new THREE.MeshBasicMaterial({ map: glowTex, color: '#ffb264', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const glowGeo = new THREE.PlaneGeometry(2, 2);
+  const glow = new THREE.InstancedMesh(glowGeo, glowMat, N * 2);
+  glow.castShadow = false; glow.receiveShadow = false; glow.frustumCulled = false; glow.visible = false; glow.renderOrder = 2;
+  glow.name = 'w3-lantern-glow';
+  const gCol = new THREE.Color();
+  const qFlat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+  const gM = new THREE.Matrix4(), gP = new THREE.Vector3(), gS = new THREE.Vector3(), qId = new THREE.Quaternion();
+  for (let i = 0; i < N * 2; i++) { glow.setMatrixAt(i, gM.makeScale(0, 0, 0)); glow.setColorAt(i, gCol.setScalar(0)); }
+  engine.scene.add(glow);
+  // "light me" rings on the snow round the unlit lanterns (only while the task runs): plain gold, so they also read on
+  // bright daytime snow where an additive glow washes out. 1 draw call, 10 × 48 tris, hidden otherwise.
+  const ringGeo = new THREE.RingGeometry(0.8, 1, 24).rotateX(-Math.PI / 2);
+  const ringMat = new THREE.MeshBasicMaterial({ color: '#f2b23a', transparent: true, opacity: 0.7, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const rings = new THREE.InstancedMesh(ringGeo, ringMat, N);
+  rings.castShadow = false; rings.receiveShadow = false; rings.frustumCulled = false; rings.visible = false; rings.name = 'w3-lantern-rings';
+  engine.scene.add(rings);
 
   // ---- carried taper
   const tGeo = taperGeo();
@@ -109,8 +143,11 @@ export default function create(ctx, env) {
     }
     const show = revealed() && !busyElsewhere();
     for (let i = 0; i < N; i++) if (cols[i]) cols[i].enabled = show;
-    if (!show) { if (body.visible) { body.visible = false; flame.visible = false; } return; }
+    if (!show) { if (body.visible) { body.visible = false; flame.visible = false; glow.visible = false; rings.visible = false; } return; }
     body.visible = true;
+    const lamp = Math.max(0, Math.min(1, engine.env?.lamp ?? 1)); // 0 broad day … 1 night
+    const hinting = active() && !chase;
+    const camQ = engine.camera.quaternion;
     // flames: scale 0 while unlit, pop with overshoot when lit, gentle flicker, chase twinkle
     let any = false;
     for (let i = 0; i < N; i++) {
@@ -129,15 +166,39 @@ export default function create(ctx, env) {
       if (s > 0.002) {
         any = true;
         const p = pts[i];
-        dummy.position.set(p.x, p.y + FLAME_Y * (1 - s), p.z);
+        dummy.position.set(p.x, p.y + FLAME_Y * SIZE * (1 - s), p.z);
         dummy.rotation.set(0, rot[i], 0);
-        dummy.scale.setScalar(s);
+        dummy.scale.setScalar(s * SIZE);
       } else { dummy.position.set(pts[i].x, pts[i].y, pts[i].z); dummy.scale.setScalar(0); }
       dummy.updateMatrix();
       flame.setMatrixAt(i, dummy.matrix);
+      // glow: pool (instance i) + halo (instance N + i)
+      const p = pts[i];
+      let pr = 0, pk = 0, hr = 0, hk = 0;
+      if (s > 0.002) {
+        pr = POOL_R * (0.55 + 0.45 * s); pk = lamp * 0.5 * Math.min(1.6, s);
+        hr = HALO_R * s; hk = (0.3 + 0.5 * lamp) * Math.min(1.6, s);
+      } else if (hinting) { // unlit, task running: a faint ember in the cage (the gold ring on the snow is below)
+        hr = HALO_R * (0.55 + 0.12 * Math.sin(clock * 3 + i * 1.7)); hk = 0.26 + 0.14 * Math.sin(clock * 3 + i * 1.7);
+      }
+      if (hinting) {
+        const rr = lit[i] ? 0 : 0.2 + 0.14 * ((clock * 0.8 + i * 0.37) % 1);
+        rings.setMatrixAt(i, gM.compose(gP.set(p.x, p.y + 0.035, p.z), qId, gS.set(rr, 1, rr)));
+      }
+      glow.setMatrixAt(i, gM.compose(gP.set(p.x, p.y + 0.03, p.z), qFlat, gS.set(pr, pr, 1)));
+      glow.setColorAt(i, gCol.setScalar(pk));
+      glow.setMatrixAt(N + i, gM.compose(gP.set(p.x, p.y + FLAME_Y * SIZE, p.z), camQ, gS.set(hr, hr, 1)));
+      glow.setColorAt(N + i, gCol.setScalar(hk));
+      if (hinting) setBody(i, lit[i] ? 1 : 1 + 0.045 * Math.sin(clock * 3 + i * 1.7)); // unlit lanterns breathe a little
     }
+    rings.visible = hinting;
+    if (hinting) { wobbling = true; body.instanceMatrix.needsUpdate = true; rings.instanceMatrix.needsUpdate = true; ringMat.opacity = 0.62 + 0.2 * Math.sin(clock * 3.2); }
+    else if (wobbling) { wobbling = false; for (let i = 0; i < N; i++) setBody(i); body.instanceMatrix.needsUpdate = true; }
     flame.visible = any;
     flame.instanceMatrix.needsUpdate = true;
+    glow.visible = any || hinting;
+    glow.instanceMatrix.needsUpdate = true;
+    if (glow.instanceColor) glow.instanceColor.needsUpdate = true;
   }
 
   const runway = {
@@ -192,7 +253,7 @@ export default function create(ctx, env) {
       for (let i = 0; i < N; i++) light(i);
     },
     chase(dur) { return startChase(dur); },
-    budget() { const b = geos.body.attributes.position.count / 3, f = geos.flame.attributes.position.count / 3; return { calls: 2, body: b, flame: f, tris: (b + f) * N }; },
+    budget() { const b = geos.body.attributes.position.count / 3, f = geos.flame.attributes.position.count / 3; return { calls: 3 + (rings.visible ? 1 : 0), body: b, flame: f, glow: N * 4, tris: (b + f) * N + N * 4 + (rings.visible ? N * 48 : 0) }; },
     async selfTest(T) {
       await T.talk(n); // accept
       T.check(accepted && taper && player.carrying === taper, 'lanterns: Mayor accepted, taper in hand');
@@ -211,8 +272,8 @@ export default function create(ctx, env) {
   act.dispose = () => {
     dropTaper();
     for (const sp of spots) { try { interact.remove(sp); } catch (e) { /* */ } }
-    engine.scene.remove(body, flame);
-    geos.body.dispose(); geos.flame.dispose(); tGeo.dispose();
+    engine.scene.remove(body, flame, glow, rings); ringGeo.dispose(); ringMat.dispose();
+    geos.body.dispose(); geos.flame.dispose(); tGeo.dispose(); glowGeo.dispose(); glowMat.dispose(); glowTex.dispose();
   };
   act.hook = { get state() { return act.state; }, lightAll: () => act.lightAll(), chase: (d) => act.chase(d) };
   try { (window.__w3 = window.__w3 || {}).lanterns = act.hook; } catch (e) { /* no window */ }

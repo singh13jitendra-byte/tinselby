@@ -245,7 +245,7 @@ export function createEve(ctx, rig, trail, overlay, sfx, pxScale) {
         sfx('sleighBells', { vol: 0.9 });
       }],
       [Tm.approach[0] + 1.6, () => sfx('whoosh', { vol: 0.6 })],
-      [Tm.approach[0] + 3.5, () => cut(runwayPose(ctx, sleighWorld), 1.6, 0.6)],
+      [Tm.approach[0] + 3.5, () => cut(runwayPose(ctx, sleighWorld), 0, 0.26)], // a hard cut: the camera turns round to face the runway
       [Tm.approach[0] + 6.0, () => sfx('sleighBells', { vol: 1 })],
       [Tm.approach[0] + 8.6, () => sfx('whoosh', { vol: 0.8 })],
       [Tm.approach[0] + 10.4, () => { rig.team.mode = 'gallop'; }],
@@ -257,7 +257,7 @@ export function createEve(ctx, rig, trail, overlay, sfx, pxScale) {
         game.emit('santa:landed', {});
         sfx('pop', { vol: 0.7 });
       }],
-      [Tm.greet, () => cut(greetPose(ctx, santaSpot, () => player.pos), 1.8, 0.62)],
+      [Tm.greet, () => cut(greetPose(ctx, santaSpot, () => player.pos), 1.8, 0.4)], // portrait: 0.62 backed the camera into the carousel's sign
       [Tm.faceSanta, () => { const s = santaSpot(); safe('tasks.gather', () => tasks()?.gather?.({ face: { x: s.x, z: s.z } })); }],
       [Tm.out[0], () => {
         rig.santaOut();
@@ -380,7 +380,7 @@ export function createEve(ctx, rig, trail, overlay, sfx, pxScale) {
     if (clover) {
       c.push([Tm.cloverGo, () => {
         if (!run.jumping) game.emit('dialog', { who: 'Santa', text: 'Ho ho ho! Clover, there you are!', pos: santaHead(), ms: 2800 });
-        cut(cloverPose(ctx, () => (cloverDouble.inScene ? cloverDouble.group.position : null)), 1.2, 0.35);
+        cut(cloverPose(ctx, () => (cloverDouble.inScene ? cloverDouble.group.position : null)), 1.2, 0.3);
       }]);
       c.push([Tm.cloverIn, () => {
         cloverDouble.show(false);
@@ -453,6 +453,23 @@ export function createEve(ctx, rig, trail, overlay, sfx, pxScale) {
     rig.santa.group.traverse((o) => { if (o.isMesh) o.castShadow = !on; }); // also when Santa stands outside the rig
   }
 
+  // -------------------------------------------------------------- budget: the gathered crowd out of the shadow pass
+  // In the wide views (gathering, Town Spirit, the runway approach, countdown, fireworks, liftoff) ~50 townsfolk and 14
+  // friends stand round the tree: their shadows are specks there but cost ~75k triangles in the shadow pass. They cast
+  // again for the close shots between Santa's greeting and the countdown (greeting, gift, dressing up), and after exit().
+  // Clover's stand-in always keeps her shadow (she is the subject of her shot).
+  let crowdOff = false;
+  const crowdSaved = [];
+  function setCrowdShadows(on) {
+    if (crowdOff === !on) return;
+    crowdOff = !on;
+    if (on) { for (const m of crowdSaved) m.castShadow = true; crowdSaved.length = 0; return; }
+    const off = (o) => { if (o.isMesh && o.castShadow) { o.castShadow = false; crowdSaved.push(o); } };
+    for (const o of engine.scene.children) if (typeof o.name === 'string' && o.name.startsWith('life-')) off(o);
+    const mayor = tasks()?.givers?.[24];
+    for (const g of new Set(Object.values(tasks()?.givers || {}))) if (g?.root && g !== mayor) g.root.traverse(off);
+  }
+
   // -------------------------------------------------------------- portrait framing per pose
   // The cinema rig is one long shot named 'cinema' (portrait: pulled back until it keeps `keep` of the 16:9 width). The
   // close / tall poses want less of that pull-back than the wide ones, so each cut sets its keep and it eases over.
@@ -474,6 +491,7 @@ export function createEve(ctx, rig, trail, overlay, sfx, pxScale) {
     const t = run.t, Tm = run.T;
     updateKeep(dt);
     setWide((t >= Tm.approach[0] && t < Tm.approach[0] + 6.5) || t >= Tm.crowd);
+    safe('crowd shadows', () => setCrowdShadows(t >= Tm.greet && t < Tm.crowd));
     const flying = (t >= Tm.approach[0] && t < Tm.landed) || (t >= Tm.lift[0] && t < Tm.lift[1]);
     if (t >= Tm.approach[0] && t < Tm.landed) {
       const s = (t - Tm.approach[0]) / (Tm.approach[1] - Tm.approach[0]);
@@ -645,6 +663,7 @@ export function createEve(ctx, rig, trail, overlay, sfx, pxScale) {
     rig.tilt.position.set(0, 0, 0);
     rig.tilt.rotation.set(0, 0, 0);
     setWide(false);
+    setCrowdShadows(true);
     rig.setShadows(true);
     ctx.cam.setShotPortrait?.('cinema', { keep: KEEP, lift: 0 });
     rig.team.mode = 'stand'; rig.team.blend = 0;
