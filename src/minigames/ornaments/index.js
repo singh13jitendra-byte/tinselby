@@ -5,6 +5,7 @@ import { cone, cyl, sph, dot, rbox, torus, extrude, tube, xf, merge, poly, starP
 import { P, mulberry32 } from '../../core/yarn.js';
 import { ARENAS } from '../../core/layout.js';
 import { SPOTS } from './clues.js';
+import { ICONS } from '../../ui/icons.js';
 import { TIME, BEAM_T, SHOW_T, SHOW_COST, SEE, PICK_R, heat, heatWord, pulsePeriod, scoreFor, starsFor } from './rules.js';
 
 // Small inline SVG tray icons (no emoji fonts: they render differently on every phone).
@@ -121,7 +122,34 @@ const CSS = `
 @keyframes ornNudge{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
 .orn-pin{position:absolute;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;pointer-events:none;display:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
 .orn-pin svg{width:100%;height:100%;animation:ornBob .7s ease-in-out infinite alternate}
+.orn-pick{all:unset;box-sizing:border-box;position:absolute;right:calc(18px + var(--safe-r,0px));bottom:calc(30px + var(--safe-b,0px));pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:10px;min-height:64px;padding:8px 22px 8px 9px;border-radius:34px;background:#3f8a47;color:#fff4e2;font:700 18px/1 var(--font,sans-serif);box-shadow:0 5px 0 #285a2e,0 8px 18px rgba(0,0,0,.25);outline:2px dashed rgba(255,244,226,.6);outline-offset:-6px;animation:ornPickIn .3s ease}
+.orn-pick[hidden]{display:none}
+.orn-pick:active{transform:translateY(3px);box-shadow:0 2px 0 #285a2e}
+.orn-pick i{flex:none;width:46px;height:46px;border-radius:50%;background:#fff;color:#3f8a47;display:grid;place-items:center}
+.orn-pick i svg{width:28px;height:28px}
+@keyframes ornPickIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes ornBob{from{transform:translateY(-6px)}to{transform:translateY(5px)}}
+/* compact card: after a few seconds the riddle folds away so the town stays visible; tap the card to read it again */
+.orn-card{pointer-events:auto;cursor:pointer;transition:padding .25s}
+.orn-more{all:unset;flex:none;display:none;align-items:center;gap:4px;padding:4px 9px;border-radius:12px;background:rgba(92,58,38,.12);font:700 12px/1 var(--font);color:#5c3a26;cursor:pointer}
+.orn-card.mini .orn-more{display:flex}
+.orn-card.mini .orn-riddle{display:none}
+.orn-card.mini .orn-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.orn-card.mini .orn-heat{margin-top:4px}
+.orn-card.mini .orn-ring{transform:scale(.8)}
+@media (orientation:portrait){
+  .orn-card.mini .orn-tray{display:none}
+  .orn-card.mini{padding:6px 12px 6px}
+}
+@media (max-height:420px) and (orientation:landscape){
+  .orn-card.mini{padding:5px 12px 5px}
+  .orn-card.mini .orn-sub{display:none}
+  .orn-card.mini .orn-name{font-size:14px}
+  .orn-card.mini .orn-tray{display:none} /* tap the card to bring the tray back; frees room for the name + Show me + Riddle */
+  .orn-card.mini .orn-more{padding:4px 7px}
+  .orn-card.mini .orn-word{font-size:14px;min-width:70px}
+  .orn-card.mini .orn-bar{height:9px}
+}
 @media (orientation:portrait){
   .orn-card{top:calc(66px + var(--safe-t,0px));width:min(92vw,380px);padding:7px 12px 8px}
   .orn-top{flex-wrap:wrap}
@@ -144,6 +172,7 @@ function heatCss(w) {
   return `rgb(${Math.round(lerp(A[0], B[0], k))},${Math.round(lerp(A[1], B[1], k))},${Math.round(lerp(A[2], B[2], k))})`;
 }
 const ARROW = '<svg viewBox="0 0 44 44"><path d="M22 40L6 18h9V5h14v13h9z" fill="#e3aa3a" stroke="#fff4e2" stroke-width="3" stroke-linejoin="round"/><path d="M22 40L6 18h9V5h14v13h9z" fill="none" stroke="#b8302d" stroke-width="1.6" stroke-linejoin="round" transform="translate(0 0)"/></svg>';
+const PICK_ICON = ICONS.hand || '';
 
 export default {
   id: 'ornaments', title: 'Ornament Hunt', district: 'market',
@@ -221,15 +250,30 @@ export default {
     const hud = document.createElement('div'); hud.className = 'orn-hud'; ctx.uiRoot.appendChild(hud);
     hud.innerHTML = `<div class="knit-card orn-card">
       <div class="orn-top"><div class="orn-tray">${items.map((it, i) => `<button class="orn-slot" data-i="${i}" aria-label="Clue ${i + 1}">${ORN_SVG[it.icon] || ''}</button>`).join('')}</div>
-        <div class="orn-ic"></div><div class="orn-tt"><b class="orn-name"></b><span class="orn-sub"></span></div><button class="orn-show" hidden>Show me<small>-${SHOW_COST}</small></button></div>
+        <div class="orn-ic"></div><div class="orn-tt"><b class="orn-name"></b><span class="orn-sub"></span></div><button class="orn-more" aria-label="Read the riddle">Riddle ▾</button><button class="orn-show" hidden>Show me<small>-${SHOW_COST}</small></button></div>
       <p class="orn-riddle"></p>
       <div class="orn-heat"><span class="orn-ring"><u></u><i></i></span><div class="orn-bar"><i style="left:5%"></i></div><b class="orn-word">Cold</b></div></div>
-      <div class="orn-pin">${ARROW}</div>`;
+      <div class="orn-pin">${ARROW}</div>
+      <button class="orn-pick" hidden><i>${PICK_ICON}</i><span>Pick up</span></button>`;
     const $ = (s) => hud.querySelector(s);
     const card = $('.orn-card'), icEl = $('.orn-ic'), nameEl = $('.orn-name'), subEl = $('.orn-sub'), riddleEl = $('.orn-riddle');
     const marker = $('.orn-bar i'), word = $('.orn-word'), ringU = $('.orn-ring u'), showBtn = $('.orn-show'), pin = $('.orn-pin');
     const slots = [...hud.querySelectorAll('.orn-slot')];
-    hud.querySelectorAll('.orn-slot, .orn-show').forEach((b) => b.addEventListener('pointerdown', (e) => e.stopPropagation()));
+    hud.querySelectorAll('.orn-slot, .orn-show, .orn-pick, .orn-card').forEach((b) => b.addEventListener('pointerdown', (e) => e.stopPropagation()));
+    // compact card: the riddle shows for a few seconds per clue, then folds away; tapping the card shows it again
+    let riddleUntil = 0, cardMini = false;
+    const openRiddle = (secs) => { riddleUntil = now + secs; };
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.orn-slot, .orn-show')) return;
+      e.stopPropagation();
+      if (cardMini) openRiddle(10); else riddleUntil = 0; // tap again to fold it now
+      audio?.sfx?.('ui');
+    });
+    // own Pick up button: the town HUD (with its big interact button) is hidden during mini-games, so on a phone
+    // there was nothing to tap next to an ornament (desktop still had E)
+    const pickBtn = $('.orn-pick');
+    const nearItem = () => { const c = interact.current; const it = c && items.find((x) => x.spot === c); return it && !it.got && !mg.finished && player.controllable ? it : null; };
+    pickBtn.addEventListener('click', (e) => { e.stopPropagation(); const it = nearItem(); if (it) collect(it); });
     mg.onDispose(() => {
       hud.remove(); style.remove();
       for (const it of items) { interact.remove(it.spot); it.spot.removed = true; }
@@ -249,6 +293,7 @@ export default {
       icEl.innerHTML = ORN_SVG[it.icon] || '';
       nameEl.textContent = `Find the ${it.kind}`;
       riddleEl.innerHTML = it.clue.map((l) => `<span>${esc(l).replace('{orn}', `<b>${esc(it.kind)}</b>`)}</span>`).join('');
+      openRiddle(8);
     }
     function select(i) {
       if (!items[i] || items[i].got || i === cur) return;
@@ -324,6 +369,11 @@ export default {
     running = true;
     const v3 = new THREE.Vector3();
 
+    mg.addUpdate(() => {
+      const show = !!nearItem(); if (pickBtn.hidden === show) pickBtn.hidden = !show;
+      const mini = running && found < 5 && now >= riddleUntil;
+      if (mini !== cardMini) { cardMini = mini; card.classList.toggle('mini', mini); }
+    });
     mg.addUpdate((dt, t) => {
       now += dt;
       const px = player.pos.x, pz = player.pos.z;

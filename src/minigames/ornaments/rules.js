@@ -4,7 +4,7 @@ export const BEAM_T = 20;      // s on the current ornament before a sparkle bea
 export const SHOW_T = 40;      // s before the "Show me" button appears
 export const SHOW_COST = 40;   // score points per "Show me"
 export const SEE = 3.5;        // ground sparkle visibility radius (m)
-export const PICK_R = 1.0;
+export const PICK_R = 1.25; // a touch forgiving on phones (props like benches keep you ~1 m off)
 
 /** 0 (cold) .. 1 (burning) from distance in metres to the ornament being hunted. */
 export const heat = (d) => Math.max(0, Math.min(1, 1 - (d - 1.0) / 7.5));
