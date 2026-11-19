@@ -94,7 +94,7 @@ export function createData(ctx) {
     },
     /** True from 25 Dec (local) on: the Christmas-mode calendar. */
     isChristmas() { return !!data.eve().isAfter; },
-    /** Status line for door 24's tile: locked "Opens on Christmas Eve · 3 sleeps", open "Tonight!", done the gift label. */
+    /** Status line for door 24's tile: locked "3 sleeps · opens Christmas Eve", open "Tonight!", done the gift label. */
     door24Text() {
       const s = data.state(24);
       if (s === 'done') return data.giftLabel();
@@ -102,7 +102,7 @@ export function createData(ctx) {
       if (s !== 'locked') return '';
       const e = data.eve();
       if (e.isEve) return 'Help Bram bring the star to the tree first';
-      return `Opens on Christmas Eve · ${data.sleepsText(e.sleeps)}`;
+      return `${data.sleepsText(e.sleeps)} · opens Christmas Eve`;
     },
     doneCount() {
       const v = safe(() => pr().doneCount?.(), undefined);
