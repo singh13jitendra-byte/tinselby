@@ -1,0 +1,39 @@
+/* Snow & gifts (Play together): fallback snowball button, screen splat, gift picker + offer card. Uses theme.css tokens. */
+#ui .sn-btn { position: absolute; right: calc(18px + var(--safe-r)); bottom: calc(190px + var(--safe-b)); width: 58px; height: 58px; z-index: 5; color: var(--ink); }
+#ui .sn-btn svg { width: 30px; height: 30px; }
+#ui .sn-btn[hidden] { display: none; }
+#ui .sn-btn.cool { opacity: .55; }
+.sn-splat { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 6;
+  background: radial-gradient(ellipse 34% 30% at var(--sx, 50%) var(--sy, 50%), rgba(255,255,255,.92) 0 55%, rgba(255,255,255,0) 100%),
+              radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0) 55%, rgba(235,244,255,.55) 100%); }
+.sn-splat.on { animation: snSplat 1.1s ease-out forwards; }
+@keyframes snSplat { 0% { opacity: 0; transform: scale(.7); } 10% { opacity: 1; transform: scale(1); } 60% { opacity: .7; } 100% { opacity: 0; transform: scale(1.05) translateY(8%); } }
+
+/* gift offer cards (same look as the reward cards) */
+.sn-cards { position: absolute; left: 50%; bottom: calc(150px + var(--safe-b)); transform: translateX(-50%); width: min(470px, 92vw); display: flex; flex-direction: column; align-items: center; z-index: 9; }
+.sn-cards .tb-card { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; transition: opacity .3s ease, transform .3s ease; animation: fadeIn .4s ease both; }
+.sn-cards .tb-card.out { opacity: 0; transform: translateY(14px) scale(.96); }
+.sn-cards .tb-card-ico { width: 48px; height: 48px; flex: none; display: grid; place-items: center; border-radius: 50%; color: var(--ic, var(--gold)); background: rgba(0,0,0,.06); }
+.sn-cards .tb-card-ico svg { width: 34px; height: 34px; }
+.sn-cards .tb-card-btns .knit-btn { font-size: 15px; padding: 10px 18px; min-height: 42px; }
+.sn-bar { height: 4px; border-radius: 3px; background: rgba(0,0,0,.1); margin-top: 6px; overflow: hidden; }
+.sn-bar > i { display: block; height: 100%; background: var(--green); transform-origin: left; animation: snBar var(--ms, 30s) linear forwards; }
+@keyframes snBar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+body.tb-photo .sn-cards, body.tb-photo .sn-btn { display: none; }
+
+/* gift picker */
+.sn-picker { position: absolute; inset: 0; display: grid; place-items: center; z-index: 12; background: rgba(20, 24, 45, .45); pointer-events: auto; padding: 12px; }
+.sn-picker .knit-card { width: min(420px, 100%); max-height: calc(100% - 8px); overflow: auto; text-align: center; padding: 16px 16px 14px; }
+.sn-picker h3 { margin: 0 0 2px; font: 700 21px/1.2 var(--font); color: var(--red); }
+.sn-picker p { margin: 0 0 10px; font: 500 14px/1.3 var(--font); opacity: .85; }
+.sn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.sn-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px 8px; min-height: 84px; border-radius: 16px; border: 2px dashed rgba(184,48,45,.4); background: var(--cream-2); color: var(--ink); font: 600 14px/1.15 var(--font); cursor: pointer; }
+.sn-item:active { transform: translateY(2px); }
+.sn-item svg { width: 34px; height: 34px; color: var(--ic, var(--red)); }
+@media (max-height: 460px) {
+  .sn-cards { bottom: calc(12px + var(--safe-b)); }
+  .sn-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  .sn-item { min-height: 66px; padding: 6px; }
+  .sn-item svg { width: 26px; height: 26px; }
+  #ui .sn-btn { bottom: calc(150px + var(--safe-b)); }
+}
