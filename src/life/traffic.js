@@ -133,7 +133,10 @@ export function createTraffic(W) {
     // who's on the street
     people.length = 0;
     const pl = ctx.player.pos;
-    riding = vehicles.some((v) => v.rider);
+    // aboard, or waiting at a stop for the tram / carriage (the stop's spot is on a crossing: counting the waiting
+    // player as an obstacle made the vehicle stop short of the stop for good)
+    const rideId = ctx.rides?.active?.id;
+    riding = vehicles.some((v) => v.rider) || rideId === 'tram' || rideId === 'carriage';
     if (!riding) people.push({ x: pl.x, z: pl.z, player: true });
     for (const d of roadPeople) if (d.vis) people.push({ x: d.x, z: d.z });
     for (const v of vehicles) {
@@ -200,6 +203,30 @@ export function createTraffic(W) {
     return false;
   }
 
+  /** Sideways step (dx, dz) that takes a pedestrian at (x, z) out of the lane just ahead of / alongside any running
+   *  vehicle (so walkers whose loop runs beside the rails make room instead of holding the tram up for good).
+   *  isFree(x, z) → bool picks the side that has room (fences!). Returns null when nothing is near. */
+  function vehicleDodge(x, z, isFree) {
+    let dx = 0, dz = 0, any = false;
+    for (const v of vehicles) {
+      if (!v.shown || v.held) continue;
+      const rx = x - v.x, rz = z - v.z;
+      const lon = rx * v.fx + rz * v.fz;
+      if (lon < -v.len / 2 - 0.2 || lon > v.len / 2 + LOOK + 0.4) continue;
+      const nx = v.fz, nz = -v.fx;
+      const lat = rx * nx + rz * nz, clear = v.half + 0.3;
+      if (Math.abs(lat) >= clear) continue;
+      let side = lat >= 0 ? 1 : -1;
+      if (isFree) {
+        const a = side * clear - lat, b = -side * clear - lat;
+        if (!isFree(x + nx * a, z + nz * a) && isFree(x + nx * b, z + nz * b)) side = -side;
+      }
+      const need = side * clear - lat;
+      dx += nx * need; dz += nz * need; any = true;
+    }
+    return any ? { dx, dz } : null;
+  }
+
   /** wave 2: hide one ambient vehicle by kind (e.g. the tram during Tram Conductor) → release() */
   function hold(kind) {
     const v = vehicles.find((x) => x.kind === kind);
@@ -208,5 +235,5 @@ export function createTraffic(W) {
     let done = false;
     return () => { if (done) return; done = true; v.held = Math.max(0, v.held - 1); };
   }
-  return { vehicles, tram, carriage, update, vehicleNear, hold, tramPath };
+  return { vehicles, tram, carriage, update, vehicleNear, vehicleDodge, hold, tramPath };
 }

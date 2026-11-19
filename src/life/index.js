@@ -22,6 +22,7 @@ export function buildLife(ctx) {
     near: (x, z, r) => { const p = ctx.player.pos; return (p.x - x) ** 2 + (p.z - z) ** 2 < r * r; },
     sfx: (name, x, z) => { try { ctx.audio?.sfx?.(name, { x, z }); } catch (e) { /* audio optional */ } },
     vehicleNear: () => false,
+    vehicleDodge: () => null,
     /** Nearest spot to (x, z) where a ring of radius ringR (plus clearance) touches no collider. */
     findFree(x, z, ringR = 0, clr = 0.12) {
       const col = ctx.colliders;
@@ -56,6 +57,7 @@ export function buildLife(ctx) {
   const sledders = createSledders(W);
   const traffic = createTraffic(W);
   W.vehicleNear = traffic.vehicleNear;
+  W.vehicleDodge = traffic.vehicleDodge;
   const modules = [crowd, kids, skaters, sledders];
   const roadPeople = [...crowd.roadPeople];
   const gatherable = [...crowd.gatherable, ...kids.gatherable];

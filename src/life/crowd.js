@@ -75,6 +75,7 @@ export function createCrowd(W) {
   /** People that vehicles must look out for. */
   const roadPeople = [...walkers.map((w) => w.d), ...crossers.map((c) => c.d)];
 
+  const isFree = (x, z) => { const [fx, fz] = W.findFree(x, z, 0, 0.08); return Math.abs(fx - x) + Math.abs(fz - z) < 0.05; };
   function updateWalkers(dt, t) {
     const pl = W.ctx.player.pos;
     for (const w of walkers) {
@@ -105,8 +106,15 @@ export function createCrowd(W) {
       const path = w.path;
       path.at(w.s, P);
       const off = L ? L.off + 0.22 : w.off;
-      d.x = P.x - P.dz * off;
-      d.z = P.z + P.dx * off;
+      let px0 = P.x - P.dz * off, pz0 = P.z + P.dx * off;
+      // make room for the tram / cars when the loop runs beside the road or rails (eased, so nobody pops)
+      const dg = W.vehicleDodge(px0, pz0, isFree);
+      const k6 = 1 - Math.exp(-dt * 6);
+      w.ddx = (w.ddx || 0) + ((dg ? dg.dx : 0) - (w.ddx || 0)) * k6;
+      w.ddz = (w.ddz || 0) + ((dg ? dg.dz : 0) - (w.ddz || 0)) * k6;
+      if (Math.abs(w.ddx) + Math.abs(w.ddz) > 0.005) { px0 += w.ddx; pz0 += w.ddz; }
+      d.x = px0;
+      d.z = pz0;
       d.y = W.groundAt(d.x, d.z);
       const chat = w.pause > 0 && (L || w._pair);
       let face = Math.atan2(P.dx, P.dz);
