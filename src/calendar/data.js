@@ -189,9 +189,11 @@ export function createData(ctx) {
     lockInfo(slot, key) {
       if (data.isUnlocked(slot, key)) return null;
       const src = safe(() => pr().wardrobe?.source?.(slot, key), undefined);
+      if (src?.santa) return { santa: true };
       if (src && (src.door || src.daily)) return src.door ? { door: src.door, title: src.title } : { daily: true };
       const d = data.doors().find((x) => x?.reward?.slot === slot && x.reward.key === key);
-      return d ? { door: d.n, title: d.title } : { daily: true };
+      if (d) return { door: d.n, title: d.title };
+      return WISH_REWARDS.some((x) => x.slot === slot && x.key === key) ? { santa: true } : { daily: true };
     },
     rewardLabel(slot, key) {
       const d = data.doors().find((x) => x?.reward?.slot === slot && x.reward.key === key);
