@@ -292,7 +292,7 @@ with sync_playwright() as p:
         FIN_TRIS = {}
 
     if 'w3tasks' in PARTS:
-        for label, base in (('no ?w3', BASE), ('?w3', W3)):
+        for label, base in (('?w2 (wave 3 off)', BASE + '&w2'), ('?w3', W3)):
             tag = 'w3tasks ' + label
             pg = b.new_page(viewport={'width': 1280, 'height': 720}); pg.set_default_timeout(600000); attach(pg, tag)
             ready(pg, base + '&play&reset')
@@ -300,7 +300,7 @@ with sync_playwright() as p:
             nf = len(r.get('fails', [])) if isinstance(r, dict) else -1; npass = len(r.get('log', []))
             print(f'  selfTest {label}: {npass} passed, {nf} failed', flush=True)
             for f in (r.get('fails') or [])[:15]: print('   ', f)
-            if label == 'no ?w3': check(nf == 0 and npass == 197, f'selfTest {label}: {npass} pass / {nf} fail (expect 197 / 0)')
+            if label.startswith('?w2'): check(nf == 0 and npass == 197, f'selfTest {label}: {npass} pass / {nf} fail (expect 197 / 0)')
             else: check(nf == 0, f'selfTest {label}: {npass} pass / {nf} fail')
             check(not errs_for(tag), f'selfTest {label}: no console errors ({len(errs_for(tag))})')
             pg.close()

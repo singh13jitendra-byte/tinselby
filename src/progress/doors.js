@@ -8,9 +8,9 @@ const reward = (slot, key, label) => ({ id: `${slot}:${key}`, slot, key, label }
 // Wave 2 doors (9–16) are live (released 18 Nov). `?w1` previews the wave-1-only calendar for testing.
 const W2 = !(typeof location !== 'undefined' && /[?&]w1(&|=|$)/.test(location.search || ''));
 
-// Wave 3 doors (17–23) are built behind ?w3 until release (WAVE3.md §Release plan 9: then W3 = !/[?&]w[12](&|=|$)/…).
+// Wave 3 doors (17–23) are live; ?w2 (or ?w1) turns them off for testing the older waves.
 // Door 24 keeps available:false either way; its state comes from progress (wave 3: date-gated, see WAVE3.md §Progress).
-export const W3 = typeof location !== 'undefined' && /[?&]w3(&|=|$)/.test(location.search || '');
+export const W3 = !(typeof location !== 'undefined' && /[?&]w[12](&|=|$)/.test(location.search || ''));
 
 export const DOORS = [
   { n: 1, title: 'Lights for Holly Lane', giver: 'Mrs Holly', district: 'residential', kind: 'task', task: 'lights', reward: reward('scarf', 'candycane', 'Candy-cane scarf'), available: true, blurb: 'Help Mrs Holly switch on the wreath lights at three houses.' },
