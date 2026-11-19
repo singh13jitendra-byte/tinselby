@@ -705,6 +705,11 @@ export function createEve(ctx, rig, trail, overlay, sfx, pxScale) {
         emitAcc: 0, giftAcc: 0, dressT0: null, dressAcc: 0, cq: { x: 0, z: 0, h: 0 }, cloverH: null, fwOn: false,
       };
       reset();
+      // Christmas Eve is a night show: ease to 21:00 if it's light out, and park the tram off the runway.
+      const w = ctx.world;
+      run.todWas = w && w.phase !== 'night' ? w.timeOfDay : null;
+      if (run.todWas != null) safe('world.setTimeOfDay', () => w.setTimeOfDay(21));
+      run.tramRelease = safe('life.holdVehicle', () => ctx.life?.holdVehicle?.('tram')) || null;
       run.cues = buildCues(Tm, clover, replay);
       fireUpTo(0);
       return true;
@@ -729,6 +734,8 @@ export function createEve(ctx, rig, trail, overlay, sfx, pxScale) {
       run = null;
       backToPlay(ctx, r.camRig);
       safe('life.release', () => ctx.life?.release?.());
+      if (typeof r.tramRelease === 'function') safe('tram.release', () => r.tramRelease());
+      if (r.todWas != null) safe('world.setTimeOfDay', () => ctx.world?.setTimeOfDay?.(r.todWas));
       safe('tasks.gather', () => tasks()?.gather?.({ on: false }));
       safe('net.release', () => r.netRelease?.());
       const ra = reindeerApi();
