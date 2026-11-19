@@ -82,7 +82,7 @@ with sync_playwright() as p:
         for f in (r.get('fails') or [])[:10]: print('   ', f)
         P = 'window.__tinselby.ctx.progress'
         check(pg.evaluate(f'[1,2,3,4,5,6,7,8].every(n => {P}.state(n) === "done")'), 'doors 1–8 done after selfTest')
-        check(pg.evaluate(f'{P}.state(24)') != 'done', 'door 24 still closed (finale is wave 3)')
+        check(pg.evaluate(f'Array.from({{length: 23}}, (_, i) => i + 1).every(n => {P}.state(n) === "done")'), 'doors 1–23 done after selfTest (wave 3 live)')
         shot(pg, 'after8', 40)
         # calendar board + wardrobe through the UI, if exposed
         C = 'window.__tinselby.ctx.calendar'
