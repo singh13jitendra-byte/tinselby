@@ -1,7 +1,8 @@
 // Two interchangeable transports behind one interface (see core.js):
-//   join(topic, presenceKey, {status, presence, pos}) → room {track(meta), send(event, payload) → bool, leave(), tick()}
+//   join(topic, presenceKey, {status, presence, pos, msg?}) → room {track(meta), send(event, payload) → bool, leave(), tick()}
 //   rpc(fn, args) → Promise<{data, error}>        disconnect()
-// - supabase: supabase-js v2 Realtime (presence + broadcast on channel `town:<n>`) and PostgREST RPCs.
+// - supabase: supabase-js v2 Realtime (presence + broadcast on channel `town:<n>` / `friends:<CODE>`) and PostgREST RPCs.
+//   Wave 4 (h.msg given): also the broadcast event 'msg' (emotes, phrases, snowballs, gifts).
 // - local:    BroadcastChannel between tabs of the same origin (presence via heartbeats) + a localStorage "database".
 //             Used for tests (?net=local); the cloud shell can't reach supabase.co.
 
@@ -45,8 +46,9 @@ export function createSupabaseTransport({ url, key }) {
         ch.on('presence', { event: 'sync' }, sync)
           .on('presence', { event: 'join' }, () => {}) // 'sync' follows every join/leave diff with the full state
           .on('presence', { event: 'leave' }, () => {})
-          .on('broadcast', { event: 'pos' }, (m) => { if (!closed && m) h.pos(m.payload); })
-          .subscribe((status, err) => {
+          .on('broadcast', { event: 'pos' }, (m) => { if (!closed && m) h.pos(m.payload); });
+        if (h.msg) ch.on('broadcast', { event: 'msg' }, (m) => { if (!closed && m) h.msg(m.payload); });
+        ch.subscribe((status, err) => {
             if (closed) return;
             if (status === 'SUBSCRIBED') h.status('joined');
             else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') h.status('error', status + (err && err.message ? ': ' + err.message : ''));
@@ -138,6 +140,7 @@ export function createLocalTransport({ clock = () => performance.now() / 1000, p
           if (changed) queueSync();
         } else if (m.t === 'bye' && typeof m.key === 'string') { if (peers.delete(m.key)) queueSync(); }
         else if (m.t === 'b' && m.event === 'pos') h.pos(m.payload);
+        else if (m.t === 'b' && m.event === 'msg' && h.msg) h.msg(m.payload);
       };
       const beat = () => {
         if (!open) return;

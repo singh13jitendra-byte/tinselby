@@ -18,6 +18,9 @@ export const TUNING = {
   spiritBackoffMaxSec: 300,
   syncWaitSec: 1.5, // settle a room join even if no presence sync arrived
   trackDebounceSec: 0.35,
+  townCap: 16, // wave 4: a friend town holds at most this many players (you included)
+  msgMax: 4, msgPerSec: 1, // wave 4: per-sender, per-type message limit
+  mutedMax: 300,
 };
 
 const TELEPORT = 4; // a jump larger than this (units) snaps instead of interpolating
@@ -66,13 +69,88 @@ export function sanitizeStyle(style, options = null) {
   return out;
 }
 
-/** Presence payload {id, name, style, door} → sanitised copy (null if unusable). */
+/** Presence payload {id, name, style, door, ride?} → sanitised copy (null if unusable). */
 export function sanitizeMeta(meta, key, styleOptions = null) {
   if (!meta || typeof meta !== 'object') return null;
   const id = typeof meta.id === 'string' && meta.id && meta.id.length <= 64 ? meta.id : typeof key === 'string' && key ? key.slice(0, 64) : null;
   if (!id) return null;
   const door = Number.isInteger(meta.door) && meta.door >= 1 && meta.door <= 24 ? meta.door : null;
-  return { id, name: cleanName(meta.name), style: sanitizeStyle(meta.style, styleOptions), door };
+  return { id, name: cleanName(meta.name), style: sanitizeStyle(meta.style, styleOptions), door, ride: sanitizeRide(meta.ride) };
+}
+
+// ------------------------------------------------------------------ wave 4: friend towns, messages, rides (PLAY.md)
+export const TOWN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const TOWN_RE = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/;
+/** '  abc234 ' → 'ABC234'; anything that isn't 6 letters of TOWN_ALPHABET → null. */
+export function normTownCode(code) {
+  if (typeof code !== 'string') return null;
+  const c = code.trim().toUpperCase();
+  return TOWN_RE.test(c) ? c : null;
+}
+/** A fresh 6-character town code. rand() → [0, 1). */
+export function makeTownCode(rand = Math.random) {
+  let s = '';
+  for (let i = 0; i < 6; i++) s += TOWN_ALPHABET[Math.min(TOWN_ALPHABET.length - 1, Math.floor(rand() * TOWN_ALPHABET.length))];
+  return s;
+}
+
+/** Presence ride {k: rideId, s: seatIndex} | null. */
+export function sanitizeRide(r) {
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return null;
+  if (typeof r.k !== 'string' || !/^[a-z0-9-]{1,24}$/i.test(r.k)) return null;
+  const s = Number.isInteger(r.s) && r.s >= 0 && r.s <= 63 ? r.s : 0;
+  return { k: r.k, s };
+}
+
+export const EMOTES = ['wave', 'cheer', 'dance', 'clap', 'heart', 'laugh', 'bow', 'snowangel'];
+export const MSG_TYPES = ['emote', 'say', 'snow', 'hit', 'gift', 'gift-ok', 'gift-no'];
+const EMOTE_SET = new Set(EMOTES), MSG_SET = new Set(MSG_TYPES);
+const PID_RE = /^[\w-]{1,64}$/; // player ids (uuid or p-…)
+const TOK_RE = /^[\w-]{1,24}$/; // throw / gift offer ids
+const PHRASE_RE = /^[a-z0-9-]{1,24}$/;
+const REWARD_RE = /^[\w-]{1,16}:[\w-]{1,32}$/; // e.g. 'scarf:red', 'coat:santa'
+const tok = (v) => (typeof v === 'string' && TOK_RE.test(v) ? v : Number.isInteger(v) && v >= 0 && v < 2 ** 31 ? v : null);
+const pid = (v) => (typeof v === 'string' && PID_RE.test(v) ? v : null);
+const coord = (v) => (typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= 300 ? r2(v) : null);
+
+/** Whitelisted message payloads (PLAY.md §Messages) → a clean copy with only the known fields, or null (drop). */
+export function validateMsg(type, d) {
+  if (!MSG_SET.has(type) || !d || typeof d !== 'object' || Array.isArray(d)) return null;
+  switch (type) {
+    case 'emote': return EMOTE_SET.has(d.e) ? { e: d.e } : null;
+    case 'say': return typeof d.p === 'string' && PHRASE_RE.test(d.p) ? { p: d.p } : null;
+    case 'snow': {
+      const t = tok(d.t), x = coord(d.x), z = coord(d.z), tx = coord(d.tx), tz = coord(d.tz);
+      return t !== null && x !== null && z !== null && tx !== null && tz !== null ? { t, x, z, tx, tz } : null;
+    }
+    case 'hit': { const t = tok(d.t), id = pid(d.id); return t !== null && id ? { t, id } : null; }
+    case 'gift': {
+      const g = tok(d.g), to = pid(d.to), r = typeof d.r === 'string' && REWARD_RE.test(d.r) ? d.r : null;
+      return g !== null && to && r ? { g, to, r } : null;
+    }
+    case 'gift-ok': case 'gift-no': { const g = tok(d.g), to = pid(d.to); return g !== null && to ? { g, to } : null; }
+    default: return null;
+  }
+}
+
+/** Sliding-window limiter: allow(key, now) is true for at most `max` calls per `perSec` seconds per key. */
+export function createRateLimiter(max = 4, perSec = 1) {
+  const m = new Map();
+  return {
+    allow(key, now) {
+      let a = m.get(key);
+      if (!a) {
+        if (m.size > 2000) for (const [k, v] of m) if (!v.length || now - v[v.length - 1] >= perSec) m.delete(k);
+        m.set(key, (a = []));
+      }
+      while (a.length && now - a[0] >= perSec) a.shift();
+      if (a.length >= max) return false;
+      a.push(now);
+      return true;
+    },
+    clear() { m.clear(); },
+    get size() { return m.size; },
+  };
 }
 
 /** Room decision after the first presence sync: stay, or the next room number to try. */
@@ -146,6 +224,9 @@ export class SnapBuffer {
  * @param o.store      {load() → obj|null, save(obj)} persistence for spirit cache and door queue
  * @param o.isHidden   () → bool
  * @param o.styleOptions STYLE_OPTIONS (for value checks)
+ * @param o.w4         wave 4 on (friend towns, 'msg' broadcasts, ride presence, muting). Off = the wave-1 protocol.
+ * @param o.town       wave 4: initial friend town code (or null = public rooms)
+ *   extra emits with w4: 'town' {code, count, full?} · 'msg' {type, from, name, data} · 'presence' {id, ride}
  */
 export function createNetCore(o) {
   const T = { ...TUNING, ...(o.tuning || {}) };
@@ -156,7 +237,16 @@ export function createNetCore(o) {
   const kind = transport ? transport.kind : 'off';
 
   const saved = safe(() => o.store && o.store.load(), null) || {};
-  const st = { online: false, room: 0, status: transport ? 'idle' : 'off', others: 0 };
+  const w4 = !!o.w4;
+  const st = { online: false, room: 0, status: transport ? 'idle' : 'off', others: 0, town: null };
+  let town = w4 ? normTownCode(o.town) : null;
+  st.town = town;
+  // muted player ids → time muted (ms); kept in the same store as the spirit cache
+  const muted = new Map((Array.isArray(saved.muted) ? saved.muted : []).filter((e) => Array.isArray(e) && typeof e[0] === 'string' && e[0].length <= 64).map((e) => [e[0], num(e[1])]));
+  const recvLimit = createRateLimiter(T.msgMax, T.msgPerSec), sendLimit = createRateLimiter(T.msgMax, T.msgPerSec);
+  let msgSent = 0, msgRecv = 0, msgDropped = 0, lastTownKey = '';
+  // rate limits run on wall time (the live clock only advances with rendered frames)
+  const wall = o.wallClock || (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000);
   const spirit = { doors: num(saved.spirit && saved.spirit.doors), helpers: num(saved.spirit && saved.spirit.helpers) };
   const sentDoors = new Set(Array.isArray(saved.sent) ? saved.sent.filter((s) => typeof s === 'string') : []);
   const pendingDoors = new Set(Array.isArray(saved.pending) ? saved.pending.filter((n) => Number.isInteger(n) && n >= 1 && n <= 24) : []);
@@ -169,9 +259,23 @@ export function createNetCore(o) {
   let spiritTimer = null, spiritBusy = false, spiritFails = 0, flushBusy = false;
 
   function persist() {
-    safe(() => o.store && o.store.save({ spirit: { ...spirit }, sent: [...sentDoors].slice(-200), pending: [...pendingDoors] }));
+    const out = { spirit: { ...spirit }, sent: [...sentDoors].slice(-200), pending: [...pendingDoors] };
+    if (muted.size) out.muted = [...muted].slice(-T.mutedMax);
+    safe(() => o.store && o.store.save(out));
   }
-  function emitStatus() { emit('status', { online: st.online, room: st.room, count: st.online ? st.others + 1 : 1, others: st.others, mode: kind }); }
+  function emitStatus() {
+    emit('status', { online: st.online, room: st.room, count: st.online ? st.others + 1 : 1, others: st.others, mode: kind });
+    emitTown();
+  }
+  /** 'town' {code, count} whenever the town code changes, or its head count while in a friend town. */
+  function emitTown(extra) {
+    if (!w4) return;
+    const count = st.online ? st.others + 1 : 1;
+    const key = (town || '') + '|' + (town ? count : '');
+    if (key === lastTownKey && !extra) return;
+    lastTownKey = key;
+    emit('town', { code: town, count, ...(extra || {}) });
+  }
 
   // ---------------------------------------------------------------- rooms
   function join(n) {
@@ -182,11 +286,13 @@ export function createNetCore(o) {
     joined = false; settled = false; stash = null; lastTrackedKey = '';
     st.room = n; st.status = 'joining';
     try {
-      room = transport.join('town:' + n, sid, {
+      const h = {
         status: (s, info) => { if (g === gen) onStatus(s, info); },
         presence: (list) => { if (g === gen) onPresence(list); },
         pos: (p) => { if (g === gen) onPos(p); },
-      });
+      };
+      if (w4) h.msg = (p) => { if (g === gen) onMsg(p); };
+      room = transport.join(town ? 'friends:' + town : 'town:' + n, sid, h);
     } catch (e) { fail('join failed: ' + msg(e)); }
   }
   function leaveRoom() {
@@ -212,7 +318,16 @@ export function createNetCore(o) {
     }
     if (!settled) {
       clearTimeout(syncTimer); syncTimer = null;
-      const next = nextRoom(st.room, others.size, T);
+      if (town && others.size + 1 > T.townCap) { // friend towns don't overflow: back to the public rooms
+        const full = town;
+        log.info(`[net] friend town ${full} is full (${others.size} other players); joining the public town`);
+        town = null; st.town = null;
+        leaveRoom();
+        emitTown({ full });
+        join(1);
+        return;
+      }
+      const next = town ? st.room : nextRoom(st.room, others.size, T);
       if (next !== st.room) {
         log.info(`[net] town:${st.room} is full (${others.size} players); trying town:${next}`);
         leaveRoom();
@@ -221,7 +336,7 @@ export function createNetCore(o) {
       }
       settled = true; failures = 0;
       st.online = true; st.status = 'online';
-      log.info(`[net] connected to town:${st.room} via ${kind} (${others.size} other player${others.size === 1 ? '' : 's'} here)`);
+      log.info(`[net] connected to ${town ? 'friends:' + town : 'town:' + st.room} via ${kind} (${others.size} other player${others.size === 1 ? '' : 's'} here)`);
       applyPresence(others, true);
       if (tracking) track();
       emitStatus();
@@ -241,15 +356,22 @@ export function createNetCore(o) {
       if (key !== r.styleKey) { r.style = m.style; r.styleKey = key; }
       r.name = m.name; r.door = m.door;
       if (!was) { r.lastSeen = now; r.stale = false; if (!initial) emit('join', { id, name: r.name }); }
+      if (w4) {
+        const rk = m.ride ? m.ride.k + ':' + m.ride.s : '';
+        if (rk !== r.rideKey) { const first = r.rideKey === undefined; r.rideKey = rk; r.ride = m.ride; if (!first || m.ride) emit('presence', { id, ride: m.ride }); }
+      }
     }
     for (const r of remotes.values()) {
-      if (r.present && !others.has(r.id)) { r.present = false; r.leftAt = now; emit('leave', { id: r.id, name: r.name }); }
+      if (r.present && !others.has(r.id)) {
+        r.present = false; r.leftAt = now; emit('leave', { id: r.id, name: r.name });
+        if (w4 && r.ride) { r.ride = null; r.rideKey = ''; emit('presence', { id: r.id, ride: null }); }
+      }
     }
     const n = others.size;
     if (n !== st.others) { st.others = n; emitStatus(); }
   }
   function newRemote(id) {
-    return { id, name: 'Traveller', style: {}, styleKey: '{}', door: null, present: false, stale: false, lastSeen: clock(), leftAt: 0, buf: new SnapBuffer(), x: 0, z: 0, h: 0, s: 0 };
+    return { id, name: 'Traveller', style: {}, styleKey: '{}', door: null, ride: null, rideKey: undefined, present: false, stale: false, lastSeen: clock(), leftAt: 0, buf: new SnapBuffer(), x: 0, z: 0, h: 0, s: 0 };
   }
   function onPos(p) {
     const d = decodePos(p);
@@ -260,6 +382,48 @@ export function createNetCore(o) {
     const now = clock();
     r.buf.push(now, d.x, d.z, d.h, d.s);
     r.lastSeen = now; r.stale = false;
+  }
+  function onMsg(p) {
+    if (!p || typeof p !== 'object' || typeof p.id !== 'string' || p.id === sid) return;
+    const r = remotes.get(p.id);
+    if (!r || !r.present || !MSG_SET.has(p.t)) { msgDropped++; return; } // only players in this room, whitelisted types
+    if (muted.has(p.id)) { msgDropped++; return; }
+    if (!recvLimit.allow(p.id + '|' + p.t, wall())) { msgDropped++; return; }
+    const data = validateMsg(p.t, p.d);
+    if (!data) { msgDropped++; return; }
+    msgRecv++;
+    emit('msg', { type: p.t, from: p.id, name: r.name, data });
+  }
+  function send(type, data) {
+    if (!w4 || !room || !settled || !st.online || paused) return false;
+    const d = validateMsg(type, data);
+    if (!d || !sendLimit.allow(type, wall())) return false;
+    const ok = safe(() => room.send('msg', { id: sid, t: type, d }), false);
+    if (ok) msgSent++;
+    return !!ok;
+  }
+  function setTown(code) {
+    if (!w4) return false;
+    const c = code == null || code === '' ? null : normTownCode(code);
+    if (code != null && code !== '' && !c) return false;
+    if (c === town) return true;
+    town = c; st.town = c;
+    if (!transport || stopped) { emitTown(); return true; }
+    const was = st.online;
+    leaveRoom(); clearRemotes();
+    st.online = false; st.others = 0; st.status = paused ? 'paused' : 'joining';
+    if (was) emitStatus(); else emitTown();
+    if (paused) return true; // resume() joins the new room
+    failures = 0; clearTimeout(retryTimer); retryTimer = null;
+    join(1);
+    return true;
+  }
+  function mute(id, on) {
+    if (typeof id !== 'string' || !id || id.length > 64) return false;
+    if (on) { muted.delete(id); muted.set(id, Date.now()); while (muted.size > T.mutedMax) muted.delete(muted.keys().next().value); }
+    else if (!muted.delete(id)) return false;
+    persist();
+    return true;
   }
   function fail(info) {
     if (stopped) return;
@@ -277,7 +441,12 @@ export function createNetCore(o) {
     retryTimer = setTimeout(() => { retryTimer = null; join(1); }, delay * 1000);
   }
   function clearRemotes() {
-    if (remotes.size) { remotes.clear(); emit('reset', {}); }
+    if (!remotes.size) return;
+    const riders = w4 ? [...remotes.values()].filter((r) => r.ride).map((r) => r.id) : [];
+    remotes.clear();
+    recvLimit.clear();
+    emit('reset', {});
+    for (const id of riders) emit('presence', { id, ride: null });
   }
 
   // ---------------------------------------------------------------- presence (self)
@@ -285,6 +454,7 @@ export function createNetCore(o) {
     if (!room || !settled || !tracking) return;
     const self = safe(() => o.getSelf(), null) || {};
     const meta = { id: sid, name: cleanName(self.name), style: sanitizeStyle(self.style, o.styleOptions), door: Number.isInteger(self.door) ? self.door : null };
+    if (w4) meta.ride = sanitizeRide(self.ride);
     const key = JSON.stringify(meta);
     if (key === lastTrackedKey) return;
     lastTrackedKey = key;
@@ -391,7 +561,13 @@ export function createNetCore(o) {
 
   // ---------------------------------------------------------------- lifecycle
   return {
-    kind, sid, state: st, remotes, spirit,
+    kind, sid, state: st, remotes, spirit, w4,
+    get town() { return town; },
+    setTown,
+    send,
+    mute,
+    isMuted: (id) => muted.has(id),
+    get muted() { return [...muted.keys()]; },
     get tuning() { return T; },
     start() {
       if (!transport) return;
@@ -430,7 +606,11 @@ export function createNetCore(o) {
     tick,
     refreshSpirit,
     recordDoor,
-    stats() { return { sent: sentCount, recv: recvCount, room: st.room, status: st.status, failures, pendingDoors: [...pendingDoors] }; },
+    stats() {
+      const s = { sent: sentCount, recv: recvCount, room: st.room, status: st.status, failures, pendingDoors: [...pendingDoors] };
+      if (w4) Object.assign(s, { town, msgSent, msgRecv, msgDropped, muted: muted.size });
+      return s;
+    },
   };
 }
 

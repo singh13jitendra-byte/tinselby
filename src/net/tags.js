@@ -102,6 +102,8 @@ export function createNameTags(ctx) {
   }
 
   const right = new THREE.Vector3(), up = new THREE.Vector3(), cp = new THREE.Vector3();
+  const tops = new Map(); // id → {x, y, z, k, f}: world point at the top centre of this frame's tag (speech bubbles sit on it)
+  let frame = 0;
   /** tags: [{id, name, coat, x, y, z, k}] (k = 0..1 fade). Call after the camera has moved this frame. */
   function update(tags) {
     const cam = engine.camera;
@@ -113,6 +115,7 @@ export function createNameTags(ctx) {
     const eyeK = ctx.cam?.eye || 0, tanHalf = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
     const seen = new Set();
     let n = 0;
+    frame++;
     // no depth test: draw far tags first so nearer ones overlap them
     const list = tags.map((t) => ({ t, d: Math.hypot(t.x - cp.x, t.y + LIFT - cp.y, t.z - cp.z) })).sort((a, b) => b.d - a.d);
     for (const { t, d } of list) {
@@ -140,6 +143,9 @@ export function createNameTags(ctx) {
         pos[o + c * 3 + 1] = cy + right.y * sx + up.y * sy;
         pos[o + c * 3 + 2] = cz + right.z * sx + up.z * sy;
       }
+      let tp = tops.get(t.id);
+      if (!tp) tops.set(t.id, (tp = { x: 0, y: 0, z: 0, k: 0, f: 0 }));
+      tp.x = cx + up.x * size; tp.y = cy + up.y * size; tp.z = cz + up.z * size; tp.k = alpha; tp.f = frame;
       uv.set([s.u0, s.v0, s.u1, s.v0, s.u1, s.v1, s.u0, s.v1], n * 8);
       for (let c = 0; c < 4; c++) col[n * 16 + c * 4 + 3] = alpha;
       n++;
@@ -148,9 +154,10 @@ export function createNameTags(ctx) {
     geo.setDrawRange(0, n * 6);
     geo.attributes.position.needsUpdate = geo.attributes.uv.needsUpdate = geo.attributes.color.needsUpdate = true;
     mesh.visible = n > 0;
+    for (const [id, tp] of tops) if (tp.f !== frame) tops.delete(id);
     return n;
   }
-  return { mesh, update, get count() { return geo.drawRange.count / 6; }, dispose() { mesh.removeFromParent(); geo.dispose(); mat.dispose(); tex.dispose(); } };
+  return { mesh, update, /** this frame's tag top for id (or undefined if its tag isn't drawn) */ top: (id) => tops.get(id), get count() { return geo.drawRange.count / 6; }, dispose() { mesh.removeFromParent(); geo.dispose(); mat.dispose(); tex.dispose(); } };
 }
 
 function smooth(a, b, x) { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
