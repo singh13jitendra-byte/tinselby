@@ -39,6 +39,8 @@ export function createTeasers(ctx, rig, trail, sfx, pxScale) {
   const teaser = {
     get active() { return !!active; },
     stop() { next = Infinity; if (active) end(); removeCameo(); },
+    /** Wave 3: start the sky teasers again after stop() (finale exit / preview end). */
+    resume() { if (next === Infinity && game.state.phase !== 'entry') next = engine.time + 45 + Math.random() * 25; },
     update(dt) {
       if (game.state.phase !== 'play') { if (active) end(); return; }
       if (!active && engine.time >= next) {

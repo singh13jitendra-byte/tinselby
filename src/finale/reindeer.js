@@ -13,37 +13,43 @@ export const TEAM = [ // rig-local slots (sleigh centre at the origin)
 const HIP_Y = 0.165;
 const LEGS = [[-0.042, 0.095, 0], [0.042, 0.095, 0.35], [-0.042, -0.095, Math.PI], [0.042, -0.095, Math.PI + 0.35]]; // x, z, phase
 
-function antler(sx) {
+function antler(sx, lo = 0) {
   const b = [sx * 0.03, 0.44, 0.17];
+  const n = lo ? 6 : 12, m = lo ? 4 : 8, r = lo ? 3 : 5;
   return [
-    tube([b, [sx * 0.06, 0.5, 0.15], [sx * 0.08, 0.56, 0.12], [sx * 0.075, 0.6, 0.1]], 0.009, C.antler, KNIT, 12, 5),
-    tube([[sx * 0.058, 0.5, 0.15], [sx * 0.09, 0.52, 0.18], [sx * 0.11, 0.55, 0.19]], 0.007, C.antler, KNIT, 8, 5),
-    tube([[sx * 0.075, 0.555, 0.125], [sx * 0.04, 0.59, 0.14], [sx * 0.035, 0.61, 0.15]], 0.006, C.antler, KNIT, 8, 5),
+    tube([b, [sx * 0.06, 0.5, 0.15], [sx * 0.08, 0.56, 0.12], [sx * 0.075, 0.6, 0.1]], 0.009, C.antler, KNIT, n, r),
+    tube([[sx * 0.058, 0.5, 0.15], [sx * 0.09, 0.52, 0.18], [sx * 0.11, 0.55, 0.19]], 0.007, C.antler, KNIT, m, r),
+    tube([[sx * 0.075, 0.555, 0.125], [sx * 0.04, 0.59, 0.14], [sx * 0.035, 0.61, 0.15]], 0.006, C.antler, KNIT, m, r),
   ];
 }
 
-function bodyGeo(rudolph) {
+/** lo = 1: the far-away level of detail (wave 3: the finale's wide crowd / fireworks shots), about a third of the triangles. */
+function bodyGeo(rudolph, lo = 0) {
+  const S = (ws, hs) => (lo ? [Math.max(6, Math.round(ws * 0.55)), Math.max(4, Math.round(hs * 0.55))] : [ws, hs]);
+  const sp = (r, c, k, ws, hs) => sph(r, c, k, ...S(ws, hs));
+  const dt = (r, c, k) => (lo ? sph(r, c, k, 5, 4) : dot(r, c, k));
   const g = [];
-  g.push(xf(sph(0.1, C.reindeer, FELT, 16, 10), [0, 0.25, 0], null, [0.68, 0.72, 1.32]));
-  g.push(xf(sph(0.085, C.muzzle, FELT, 12, 8), [0, 0.22, 0.03], null, [0.62, 0.55, 1.1])); // belly
-  g.push(xf(sph(0.065, C.reindeer, FELT, 12, 8), [0, 0.28, 0.09], null, [0.9, 1, 1])); // chest
-  g.push(xf(cyl(0.035, 0.045, 0.13, 10, C.reindeer, FELT), [0, 0.34, 0.14], [0.55, 0, 0]));
-  g.push(xf(sph(0.05, C.reindeer, FELT, 12, 10), [0, 0.41, 0.18], null, [0.85, 0.9, 1.1]));
-  g.push(xf(sph(0.034, C.muzzle, FELT, 10, 8), [0, 0.392, 0.225], null, [0.9, 0.8, 1.1]));
+  g.push(xf(sp(0.1, C.reindeer, FELT, 16, 10), [0, 0.25, 0], null, [0.68, 0.72, 1.32]));
+  g.push(xf(sp(0.085, C.muzzle, FELT, 12, 8), [0, 0.22, 0.03], null, [0.62, 0.55, 1.1])); // belly
+  g.push(xf(sp(0.065, C.reindeer, FELT, 12, 8), [0, 0.28, 0.09], null, [0.9, 1, 1])); // chest
+  g.push(xf(cyl(0.035, 0.045, 0.13, lo ? 7 : 10, C.reindeer, FELT), [0, 0.34, 0.14], [0.55, 0, 0]));
+  g.push(xf(sp(0.05, C.reindeer, FELT, 12, 10), [0, 0.41, 0.18], null, [0.85, 0.9, 1.1]));
+  g.push(xf(sp(0.034, C.muzzle, FELT, 10, 8), [0, 0.392, 0.225], null, [0.9, 0.8, 1.1]));
   if (rudolph) {
-    g.push(xf(sph(0.027, '#ff3626', GLOW, 10, 8), [0, 0.398, 0.266]));
-  } else g.push(xf(dot(0.013, P.ink, GLOSS), [0, 0.4, 0.258]));
+    g.push(xf(sp(0.027, '#ff3626', GLOW, 10, 8), [0, 0.398, 0.266]));
+  } else g.push(xf(dt(0.013, P.ink, GLOSS), [0, 0.4, 0.258]));
   for (const sx of [-1, 1]) {
-    g.push(xf(dot(0.0075, P.ink, GLOSS), [sx * 0.025, 0.425, 0.215]));
-    g.push(xf(sph(0.018, C.reindeer, FELT, 8, 6), [sx * 0.045, 0.44, 0.16], [0, 0, sx * 0.9], [1.5, 0.5, 0.8])); // ears
-    g.push(...antler(sx));
+    if (!lo) g.push(xf(dot(0.0075, P.ink, GLOSS), [sx * 0.025, 0.425, 0.215]));
+    g.push(xf(sp(0.018, C.reindeer, FELT, 8, 6), [sx * 0.045, 0.44, 0.16], [0, 0, sx * 0.9], [1.5, 0.5, 0.8])); // ears
+    g.push(...antler(sx, lo));
   }
-  g.push(xf(sph(0.022, C.fur, FELT, 8, 6), [0, 0.29, -0.13])); // tail
+  g.push(xf(sp(0.022, C.fur, FELT, 8, 6), [0, 0.29, -0.13])); // tail
   // harness: collar with gold bells, girth strap, back strap
-  g.push(xf(torus(0.05, 0.012, C.antler, KNIT), [0, 0.32, 0.12], [0.9, 0, 0], [1, 1.15, 1]));
-  for (const a of [-1.1, -0.4, 0.4, 1.1]) g.push(xf(dot(0.011, P.gold, GLOSS), [Math.sin(a) * 0.05, 0.3 - Math.cos(a) * 0.035, 0.14 + Math.cos(a) * 0.02]));
-  g.push(xf(torus(0.072, 0.011, C.antler, KNIT), [0, 0.25, -0.01], null, [0.98, 1.05, 1]));
-  g.push(xf(sph(0.02, P.gold, GLOSS, 8, 6), [0, 0.326, -0.01], null, [1, 0.5, 1]));
+  const ts = lo ? 12 : 24, rs = lo ? 4 : 8;
+  g.push(xf(torus(0.05, 0.012, C.antler, KNIT, Math.PI * 2, ts, rs), [0, 0.32, 0.12], [0.9, 0, 0], [1, 1.15, 1]));
+  for (const a of (lo ? [-0.7, 0.7] : [-1.1, -0.4, 0.4, 1.1])) g.push(xf(dt(0.011, P.gold, GLOSS), [Math.sin(a) * 0.05, 0.3 - Math.cos(a) * 0.035, 0.14 + Math.cos(a) * 0.02]));
+  g.push(xf(torus(0.072, 0.011, C.antler, KNIT, Math.PI * 2, ts, rs), [0, 0.25, -0.01], null, [0.98, 1.05, 1]));
+  g.push(xf(sp(0.02, P.gold, GLOSS, 8, 6), [0, 0.326, -0.01], null, [1, 0.5, 1]));
   return merge(g).translate(0, -0.025, 0);
 }
 
@@ -62,10 +68,12 @@ export function reindeerGeos() { return { body: bodyGeo(false), leg: legGeo() };
 export function buildTeam(mat) {
   const group = new THREE.Group();
   const normals = TEAM.filter((s) => !s.rudolph);
-  const bodies = new THREE.InstancedMesh(bodyGeo(false), mat, normals.length);
+  const hiGeo = { body: bodyGeo(false), rud: bodyGeo(true) };
+  let lowGeo = null;
+  const bodies = new THREE.InstancedMesh(hiGeo.body, mat, normals.length);
   bodies.castShadow = true;
   bodies.frustumCulled = false;
-  const rud = new THREE.Mesh(bodyGeo(true), mat);
+  const rud = new THREE.Mesh(hiGeo.rud, mat);
   rud.castShadow = true;
   rud.matrixAutoUpdate = false;
   const legs = new THREE.InstancedMesh(legGeo(), mat, TEAM.length * 4);
@@ -88,7 +96,8 @@ export function buildTeam(mat) {
   group.add(reins);
 
   const dummy = new THREE.Object3D(), leg = new THREE.Object3D();
-  const mBody = new THREE.Matrix4(), mLeg = new THREE.Matrix4();
+  const mBody = new THREE.Matrix4(), mLeg = new THREE.Matrix4(), mZero = new THREE.Matrix4().makeScale(0, 0, 0);
+  const hidden = TEAM.map(() => false); // wave 3: one slot can stand empty (Clover's harness before she rejoins)
   let t = 0;
   const team = {
     group,
@@ -109,9 +118,11 @@ export function buildTeam(mat) {
         else dummy.rotation.y = 0;
         dummy.updateMatrix();
         mBody.copy(dummy.matrix);
-        if (s.rudolph) { rud.matrix.copy(mBody); rud.matrixWorldNeedsUpdate = true; }
-        else bodies.setMatrixAt(bi++, mBody);
+        const off = hidden[i];
+        if (s.rudolph) { rud.visible = !off; rud.matrix.copy(mBody); rud.matrixWorldNeedsUpdate = true; }
+        else bodies.setMatrixAt(bi++, off ? mZero : mBody);
         LEGS.forEach(([lx, lz, lph], j) => {
+          if (off) { legs.setMatrixAt(i * 4 + j, mZero); return; }
           const front = lz > 0;
           let a;
           if (fly) a = front ? -0.9 + Math.sin(ph + lph) * 0.35 : 0.85 + Math.sin(ph + lph) * 0.35; // stretched, gentle paddling
@@ -126,6 +137,23 @@ export function buildTeam(mat) {
       bodies.instanceMatrix.needsUpdate = true;
       legs.instanceMatrix.needsUpdate = true;
     },
+    /** Wave 3: hide / show one team slot (body + its 4 legs; the static reins stay, so the empty harness reads). */
+    setSlotVisible(i, on) {
+      if (i < 0 || i >= TEAM.length || hidden[i] === !on) return;
+      hidden[i] = !on;
+      team.update(0);
+    },
+    slotVisible: (i) => !hidden[i],
+    /** Wave 3: far-away level of detail for the bodies (wide shots); the legs and reins stay as they are. */
+    setLod(low) {
+      low = !!low;
+      if (team.lod === low) return;
+      team.lod = low;
+      if (low && !lowGeo) lowGeo = { body: bodyGeo(false, 1), rud: bodyGeo(true, 1) };
+      bodies.geometry = low ? lowGeo.body : hiGeo.body;
+      rud.geometry = low ? lowGeo.rud : hiGeo.rud;
+    },
+    lod: false,
   };
   team.update(0);
   return team;

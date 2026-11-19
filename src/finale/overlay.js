@@ -58,6 +58,59 @@ const CSS = `
   @keyframes finTagP { from { opacity: 0; transform: translateX(50%) translateY(30px) rotate(8deg) scale(.6); } to { opacity: 1; transform: translateX(50%) rotate(-4deg); } }
   .fin-end { width: 90vw; padding: 24px 20px 22px; }
 }
+
+/* ---- wave 3: Town Spirit banner, gift label on the tag, preview labels, Christmas Eve end card ---- */
+.fin-spirit { position: absolute; left: 50%; top: calc(16px + var(--safe-t)); transform: translateX(-50%); text-align: center;
+  padding: 12px 30px 14px; min-width: 300px; max-width: min(92vw, 700px); animation: finSpirit .7s cubic-bezier(.2,1.5,.4,1) both;
+  transition: opacity .6s ease, transform .6s ease; }
+.fin-spirit.out { opacity: 0; transform: translate(-50%, -14px); }
+.fin-spirit .k { font: 600 13px/1 var(--font); letter-spacing: .2em; text-transform: uppercase; color: var(--gold); }
+.fin-spirit .big { font: 700 clamp(22px, 3.2vw, 34px)/1.1 var(--font); color: var(--red); margin-top: 5px; white-space: nowrap; }
+.fin-spirit .big b { display: inline-block; min-width: 1.6ch; font-variant-numeric: tabular-nums; }
+.fin-spirit .by { font: 500 clamp(14px, 1.8vw, 18px)/1.25 var(--font); color: var(--ink); margin-top: 4px; }
+.fin-spirit .stitch { display: flex; gap: 7px; justify-content: center; margin-top: 9px; }
+.fin-spirit .stitch i { width: 9px; height: 9px; border-radius: 50%; background: var(--gold); opacity: .25; transition: opacity .25s, transform .25s; }
+.fin-spirit .stitch i.on { opacity: 1; transform: scale(1.15); }
+.fin-spirit .stitch i:nth-child(2n) { background: var(--red); } .fin-spirit .stitch i:nth-child(3n) { background: var(--green); }
+@keyframes finSpirit { from { opacity: 0; transform: translate(-50%, -30px) scale(.7); } to { opacity: 1; transform: translateX(-50%); } }
+.fin-tag .fin-tag-gift { font: 600 17px/1.15 var(--font); color: var(--green); margin-top: 6px; }
+.fin-prev { position: absolute; left: 50%; top: calc(16px + var(--safe-t)); transform: translateX(-50%); text-align: center; white-space: nowrap;
+  padding: 8px 20px 9px; border-radius: 999px; background: rgba(40,22,18,.42); animation: finLab .6s ease both; transition: opacity .6s ease; }
+.fin-prev.out { opacity: 0; }
+.fin-prev .knit-sub { font-size: clamp(12px, 1.8vw, 16px); }
+.fin-prev.big { top: auto; bottom: calc(16% + var(--safe-b)); background: none; padding: 0; }
+.fin-prev.big .knit-title { font-size: clamp(26px, 5vw, 56px); white-space: normal; }
+.fin-end .gift { margin: -6px 0 12px; font: 600 clamp(16px, 2.3vw, 21px)/1.25 var(--font); color: var(--green); }
+.fin-end .gift small { display: block; font: 500 13px/1.3 var(--font); color: var(--ink); opacity: .7; margin-top: 2px; }
+.fin-end .doors { margin: 0 0 18px; font: 500 clamp(14px, 1.9vw, 17px)/1.3 var(--font); color: var(--ink); opacity: .85; }
+.fin-end .btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+/* short landscape phones (812 × 375, 667 × 375): compact banner and end card, so the star and both buttons stay in view */
+@media (max-height: 520px) and (orientation: landscape) {
+  .fin-spirit { top: calc(8px + var(--safe-t)); padding: 7px 22px 9px; min-width: 0; }
+  .fin-spirit .k { font-size: 11px; }
+  .fin-spirit .big { font-size: clamp(17px, 5.2vh, 24px); margin-top: 3px; }
+  .fin-spirit .by { font-size: 13px; margin-top: 2px; }
+  .fin-spirit .stitch { display: none; }
+  .fin-end { width: min(88vw, 580px); padding: 12px 26px 14px; outline-offset: -7px; }
+  .fin-end .stitch { margin: 0 0 6px; }
+  .fin-end .stitch i { width: 9px; height: 9px; }
+  .fin-end h1 { font-size: clamp(22px, 8.4vh, 36px); }
+  .fin-end .love { margin: 4px 0 8px; font-size: 15px; }
+  .fin-end .gift { margin: -2px 0 6px; font-size: 15px; }
+  .fin-end .gift small { display: inline; margin: 0 0 0 6px; font-size: 12px; }
+  .fin-end .doors { margin: 0 0 10px; font-size: 13px; }
+  .fin-end .btns { flex-wrap: nowrap; gap: 12px; }
+  .fin-end .knit-btn { min-height: 44px; padding: 11px 20px; font-size: 16px; }
+  .fin-prev.big { bottom: calc(10% + var(--safe-b)); }
+  .fin-prev.big .knit-title { font-size: clamp(22px, 8vh, 40px); }
+}
+@media (orientation: portrait) {
+  .fin-spirit { min-width: 0; width: 90vw; padding: 12px 16px 14px; }
+  .fin-spirit .big { white-space: normal; }
+  .fin-prev { white-space: normal; width: max-content; max-width: 90vw; }
+  .fin-prev.big { width: 90vw; bottom: calc(18% + var(--safe-b)); }
+  .fin-end .btns { flex-direction: column; align-items: stretch; gap: 12px; }
+}
 `;
 
 export function createOverlay(root) {
@@ -71,15 +124,88 @@ export function createOverlay(root) {
   layer.className = 'fin-layer';
   (root || document.body).appendChild(layer);
   let tag = null, count = null, label = null, xmas = null;
+  let spiritEl = null, spiritN = null, spiritDots = [], spiritC = null, prevEl = null, endEl = null;
+  const fadeOut = (e, cls = 'out', ms = 700) => { if (!e) return; e.classList.add(cls); setTimeout(() => e.remove(), ms); };
 
   return {
     layer,
-    giftTag(name) {
+    giftTag(name, giftLabel = null) {
       tag?.remove();
       tag = el('div', 'knit-card fin-tag', layer);
       el('div', 'fin-tag-for', tag).textContent = 'For';
       el('div', 'fin-tag-name', tag).textContent = name;
+      if (giftLabel) el('div', 'fin-tag-gift', tag).textContent = giftLabel;
       el('div', 'fin-tag-from', tag).textContent = '— with love, Santa';
+    },
+    /** Wave 3: the Town Spirit banner. Online with friends: "{doors} Advent doors opened" / "by {helpers} friends in
+     *  Tinselby"; on your own: "You opened {mine} Advent doors!". The number counts up over 2.5 s (driven by update(dt)). */
+    spirit({ doors = 0, helpers = 1, mine = 0, together = helpers > 1 } = {}) {
+      spiritEl?.remove();
+      spiritEl = el('div', 'knit-card fin-spirit', layer);
+      el('div', 'k', spiritEl).textContent = 'Town Spirit';
+      const big = el('div', 'big', spiritEl);
+      const target = together ? doors : mine;
+      if (together) {
+        spiritN = el('b', '', big); big.append(' Advent doors opened');
+        el('div', 'by', spiritEl).textContent = `by ${helpers} friends in Tinselby`;
+      } else {
+        big.append('You opened '); spiritN = el('b', '', big); big.append(` Advent door${target === 1 ? '' : 's'}!`);
+      }
+      spiritN.textContent = '0';
+      const st = el('div', 'stitch', spiritEl);
+      spiritDots = Array.from({ length: 9 }, () => el('i', '', st));
+      spiritC = { t: 0, dur: 2.5, target: Math.max(0, Math.round(target)) };
+    },
+    hideSpirit() { fadeOut(spiritEl); spiritEl = null; spiritC = null; },
+    /** Advance timeline-driven overlay animations (Town Spirit count-up). */
+    update(dt) {
+      if (!spiritC || !spiritN) return;
+      spiritC.t = Math.min(spiritC.dur, spiritC.t + dt);
+      const k = spiritC.t / spiritC.dur, e = 1 - Math.pow(1 - k, 3);
+      spiritN.textContent = String(Math.round(spiritC.target * e));
+      const on = Math.round(e * spiritDots.length);
+      spiritDots.forEach((d, i) => d.classList.toggle('on', i < on));
+      if (k >= 1) spiritC = null;
+    },
+    /** Wave 3 preview: a small pill label at the top, or (big) a knitted title low on the screen. */
+    previewLabel(text, { big = false } = {}) {
+      fadeOut(prevEl);
+      prevEl = el('div', 'fin-prev' + (big ? ' big' : ''), layer);
+      el('div', big ? 'knit-title' : 'knit-sub', prevEl).textContent = text;
+    },
+    hidePreview() { fadeOut(prevEl); prevEl = null; },
+    /** Wave 3 end card: stitches, greeting, Santa's gift, doors opened together, Keep exploring / Watch again. */
+    eveCard({ name, gift = null, doors = 0, onKeep, onAgain }) {
+      xmas?.remove(); xmas = null;
+      count?.remove(); count = null;
+      label?.remove(); label = null;
+      endEl?.remove();
+      const card = endEl = el('div', 'knit-card fin-end interactive', layer);
+      const st = el('div', 'stitch', card);
+      for (let i = 0; i < 7; i++) el('i', '', st);
+      el('h1', '', card).textContent = `Merry Christmas, ${name}!`;
+      el('div', 'love', card).textContent = '\u2014 love, Tinselby';
+      if (gift?.label) {
+        const g = el('div', 'gift', card);
+        g.append(`Santa's gift: ${gift.label}`);
+        el('small', '', g).textContent = "You're wearing it!";
+      }
+      if (doors > 0) el('div', 'doors', card).textContent = `${doors} Advent door${doors === 1 ? '' : 's'} opened together`;
+      const btns = el('div', 'btns', card);
+      const keep = el('button', 'knit-btn green', btns);
+      keep.textContent = 'Keep exploring';
+      keep.addEventListener('click', (e) => { e.stopPropagation(); onKeep?.(); });
+      const again = el('button', 'knit-btn cream', btns);
+      again.textContent = 'Watch again';
+      again.addEventListener('click', (e) => { e.stopPropagation(); onAgain?.(); });
+      setTimeout(() => { try { if (keep.isConnected) keep.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 900);
+      return card;
+    },
+    /** Remove every overlay at once (finale exit / reset). */
+    clear() {
+      for (const e of [tag, count, label, xmas, spiritEl, prevEl, endEl]) e?.remove();
+      tag = count = label = xmas = spiritEl = prevEl = endEl = null;
+      spiritC = null;
     },
     hideTag() { if (tag) { tag.style.transition = 'opacity .5s'; tag.style.opacity = '0'; const t = tag; tag = null; setTimeout(() => t.remove(), 600); } },
     countdown(n) {
