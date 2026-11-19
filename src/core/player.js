@@ -620,6 +620,52 @@ export function buildCharacter(mat, style = DEFAULT_STYLE, opts = {}) {
 /** How far below the bench top the doll's root goes in the seated pose (design units; × the doll's scale). */
 export const SEAT_DROP = 0.056;
 
+// ---------------------------------------------------------------- emotes (Play together; src/social)
+// Short knitted-doll animations layered over whatever animate() set this frame (cross-faded in/out); moving cancels them.
+// Names match the net protocol: wave, cheer, dance, clap, heart, laugh, bow, snowangel.
+export const EMOTE_DURATIONS = { wave: 2.0, cheer: 1.8, dance: 2.5, clap: 1.8, heart: 2.0, laugh: 1.8, bow: 1.7, snowangel: 2.5 };
+const EMOTE_EASE = { snowangel: 0.45, bow: 0.4 };
+function applyEmote(ch, name, t, dur) {
+  const ease = EMOTE_EASE[name] || 0.25;
+  const u = Math.max(0, Math.min(1, t / ease, (dur - t) / ease));
+  const w = u * u * (3 - 2 * u);
+  const [aL, aR] = ch.arms, [lL, lR] = ch.legs, body = ch.body;
+  const mix = (o, k, v) => { o[k] += (v - o[k]) * w; };
+  const arms = (x, zf) => { mix(aL.rotation, 'x', typeof x === 'function' ? x(-1) : x); mix(aR.rotation, 'x', typeof x === 'function' ? x(1) : x); mix(aL.rotation, 'z', zf(-1)); mix(aR.rotation, 'z', zf(1)); };
+  const s = Math.sin;
+  if (name === 'wave') {
+    mix(aR.rotation, 'x', 0); mix(aR.rotation, 'z', 2.45 + s(t * 13) * 0.32);
+    mix(body.rotation, 'z', -0.05);
+  } else if (name === 'cheer') {
+    arms(-2.7, (sx) => sx * (0.55 + s(t * 15) * 0.12));
+    mix(body.position, 'y', Math.abs(s(t * 9)) * 0.035);
+  } else if (name === 'dance') {
+    const p = t * 7;
+    arms((sx) => -0.9 + s(p + (sx > 0 ? 0 : Math.PI)) * 0.6, (sx) => sx * (0.9 + 0.3 * s(p)));
+    mix(body.rotation, 'z', s(p) * 0.18); mix(body.position, 'y', Math.abs(s(p)) * 0.025);
+    mix(lL.rotation, 'x', s(p) * 0.5); mix(lR.rotation, 'x', -s(p) * 0.5);
+  } else if (name === 'clap') {
+    const c = 0.5 + 0.5 * s(t * 14);
+    arms(-1.35, (sx) => sx * (0.35 - 1.25 * c));
+    mix(body.position, 'y', Math.abs(s(t * 7)) * 0.01);
+  } else if (name === 'heart') {
+    arms(-2.75, (sx) => -sx * (0.7 + s(t * 6) * 0.06));
+    mix(body.rotation, 'z', s(t * 3) * 0.06); mix(body.position, 'y', Math.abs(s(t * 6)) * 0.014);
+  } else if (name === 'laugh') {
+    arms(-0.9, (sx) => -sx * 0.2);
+    mix(body.rotation, 'x', -0.22); mix(body.rotation, 'z', s(t * 22) * 0.05); mix(body.position, 'y', Math.abs(s(t * 18)) * 0.014);
+  } else if (name === 'bow') {
+    arms(0.5, (sx) => sx * 0.25);
+    mix(body.rotation, 'x', 0.95);
+  } else if (name === 'snowangel') {
+    const c = 0.5 + 0.5 * s(t * 7);
+    mix(body.rotation, 'x', -1.5); mix(body.position, 'y', 0.078);
+    arms(0, (sx) => sx * (0.4 + 1.9 * c));
+    mix(lL.rotation, 'z', -(0.1 + 0.35 * c)); mix(lR.rotation, 'z', 0.1 + 0.35 * c);
+    mix(lL.rotation, 'x', 0); mix(lR.rotation, 'x', 0);
+  }
+}
+
 /** The player: knitted character + movement, collisions, ground height, carrying, scripted walkTo. */
 export function createPlayer(engine, input, colliders, game, camYawRef) {
   const SCALE = 1.15, SPEED = 1.9, R = 0.08;
@@ -633,6 +679,7 @@ export function createPlayer(engine, input, colliders, game, camYawRef) {
   let heading = SPAWN.heading;
   let carried = null;
   let script = null; // {x, z, resolve}
+  let emoting = null; // {name, t, dur}: see player.emote
   let dollVisible = true; // false while the camera looks through the character's eyes (eye view)
 
   const player = {
@@ -673,6 +720,12 @@ export function createPlayer(engine, input, colliders, game, camYawRef) {
     /** Scripted walk for cutscenes; resolves when arrived. */
     walkTo(x, z) { return new Promise((resolve) => { script = { x, z, resolve }; }); },
     faceTowards(x, z) { heading = Math.atan2(x - pos.x, z - pos.z); },
+    /** Play a knitted-doll emote (wave, cheer, dance, clap, heart, laugh, bow, snowangel) for 1.5–2.5 s; moving cancels it. Returns false if it can't play. */
+    emote(name) {
+      if (!EMOTE_DURATIONS[name] || ch.seated) return false;
+      emoting = { name, t: 0, dur: EMOTE_DURATIONS[name] };
+      return true;
+    },
     update(dt) {
       const px = pos.x, pz = pos.z;
       let desired = new THREE.Vector2();
@@ -692,6 +745,13 @@ export function createPlayer(engine, input, colliders, game, camYawRef) {
       root.position.copy(pos);
       ch.yaw.rotation.y = heading;
       ch.animate(dt, Math.min(moved, vel.length() + 0.05), player.onStep);
+      if (emoting) {
+        emoting.t += dt;
+        if (emoting.t >= emoting.dur || ch.seated || moved > 0.2 || vel.length() > 0.3 || script) {
+          emoting = null;
+          ch.arms[0].rotation.z = -0.25; ch.arms[1].rotation.z = 0.25; // back to the rest pose
+        } else applyEmote(ch, emoting.name, emoting.t, emoting.dur);
+      }
     },
   };
   return player;
