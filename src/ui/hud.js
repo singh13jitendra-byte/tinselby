@@ -4,6 +4,7 @@
 // available in mini-games that let the player walk.
 import { ICONS } from './icons.js';
 import { createJoystick } from './joystick.js';
+import { W3 } from '../progress/doors.js';
 
 export function createHUD(ctx, root, data, ui) {
   const { game, interact, player, cam, engine } = ctx;
@@ -122,11 +123,19 @@ export function createHUD(ctx, root, data, ui) {
     if (slow <= 0) {
       slow = 0.25;
       const c = data.current();
-      const dk = c ? `${c}|${data.door(c)?.title}` : data.waveDone() ? 'wave' : '';
+      // wave 3: with 23 doors done the chip counts the sleeps to Christmas Eve; once door 24 is done there is no 'more soon'
+      let dk = c ? `${c}|${data.door(c)?.title}` : data.waveDone() ? 'wave' : '';
+      let eveTxt = '';
+      if (!c && W3 && dk === 'wave') {
+        if (data.state(24) === 'done') dk = 'allDone';
+        else if (data.state(24) !== 'open') { const e = data.eve(); eveTxt = e.isEve ? 'Christmas Eve is here' : `Christmas Eve in ${data.sleepsText(e.sleeps)}`; dk = 'eve|' + eveTxt; }
+      }
       if (dk !== lastDoor) {
         const changed = lastDoor !== null;
         lastDoor = dk;
         if (c) { doorN.textContent = String(c); doorTxt.innerHTML = `<b>Door ${c}</b> · ${escapeHTML(data.door(c)?.title || '')}`; }
+        else if (dk === 'allDone') { doorN.textContent = '★'; doorTxt.innerHTML = '<b>All 24 doors open</b>'; }
+        else if (eveTxt) { doorN.textContent = '★'; doorTxt.innerHTML = `<b>${escapeHTML(eveTxt)}</b>`; }
         else if (dk === 'wave') { doorN.textContent = '★'; doorTxt.innerHTML = `<b>${data.doneCount()} doors open</b> · more soon!`; }
         else { doorN.textContent = '★'; doorTxt.innerHTML = '<b>Advent Calendar</b>'; }
         if (changed) { doorChip.classList.remove('flash'); void doorChip.offsetWidth; doorChip.classList.add('flash'); }

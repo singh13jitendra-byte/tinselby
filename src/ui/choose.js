@@ -22,7 +22,7 @@ export function createChoose(ctx, root) {
           ${spec.title ? `<div class="tb-choose-title">${esc(spec.title)}</div>` : ''}
           ${spec.text ? `<div class="tb-choose-text">${esc(spec.text)}</div>` : ''}
           <div class="tb-choose-opts">${options.map((o, i) => `
-            <button type="button" class="knit-btn ${i % 2 ? 'cream' : 'green'} tb-choose-opt" data-i="${i}">
+            <button type="button" class="knit-btn green tb-choose-opt" data-i="${i}">
               <span class="tb-choose-ico">${ICONS[o.icon] || ICONS.star}</span><span class="tb-choose-lab">${esc(o.label)}</span>
             </button>`).join('')}
           </div>

@@ -301,6 +301,7 @@ export default function create(ctx, env) {
       if (!wished) { const o = giverPos(); return { id: 'letters-bring', text: 'Bring the letters to Elf Pepper', icon: 'letter', x: o.x, z: o.z }; }
       return { id: 'letters-post', text: "Post the letters in Santa's mailbox", icon: 'letter', x: MB.x, z: MB.z };
     },
+    giverOff(g) { return g === env.giver && active() && allCaught() && wished && !choosing; }, // wish chosen: Pepper steps aside so the mailbox wins
     giverLabel() { return active() && allCaught() && !wished ? { label: 'Write to Santa', icon: 'letter' } : null; },
     onDoll: () => false, dollLabel: () => null,
     update,

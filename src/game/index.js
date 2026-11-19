@@ -142,7 +142,7 @@ export function createTasks(ctx) {
       completeDoor(n, { score: r.score, stars: r.stars });
       say(n, first ? 'done' : 'replay');
       givers[n].hop();
-    } else say(n, 'retry');
+    } else if (!r.quit) say(n, 'retry'); // ✕ quit: no result line
   }
 
   // ------------------------------------------------------------ talking to givers
@@ -242,6 +242,7 @@ export function createTasks(ctx) {
       enabled: () => {
         if (S.phase !== 'play' || pending || playingDoor || choosing) return false;
         if (g.hiddenBy.size) return false;
+        if (actList.some((a) => { try { return a.giverOff?.(g); } catch (e) { return false; } })) return false; // an activity's own giver step is over (door 22: the mailbox takes over)
         if (g.doors.includes(24)) {
           if (acts.st.hasStar || acts.st.placing) return false;
           // on Christmas Eve the tree spot takes over (so anywhere round the tree places the star), unless the Mayor still has door 10 / 20 for you

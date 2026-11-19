@@ -124,7 +124,7 @@ export function createCards(ctx, data, { wear, tint, modalOpen, onShowDoors }) {
       waveShown = true;
       if (e.isAfter) {
         flags.set('xmas-card');
-        push({ kind: 'wave xmas', icon: ICONS.tree, iconColor: 'var(--green)', sound: 'sleighBells', kicker: 'Every Advent door is open!', title: `Merry Christmas, ${pname()}!`, sub: 'Play any door again, any time you like.', buttons: [{ label: 'Thank you!', cls: 'green' }] });
+        push({ kind: 'wave xmas', icon: ICONS.tree, iconColor: 'var(--green)', sound: 'sleighBells', kicker: data.state(24) === 'done' ? 'Every Advent door is open!' : 'Merry Christmas!', title: `Merry Christmas, ${pname()}!`, sub: data.state(24) === 'done' ? 'Play any door again, any time you like.' : 'Door 24 is still waiting at the big tree.', buttons: [{ label: 'Thank you!', cls: 'green' }] });
         return;
       }
       push({
@@ -169,7 +169,8 @@ export function createCards(ctx, data, { wear, tint, modalOpen, onShowDoors }) {
   function xmasCard() {
     if (!W3 || game.state.phase === 'entry' || !eve().isAfter || flags.has('xmas-card') || waveShown && flags.has('xmas-card')) return;
     flags.set('xmas-card');
-    push({ kind: 'xmas', icon: ICONS.tree, iconColor: 'var(--green)', sound: 'sleighBells', kicker: 'Merry Christmas', title: `Merry Christmas, ${pname()}!`, sub: 'Every Advent door is open: play them again any time.', buttons: [{ label: 'Thank you!', cls: 'green' }] });
+    const all = data.state(24) === 'done'; // door 24 still unplayed: nudge to it instead of claiming everything is done
+    push({ kind: 'xmas', icon: ICONS.tree, iconColor: 'var(--green)', sound: 'sleighBells', kicker: 'Merry Christmas', title: `Merry Christmas, ${pname()}!`, sub: all ? 'Every Advent door is open: play them again any time.' : 'Door 24 is still waiting: meet Mayor Tinsel at the big tree.', buttons: all ? [{ label: 'Thank you!', cls: 'green' }] : [{ label: 'Show me', cls: 'green', fn: () => { try { ctx.tasks?.focusDoor?.(24); } catch (er) { /* */ } } }, { label: 'Later', cls: 'cream' }] });
   }
   const checkSeasonal = () => { eveCard(false); xmasCard(); };
   game.on('game:start', () => setTimeout(checkSeasonal, 2500));
