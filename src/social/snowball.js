@@ -109,9 +109,11 @@ function build(ctx) {
     } catch (e) { return false; }
   }
   const ready = () => typeof net()?.send === 'function' && !!net()?.id;
+  // Where player id is: their drawn doll, else their streamed position. A doll handle that isn't drawn falls back to
+  // the raw remote state, which is (0, 0) until the first position packet arrives: never aim there.
   const posOf = (id) => {
     const d = net()?.doll?.(id);
-    if (d && Number.isFinite(d.x)) return { x: d.x, z: d.z };
+    if (d && d.visible && Number.isFinite(d.x)) return { x: d.x, z: d.z };
     const p = net()?.players?.().find((q) => q.id === id);
     return p ? { x: p.x, z: p.z } : null;
   };

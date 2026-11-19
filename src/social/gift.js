@@ -164,6 +164,8 @@ function build(ctx) {
       if (had) toast('You already have one — thanks anyway!', 3400);
       else {
         let ok = null;
+        // a gift is not a door reward: skip the HUD's door reward card, the "Gift from …" toast says it
+        try { ctx.ui?.cards?.suppressGrants?.(800); } catch (e) { /* */ }
         try { ok = prog()?.rewards?.grant?.(c.r); } catch (e) { /* */ }
         if (ok) { limit.bump(); toast(`Gift from ${c.name}!`, 3400); sfx('gift'); }
         else { toast('Something went wrong with that gift.', 2600); yes = false; }

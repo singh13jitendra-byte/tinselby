@@ -210,7 +210,7 @@ function createNetImpl(ctx) {
       } catch (e) { return false; }
     },
     isMuted(id) { try { return W4 && core.isMuted(id); } catch (e) { return false; } },
-    /** Handle on a remote player's doll, or null: {x, z, h, visible, emote(e), bubble(text, ms), stagger(dx, dz), seat(pose|null)}. */
+    /** Handle on a remote player's doll, or null: {x, z, y, h, visible, emote(e), bubble(text, ms), stagger(dx, dz), seat(pose|null)}. */
     doll(id) {
       try {
         if (!W4) return null;
@@ -221,6 +221,8 @@ function createNetImpl(ctx) {
           id,
           get x() { const p = at(); return p ? p.x : r.x; },
           get z() { const p = at(); return p ? p.z : r.z; },
+          /** feet height of the drawn doll (seated riders sit above the ground), or null when not drawn */
+          get y() { const p = at(); return p ? p.y : null; },
           get h() { const p = at(); return p ? p.h : r.h; },
           get visible() { return !!at(); },
           emote: (e) => { try { return view.emote(id, e); } catch (err) { return false; } },

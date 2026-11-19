@@ -7,15 +7,19 @@
 @media (orientation: portrait) {
   .tb-hud:has(.tbs-friends-btn) .tb-chips { max-width: calc(100% - 6 * 46px - 5 * 6px - 8px); }
 }
+/* short landscape: a centred door chip would run under the (wider) round-button row, so the top-centre column sits in
+   the gap between the left column (goal chip, max 28vw / 27vw) and the 6-button row (6 x 48 + 5 x 6 / 6 x 44 + 5 x 4) */
 @media (orientation: landscape) and (max-height: 430px) {
-  .tb-hud:has(.tbs-friends-btn) .tb-tc { max-width: 28vw; }
+  .tb-hud:has(.tbs-friends-btn) .tb-tc {
+    left: calc(20px + 28vw + var(--safe-l)); right: calc(12px + 318px + 8px + var(--safe-r)); transform: none; max-width: none;
+  }
 }
-@media (max-height: 380px) and (max-width: 720px) {
-  .tb-hud:has(.tbs-friends-btn) .tb-tc { max-width: 24vw; }
-  .tb-hud:has(.tbs-friends-btn) .tb-tr .knit-btn.round { width: 44px; height: 44px; }
+@media (orientation: landscape) and (max-height: 380px) and (max-width: 720px) {
+  .tb-hud:has(.tbs-friends-btn) .tb-tc { left: calc(20px + 27vw + var(--safe-l)); right: calc(12px + 284px + 6px + var(--safe-r)); }
 }
 @media (orientation: portrait) and (max-width: 374px) {
   .tb-hud:has(.tbs-friends-btn) .tb-tr .knit-btn.round { width: 44px; height: 44px; }
+  .tb-hud:has(.tbs-friends-btn) .tb-chips { max-width: calc(100% - 6 * 44px - 5 * 6px - 8px); }
 }
 
 /* ------------------------------------------------------------------ HUD: bottom-right stack (emote button, friends pill, extras) */
@@ -48,6 +52,15 @@
 @media (max-height: 430px) {
   .tbs-corner { bottom: calc(88px + var(--safe-b)); gap: 8px; }
   .tbs-root .knit-btn.round { width: 52px; height: 52px; }
+}
+/* phones: a bottom card (reward card, gift offer; in portrait also the people card) spans the width and would
+   half-cover the corner stack, so the stack steps aside until the card goes */
+.tbs-corner { transition: opacity .2s ease; }
+@media (orientation: portrait) {
+  #ui:has(.tbs-person:not([hidden])) .tbs-corner { opacity: 0; pointer-events: none; }
+}
+@media (orientation: portrait), (max-height: 430px) {
+  #ui:has(.tb-cards > .tb-card) .tbs-corner, #ui:has(.sn-cards > .tb-card:not(.out)) .tbs-corner { opacity: 0; pointer-events: none; }
 }
 
 /* ------------------------------------------------------------------ modal sheets: invite card + wheel */
