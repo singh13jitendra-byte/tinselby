@@ -6,6 +6,7 @@ const S = 1024, C = 128; // atlas size, cell size (8 × 8 cells)
 export const CELL = {
   num: (n) => n - 1, // 0..23
   digit: (d) => 24 + d, // 24..33
+  'hat:tophat': 44, 'hat:starlight': 45, 'hat:parcel': 38,
   star: 34, hat: 35, scarf: 36, coat: 37, gift: 38, flake: 39, stitch: 40,
   stars: (k) => 41 + Math.max(0, Math.min(2, k - 1)), // 41..43 (1–3 stars)
   header: 48, // 4 cells wide (row 6)
@@ -105,6 +106,17 @@ function draw(g) {
     felt(g, () => { g.beginPath(); g.ellipse(x + 64, y + 38, 44, 22, 0, 0, Math.PI * 2); g.moveTo(x + 64 + 26, y + 38); g.ellipse(x + 64, y + 38, 26, 10, 0, 0, Math.PI * 2, true); });
     felt(g, () => { g.beginPath(); g.moveTo(x + 70, y + 50); g.lineTo(x + 92, y + 52); g.lineTo(x + 98, y + 112); g.lineTo(x + 76, y + 114); g.closePath(); });
     felt(g, () => { g.beginPath(); g.moveTo(x + 50, y + 52); g.lineTo(x + 70, y + 54); g.lineTo(x + 62, y + 106); g.lineTo(x + 40, y + 102); g.closePath(); });
+  }
+  { // top hat
+    const [x, y] = at(CELL['hat:tophat']);
+    felt(g, () => rrect(g, x + 36, y + 14, 56, 66, 8), { c: [x + 64, y + 48] });
+    felt(g, () => { g.beginPath(); g.ellipse(x + 64, y + 90, 54, 16, 0, 0, Math.PI * 2); }, { fill: '#e8e0d8' });
+    g.fillStyle = 'rgba(58,42,36,0.35)'; g.fillRect(x + 37, y + 60, 54, 12);
+  }
+  { // crown
+    const [x, y] = at(CELL['hat:starlight']);
+    felt(g, () => { g.beginPath(); g.moveTo(x + 16, y + 100); g.lineTo(x + 10, y + 36); g.lineTo(x + 40, y + 62); g.lineTo(x + 64, y + 20); g.lineTo(x + 88, y + 62); g.lineTo(x + 118, y + 36); g.lineTo(x + 112, y + 100); g.closePath(); }, { c: [x + 64, y + 70] });
+    g.fillStyle = INK; for (const [px, py] of [[64, 82], [38, 84], [90, 84]]) { g.beginPath(); g.arc(x + px, y + py, 5, 0, Math.PI * 2); g.fill(); }
   }
   { // coat
     const [x, y] = at(CELL.coat);

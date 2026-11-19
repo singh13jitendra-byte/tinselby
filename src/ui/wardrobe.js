@@ -10,9 +10,9 @@ import { saveProfile, validStyle } from './profile.js';
 const CHARACTER = ['hair', 'hairColor', 'skin', 'outfit'];
 const WARDROBE = ['coat', 'hat', 'scarf'];
 const LABEL = { coat: 'Coat', hat: 'Hat', scarf: 'Scarf', hair: 'Hair', hairColor: 'Hair colour', skin: 'Skin', outfit: 'Outfit' };
-const SHORT = { bobble: 'Bobble', earflap: 'Ear-flap', earmuffs: 'Earmuffs', none: 'None', santa: 'Santa', reindeer: 'Reindeer', elf: 'Elf', conductor: 'Conductor', bow: 'Bow', gnome: 'Gnome' };
+const SHORT = { bobble: 'Bobble', earflap: 'Ear-flap', earmuffs: 'Earmuffs', none: 'None', santa: 'Santa', reindeer: 'Reindeer', elf: 'Elf', conductor: 'Conductor', bow: 'Bow', gnome: 'Gnome', tophat: 'Top hat', parcel: 'Present', starlight: 'Crown' };
 // small marks so swatches with (nearly) the same colour read differently: jingle = red + gold bell, holly = green + berry, snowy = cream + coal
-const MARK = { jingle: 'gold', holly: 'berry', snowy: 'coal', midnight: 'gold' };
+const MARK = { jingle: 'gold', holly: 'berry', snowy: 'coal', midnight: 'gold', santa: 'fur', lantern: 'flame', cocoa: 'marsh', elf: 'gold', postal: 'stamp', frost: 'flake', aurora: 'glow' };
 const SWATCH = { striped: 'repeating-linear-gradient(45deg,#b8302d 0 7px,#f5f1ea 7px 14px)', candycane: 'repeating-linear-gradient(135deg,#b5332e 0 6px,#f5f1ea 6px 12px)' };
 const PRESETS = [
   { id: 'boy', label: 'Boy', style: { hair: 'tousled', hairColor: 'brown', outfit: 'duffle', coat: 'mustard', hat: 'none' }, legacy: { coat: 'mustard', hat: 'earflap' } },
@@ -25,6 +25,15 @@ const DOLL = {
 
 const isCssColour = (v) => typeof v === 'string' && (/^#[0-9a-f]{3,8}$/i.test(v) || /gradient\(/.test(v) || /^(rgb|hsl)a?\(/.test(v));
 const swatchCss = (key, v) => SWATCH[key] || (isCssColour(v) ? v : null);
+const WISH_KEYS = new Set(['coat:santa', 'hat:starlight', 'scarf:aurora']);
+/** data.lockInfo plus wish pieces ({santa: true}: a gift from Santa, chosen at door 22). */
+function lockOf(ctx, data, slot, key) {
+  if (data.isUnlocked(slot, key)) return null;
+  let src = null;
+  try { src = ctx.progress?.wardrobe?.source?.(slot, key); } catch (e) { /* stub */ }
+  if (src?.santa || (!src && WISH_KEYS.has(`${slot}:${key}`))) return { santa: true };
+  return data.lockInfo(slot, key);
+}
 const nice = (k) => k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
 const shortLabel = (slot, key, v) => (slot === 'hat' && SHORT[key]) || (typeof v === 'string' && !isCssColour(v) ? v.replace(/\s+(hat|beanie|coat)$/i, '') : nice(key));
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -90,12 +99,12 @@ export function createStyleTray(ctx, data, opts = {}) {
   function render() {
     el.querySelectorAll('[data-k]').forEach((b) => {
       const slot = b.dataset.k, key = b.dataset.v;
-      const info = data.lockInfo(slot, key);
+      const info = lockOf(ctx, data, slot, key);
       b.classList.toggle('on', style[slot] === key);
       b.classList.toggle('locked', !!info);
       b.setAttribute('aria-pressed', String(style[slot] === key));
       const lk = b.querySelector('.tb-lock');
-      if (info) { lk.hidden = false; lk.innerHTML = `${ICONS.lock}<span>${info.door ? `Door ${info.door}` : 'Gift'}</span>`; b.setAttribute('aria-disabled', 'true'); }
+      if (info) { lk.hidden = false; lk.innerHTML = `${ICONS.lock}<span>${info.santa ? 'Santa\u2019s gift' : info.door ? `Door ${info.door}` : 'Gift'}</span>`; b.setAttribute('aria-disabled', 'true'); }
       else { lk.hidden = true; lk.innerHTML = ''; b.removeAttribute('aria-disabled'); }
     });
     el.querySelectorAll('.tb-preset').forEach((b) => {
@@ -121,11 +130,11 @@ export function createStyleTray(ctx, data, opts = {}) {
     const b = e.target.closest('[data-k]');
     if (!b) return;
     const slot = b.dataset.k, key = b.dataset.v;
-    const info = data.lockInfo(slot, key);
+    const info = lockOf(ctx, data, slot, key);
     if (info) {
       b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope');
       const what = data.rewardLabel(slot, key);
-      say(info.door ? `The ${what} unlocks at Door ${info.door}: ${data.door(info.door)?.title || ''}` : `The ${what} comes in a daily gift box.`);
+      say(info.santa ? `A wish for Santa: pick the ${what} at Door 22 and he brings it on Christmas Eve.` : info.door ? `The ${what} unlocks at Door ${info.door}: ${data.door(info.door)?.title || ''}` : `The ${what} comes in a daily gift box.`);
       sfx('ui');
       return;
     }

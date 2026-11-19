@@ -362,6 +362,9 @@
 
 /* cable car ride (eye-level ride shot): HUD fades out except the mute button; 'Tap to skip' is a separate overlay */
 .tb-hud .tb-tc, .tb-hud .tb-act, .tb-hud .tb-keys, .tb-hud .tb-tr .knit-btn:not(.tb-mute) { transition: opacity .35s ease; }
+.tb-ride .tb-door, .tb-ride .tb-hintpill { visibility: hidden; }
+/* during every ride (tram, carriage, wheel, carousel, skating, sledging, cable car) the door pill and "go to door N" arrow toasts step aside */
+#ui:has(> .tb-hud.tb-ride) .tb-toast.has-arrow, #ui:has(> .tb-hud.tb-ride) .tb-banner { opacity: 0; visibility: hidden; pointer-events: none; }
 .tb-ride .tb-tl, .tb-ride .tb-tc, .tb-ride .tb-act, .tb-ride .tb-keys, .tb-ride .tb-tr .knit-btn:not(.tb-mute) { opacity: 0; pointer-events: none; }
 
 /* very small landscape phones (e.g. 667x375): keep top-centre clear of top-right, cards clear of the joystick */
@@ -483,6 +486,15 @@
 .tb-mark.berry { right: 5px; bottom: 5px; width: 12px; height: 12px; background: radial-gradient(circle at 35% 30%, #ff9a8f, #c4362f 65%, #8b2523); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
 .tb-mark.coal { inset: 12px; border: 3px solid #2a2623; background: transparent; }
 .tb-swatch:has(.tb-mark.coal)::after { display: none; }
+/* wave 3: santa = white fur trim, lantern = flame, cocoa = marshmallows, elf = bell, postal = stamp, frost = flake, aurora = glow */
+.tb-mark.fur { left: 8px; right: 8px; bottom: 4px; height: 9px; border-radius: 6px; background: #fbf6ea; box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3); }
+.tb-mark.flame { left: 50%; top: 50%; width: 11px; height: 15px; margin: -9px 0 0 -5.5px; border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%; background: radial-gradient(circle at 50% 70%, #fff6c8, #ffd25a 55%, #f08a2c); box-shadow: 0 0 6px 2px rgba(255, 214, 110, 0.8); }
+.tb-mark.marsh { right: 6px; bottom: 6px; width: 9px; height: 9px; background: #fbf6ea; box-shadow: -10px -4px 0 -1px #fbf6ea, 0 1px 0 rgba(0, 0, 0, 0.3); }
+.tb-mark.stamp { right: 5px; bottom: 5px; width: 13px; height: 15px; border-radius: 2px; background: #fbf1da; outline: 2px dotted #c0392b; outline-offset: -2px; box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3); }
+.tb-mark.flake { inset: 11px; border: 2.5px solid #5f8fb8; background: radial-gradient(circle, #fff 0 3px, transparent 4px); }
+.tb-swatch:has(.tb-mark.flake)::after { display: none; }
+.tb-mark.glow { inset: 0; background: linear-gradient(160deg, transparent 35%, rgba(150, 110, 230, 0.65) 100%); }
+.tb-lock span { white-space: nowrap; }
 
 .tb-choose { position: absolute; inset: 0; display: grid; place-items: center; padding: calc(12px + var(--safe-t)) calc(14px + var(--safe-r)) calc(12px + var(--safe-b)) calc(14px + var(--safe-l)); background: rgba(24, 26, 48, 0.5); z-index: 30; opacity: 0; transition: opacity .25s ease; }
 .tb-choose.in { opacity: 1; }

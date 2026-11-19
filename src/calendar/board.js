@@ -7,6 +7,7 @@ import { P } from '../core/yarn.js';
 import { STYLE_OPTIONS } from '../core/player.js';
 import { cyl, sph, box, rbox, tube, dot, extrude, xf, merge, poly, starPts, KNIT, FELT, GLOW, GLOSS } from '../core/prims.js';
 import { createAtlas, cellUV, CELL } from './atlas.js';
+import { W3 } from '../progress/doors.js';
 
 const COLS = 6, ROWS = 4, CW = 0.26, DOOR = 0.2, DT = 0.028;
 const PANEL_W = COLS * CW + 0.2, GRID_H = ROWS * CW, HEADER = 0.25;
@@ -16,7 +17,7 @@ const LEG_X = PANEL_W / 2 + 0.03, SIGN_Y = 0.31, SIGN_W = 0.94, SIGN_H = 0.3;
 const Z_FRONT = 0.04, Z_PLATE = 0.045, Z_DOOR = 0.065, Z_ICON = 0.049;
 const SCALE = 0.8; // whole board (keeps it readable from the follow camera when you stand at it)
 const DOOR_COLS = ['#b8302d', '#3f6e45', '#efe1c6', '#4f9590', '#d59f3c', '#8a4f7d'];
-const HAT_TINT = { santa: '#c4362f', reindeer: '#8a5a3c', elf: '#3f8a4a', bobble: '#efe1c6', earflap: '#8a5a3c', earmuffs: '#e7a1a3', conductor: '#34486e', bow: '#c4362f', gnome: '#b5332e' };
+const HAT_TINT = { santa: '#c4362f', reindeer: '#8a5a3c', elf: '#3f8a4a', bobble: '#efe1c6', earflap: '#8a5a3c', earmuffs: '#e7a1a3', conductor: '#34486e', bow: '#c4362f', gnome: '#b5332e', tophat: '#2b2523', parcel: '#c4362f', starlight: '#e3aa3a' };
 const SPECIAL_TINT = { candycane: '#e0605a', striped: '#e0605a', gingerbread: '#a8693c', jingle: '#c4362f', snowy: '#cfc8b8' };
 
 /** Door n (1..24) cell centre in board space. */
@@ -137,10 +138,11 @@ export function createBoard(ctx, data) {
   function paintDoor(i, st) {
     const o = i * PER;
     tmpC.set(DOOR_COLS[(i * 5 + Math.floor(i / COLS)) % DOOR_COLS.length]);
+    if (W3 && i === 23 && st === 'open') tmpC.set('#e3aa3a'); // Christmas Eve glows gold while it is open
     if (st === 'soon') tmpC.lerp(new THREE.Color('#8f8a86'), 0.55).multiplyScalar(0.8);
     for (let v = 0; v < slabN; v++) { const d = (o + v) * 3; dcol[d] = tmpC.r; dcol[d + 1] = tmpC.g; dcol[d + 2] = tmpC.b; }
     const kind = st === 'open' ? GLOW : FELT;
-    tmpC.set(st === 'open' ? '#cf6f26' : st === 'done' ? '#f3d9a8' : '#2f2420');
+    tmpC.set(st === 'open' ? (W3 && i === 23 ? '#ffd36a' : '#cf6f26') : st === 'done' ? '#f3d9a8' : '#2f2420');
     for (let v = 0; v < PN; v++) { const d = (o + TN + v) * 3; dcol[d] = tmpC.r; dcol[d + 1] = tmpC.g; dcol[d + 2] = tmpC.b; dmat[o + TN + v] = kind; }
   }
 
@@ -221,11 +223,13 @@ export function createBoard(ctx, data) {
       const d = data.door(i + 1);
       if (st === 'done') {
         const r = d?.reward;
-        const cell = r ? CELL[r.slot] ?? CELL.star : CELL.star;
+        const cell = r ? CELL[`${r.slot}:${r.key}`] ?? CELL[r.slot] ?? CELL.star : CELL.star;
         flatQuad(Q.icon + i, cx, cy + 0.022, Z_ICON, 0.13, 0.13, cellUV(cell), r ? rewardTint(r.slot, r.key) : '#f2b640');
         const k = d?.game ? data.stars(i + 1) : 0;
         if (k > 0) { const u = cellUV(CELL.stars(k)); const dv = (u[3] - u[1]); flatQuad(Q.stars + i, cx, cy - 0.06, Z_ICON + 0.001, 0.17, 0.064, [u[0], u[1] + dv * 0.3, u[2], u[3] - dv * 0.3], '#ffffff'); }
         else hideQuad(Q.stars + i);
+      } else if (W3 && i === 23 && st === 'open') { // a gold star behind the ajar door
+        flatQuad(Q.icon + i, cx, cy + 0.01, Z_ICON, 0.14, 0.14, cellUV(CELL.star), '#ffe9a0'); hideQuad(Q.stars + i);
       } else { hideQuad(Q.icon + i); hideQuad(Q.stars + i); }
       writeNumber(i, Math.max(0, angle[i]), st);
     }

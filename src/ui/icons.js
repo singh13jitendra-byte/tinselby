@@ -37,6 +37,15 @@ export const ICONS = {
   hoof: svg('<path d="M7.500 3.500c-2 3-2.800 7-2.200 10 .5 2.800 2.200 4 3.300 2.300.7-1.200.3-3.500.6-6 .2-2.200.6-4.300-1.700-6.300zM16.500 3.500c2 3 2.800 7 2.200 10-.5 2.800-2.200 4-3.300 2.300-.7-1.200-.3-3.500-.6-6-.2-2.200-.6-4.300 1.700-6.300z" fill="currentColor" fill-opacity=".3"/><path d="M8 19.500h8M9.500 21.500h5"/>'),
   conductor: svg('<path d="M5 14.500c0-6 14-6 14 0z" fill="currentColor" fill-opacity=".25"/><path d="M3 14.500h18l-1.800 4.500c-3.800 1.200-11.600 1.200-15.400 0z" fill="currentColor" fill-opacity=".35"/><circle cx="12" cy="9.500" r="1.500" fill="currentColor"/>'),
   bell: svg('<path d="M6 17c1.200-1.300 1.800-3 1.800-5.500a4.200 4.200 0 0 1 8.400 0c0 2.500.6 4.200 1.800 5.500z" fill="currentColor" fill-opacity=".25"/><path d="M12 4.500V3M10 19.500a2 2 0 0 0 4 0"/>'),
+  // ---- wave 3 (doors 17-24)
+  note: svg('<path d="M9 17.5V5.500l10-2v12" fill="none"/><ellipse cx="6.800" cy="17.800" rx="3" ry="2.400" fill="currentColor" fill-opacity=".35"/><ellipse cx="16.800" cy="15.800" rx="3" ry="2.400" fill="currentColor" fill-opacity=".35"/><path d="M9 9l10-2"/>'),
+  letter: svg('<rect x="3" y="6" width="18" height="12.500" rx="2.200" fill="currentColor" fill-opacity=".2"/><path d="M3.500 7.500L12 13.500l8.500-6"/><circle cx="17.800" cy="15.800" r="1.700" fill="currentColor" stroke-width="1.400"/>'),
+  cocoa: svg('<path d="M5 9.500h12v5.500a5.500 5.500 0 0 1-5.500 5.500h-1A5.500 5.500 0 0 1 5 15z" fill="currentColor" fill-opacity=".25"/><path d="M17 11h1.800a2.600 2.600 0 0 1 0 5.200H16.500"/><path d="M8.500 3.500c-1 1-1 2 0 3M12 3c-1 1.100-1 2.200 0 3.300M5.500 9.500h11"/>'),
+  lantern: svg('<path d="M9.500 3.500h5M12 3.500V5"/><path d="M8 5.500h8l1.500 3v7L16 18.500H8L6.500 15.500v-7z" fill="currentColor" fill-opacity=".2"/><path d="M8 5.500l-1.500 3M16 5.500l1.500 3M6.500 15.500h11M9.500 21h5"/><path d="M12 9.500c1.500 1.300 1.700 2.300 1.700 2.900a1.700 1.700 0 0 1-3.400 0c0-.6.200-1.600 1.700-2.900z" fill="currentColor"/>'),
+  parcel: svg('<rect x="4" y="10" width="16" height="10.500" rx="1.500" fill="currentColor" fill-opacity=".2"/><path d="M3 10h18M12 10v10.500M12 10C10.500 5.500 7 6 8 8c.7 1.500 4 2 4 2zm0 0c1.500-4.500 5-4 4-2-.7 1.500-4 2-4 2z"/>'),
+  tree: svg('<path d="M12 2.800l-4 5.200h2.500L6.500 13H9.500L5 18.500h14L14.500 13h3L13.500 8H16z" fill="currentColor" fill-opacity=".25"/><path d="M12 18.500V21.500"/><circle cx="10" cy="14.800" r=".8" fill="currentColor"/><circle cx="14" cy="11" r=".8" fill="currentColor"/>'),
+  crown: svg('<path d="M4 18.500L3.500 8l4.500 4 4-6.500L16 12l4.500-4L20 18.500z" fill="currentColor" fill-opacity=".3"/><path d="M4 21h16"/>'),
+  tophat: svg('<rect x="7" y="3.500" width="10" height="12.500" rx="1.600" fill="currentColor" fill-opacity=".35"/><path d="M7 13h10M3 17.500c0-1.200 3-1.800 9-1.800s9 .6 9 1.800-3 2-9 2-9-.8-9-2z" fill="currentColor" fill-opacity=".2"/>'),
 };
 
 /** Icon by name; unknown names fall back to the pointing hand. */
@@ -45,6 +54,11 @@ ICONS.house = ICONS.home;
 ICONS.bow = ICONS.ribbon;
 ICONS.giftwrap = ICONS.ribbon;
 ICONS.cap = ICONS.conductor;
+ICONS.carols = ICONS.note;
+ICONS.post = ICONS.letter;
+ICONS.mail = ICONS.letter;
+ICONS.mug = ICONS.cocoa;
+ICONS.present = ICONS.parcel;
 
 /** A knitted star for the Festive Spirit meter (filled or empty). */
 export function spiritStar() {
@@ -54,3 +68,6 @@ export function spiritStar() {
     <path class="tb-sstar-shine" d="M18.5 21.5l3-1"/>
   </svg>`;
 }
+
+/** Per-reward glyphs for wave-3 pieces (cards + calendar), keyed `${slot}:${key}`; other rewards use the slot glyph. */
+export const REWARD_GLYPH = { 'hat:tophat': ICONS.tophat, 'hat:starlight': ICONS.crown, 'hat:parcel': ICONS.parcel, 'scarf:postal': ICONS.letter, 'coat:lantern': ICONS.lantern, 'coat:cocoa': ICONS.cocoa, 'coat:santa': ICONS.sleigh, 'scarf:aurora': ICONS.sparkle, 'scarf:frost': ICONS.snowflake, 'coat:elf': ICONS.tree };

@@ -165,3 +165,13 @@
   .cal-dtxt { flex-basis: auto; flex: 1; }
   .cal-detail { flex-wrap: nowrap; }
 }
+
+/* wave 3: door 24 (Christmas Eve) and Christmas mode (from 25 Dec: every door open and replayable) */
+.cal-door[data-n="24"].s-open { background-color: #d99a2e; --tc: #3a2a24; box-shadow: 0 0 0 3px #fff0b3, 0 0 26px 8px rgba(255, 215, 110, 0.9), 0 4px 0 rgba(60, 30, 20, 0.3); }
+.cal-door[data-n="24"].s-done { background-color: #fff3cf; outline-color: rgba(217, 154, 46, 0.7); }
+.cal-door[data-n="24"].s-done::before { background: #d99a2e; }
+.cal-badge.open.tonight { background: #fff6d6; color: #8a4a00; }
+.cal-watch { white-space: nowrap; }
+.cal-wrap.xmas .cal-panel { box-shadow: 0 0 0 4px #e3aa3a, 0 10px 30px rgba(0, 0, 0, 0.35); }
+.cal-wrap.xmas .cal-door.s-open { animation: none; box-shadow: 0 3px 0 rgba(60, 30, 20, 0.3); outline-color: rgba(255, 214, 110, 0.9); }
+.cal-wrap.xmas .cal-badge.open { background: #fff0c4; box-shadow: 0 2px 0 #d9b25a; }

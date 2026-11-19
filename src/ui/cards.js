@@ -1,5 +1,6 @@
 // Reward / daily-gift / wave-end cards (queued, one at a time, only during free play) and tiny net join/leave toasts.
-import { ICONS } from './icons.js';
+import { ICONS, REWARD_GLYPH } from './icons.js';
+import { W3 } from '../progress/doors.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const GLYPH = {
@@ -69,6 +70,7 @@ export function createCards(ctx, data, { wear, tint, modalOpen, onShowDoors }) {
   }
 
   function rewardIcon(r) {
+    if (r && REWARD_GLYPH[`${r.slot}:${r.key}`]) return { icon: REWARD_GLYPH[`${r.slot}:${r.key}`], iconColor: tint(r.slot, r.key) };
     if (r && GLYPH[r.slot]) return { icon: GLYPH[r.slot], iconColor: tint(r.slot, r.key) };
     return { icon: ICONS.gift, iconColor: 'var(--red)' };
   }
@@ -103,10 +105,38 @@ export function createCards(ctx, data, { wear, tint, modalOpen, onShowDoors }) {
   // ---- wave-end teaser (copy by the last available door: wave 1 = 8, wave 2 = 16)
   let waveShown = false;
   const lookUp = () => setTimeout(() => { try { ctx.teasers?.sky?.(); } catch (e) { /* */ } }, 250);
+  const eve = () => (data.eve ? data.eve() : (ctx.progress?.eve || { isEve: false, isAfter: false, sleeps: 0 }));
+  const sleeps = (k) => (data.sleepsText ? data.sleepsText(k) : k === 1 ? '1 sleep' : `${k} sleeps`);
+  const pname = () => game.state.playerName || 'friend';
+  const flags = {
+    has: (k) => { try { return !!ctx.progress?.flags?.has?.(k); } catch (e) { return false; } },
+    set: (k) => { try { ctx.progress?.flags?.set?.(k); } catch (e) { /* */ } },
+  };
+  const lookUpW3 = () => setTimeout(() => { try { if (ctx.finale?.preview) ctx.finale.preview(); else ctx.teasers?.sky?.(); } catch (e) { /* */ } }, 250);
   function waveEnd() {
     if (waveShown) return;
-    waveShown = true;
     const last = data.lastAvailable();
+    if (W3 && data.state(24) === 'done') { waveShown = true; return; } // the finale has been played: no end card
+    if (W3 && last >= 23) {
+      const e = eve();
+      // on Christmas Eve itself the Christmas Eve card takes over (door 24 is open or waiting for the star)
+      if (e.isEve && !e.isAfter) { waveShown = true; eveCard(true); return; }
+      waveShown = true;
+      if (e.isAfter) {
+        flags.set('xmas-card');
+        push({ kind: 'wave xmas', icon: ICONS.tree, iconColor: 'var(--green)', sound: 'sleighBells', kicker: 'Every Advent door is open!', title: `Merry Christmas, ${pname()}!`, sub: 'Play any door again, any time you like.', buttons: [{ label: 'Thank you!', cls: 'green' }] });
+        return;
+      }
+      push({
+        kind: 'wave', icon: ICONS.sleigh, iconColor: 'var(--red)', sound: 'sleighBells',
+        kicker: 'All 23 doors opened!',
+        title: 'Santa’s sleigh is nearly here…',
+        sub: `Christmas Eve opens on 24 December: ${sleeps(e.sleeps)} to go!`,
+        buttons: [{ label: 'Look up!', cls: 'green', fn: lookUpW3 }, { label: 'Later', cls: 'cream' }],
+      });
+      return;
+    }
+    waveShown = true;
     const w2 = last > 8;
     push({
       kind: 'wave', icon: w2 ? ICONS.bell : ICONS.sleigh, iconColor: 'var(--red)', sound: 'sleighBells',
@@ -116,6 +146,36 @@ export function createCards(ctx, data, { wear, tint, modalOpen, onShowDoors }) {
       buttons: [{ label: 'Look up!', cls: 'green', fn: lookUp }],
     });
   }
+  // ---- Christmas Eve card (door 24 open; or waiting for the star) + the post-Christmas card; both once per save (progress flags)
+  let eveQueued = false;
+  function eveCard(force) {
+    if (!W3 || game.state.phase === 'entry') return;
+    const e = eve();
+    if (!e.isEve || e.isAfter || data.state(24) === 'done') return;
+    const open = data.state(24) === 'open';
+    if (open && flags.has('eve-card') && !force) return;
+    if (eveQueued) return;
+    eveQueued = true;
+    const cur = data.current();
+    push({
+      kind: 'eve', icon: ICONS.star, iconColor: 'var(--gold)', sound: 'bell',
+      kicker: 'Christmas Eve',
+      title: 'Santa is on his way to Tinselby!',
+      sub: open ? 'Meet Mayor Tinsel at the big tree' : 'Help Bram bring the star to the big tree first',
+      buttons: [{ label: 'Show me', cls: 'green', fn: () => { try { if (open) ctx.tasks?.focusDoor?.(24); else if (cur) onShowDoors?.(cur, cur); } catch (er) { /* */ } } }, { label: 'Later', cls: 'cream' }],
+      onClose: () => { eveQueued = false; if (open) flags.set('eve-card'); },
+    });
+  }
+  function xmasCard() {
+    if (!W3 || game.state.phase === 'entry' || !eve().isAfter || flags.has('xmas-card') || waveShown && flags.has('xmas-card')) return;
+    flags.set('xmas-card');
+    push({ kind: 'xmas', icon: ICONS.tree, iconColor: 'var(--green)', sound: 'sleighBells', kicker: 'Merry Christmas', title: `Merry Christmas, ${pname()}!`, sub: 'Every Advent door is open: play them again any time.', buttons: [{ label: 'Thank you!', cls: 'green' }] });
+  }
+  const checkSeasonal = () => { eveCard(false); xmasCard(); };
+  game.on('game:start', () => setTimeout(checkSeasonal, 2500));
+  game.on('door:open', ({ n } = {}) => { if (n === 24) setTimeout(() => eveCard(false), 1200); });
+  game.on('door:complete', ({ n } = {}) => { if (n === 4) setTimeout(() => eveCard(false), 1800); });
+  game.on('progress:change', (d) => { if (d && d.eve) setTimeout(checkSeasonal, 800); });
   // ---- "New Advent doors are open!" for returning players (progress emits doors:new once per save per wave)
   let newDoorsKey = '';
   function doorsNew({ from, to } = {}) {
@@ -127,7 +187,7 @@ export function createCards(ctx, data, { wear, tint, modalOpen, onShowDoors }) {
       kind: 'newdoors', icon: ICONS.calendar, iconColor: 'var(--gold)', sound: 'bell',
       kicker: 'New Advent doors!',
       title: from === to ? `Door ${from} is open` : `Doors ${from}–${to} are open`,
-      sub: 'Fresh games, a cosy cottage and a few surprises are waiting.',
+      sub: W3 && to >= 17 ? 'Christmas Eve is coming!' : 'Fresh games, a cosy cottage and a few surprises are waiting.',
       buttons: [
         { label: 'Show me', cls: 'green', fn: () => onShowDoors?.(from, to) },
         { label: 'Later', cls: 'cream' },
@@ -167,7 +227,7 @@ export function createCards(ctx, data, { wear, tint, modalOpen, onShowDoors }) {
   }
 
   return {
-    reward, daily, waveEnd, doorsNew, update,
+    reward, daily, waveEnd, doorsNew, update, eveCard, xmasCard,
     /** Fold reward:grant events of the next ms into the card being shown (daily gift). */
     suppressGrants(ms = 800) { suppressGrants = performance.now() + ms; },
     get busy() { return !!active || queue.length > 0; },

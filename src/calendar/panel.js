@@ -1,6 +1,7 @@
 // Calendar panel (DOM): a knitted 6×4 grid of doors with their states, the visit streak, Town Spirit and players online.
 // Tapping an open door points the way to its giver ("Find Tilly in Pinecone Park").
-import { ICONS } from '../ui/icons.js';
+import { ICONS, REWARD_GLYPH } from '../ui/icons.js';
+import { W3 } from '../progress/doors.js';
 
 const FELTS = [['#b8302d', '#fff4e2'], ['#3f6e45', '#fff4e2'], ['#efe1c6', '#3a2a24'], ['#4f9590', '#fff4e2'], ['#d59f3c', '#3a2a24'], ['#8a4f7d', '#fff4e2']];
 const SLOT_ICON = { hat: 'hat', scarf: 'scarf', coat: 'coat' };
@@ -54,14 +55,17 @@ export function createPanel(ctx, data, { onHint, rewardTint }) {
   function tileHTML(n, st) {
     const d = data.door(n) || { title: '' };
     const where = d.district ? data.districtName(d.district) : '';
-    const sub = st === 'soon' ? 'Coming soon' : [d.giver, where].filter(Boolean).join(' · ');
+    let sub = st === 'soon' ? 'Coming soon' : [d.giver, where].filter(Boolean).join(' · ');
+    const xmas = W3 && data.isChristmas?.();
+    if (W3 && n === 24) sub = data.door24Text?.() || sub;
+    else if (xmas && st === 'open') sub = 'Play any time';
     let badge = '';
-    if (st === 'open') badge = '<span class="cal-badge open">Open!</span>';
+    if (st === 'open') badge = n === 24 && W3 && !xmas ? '<span class="cal-badge open tonight">Tonight!</span>' : `<span class="cal-badge open">${xmas ? 'Play' : 'Open!'}</span>`;
     else if (st === 'locked') badge = `<span class="cal-badge lock">${ICONS.lock}</span>`;
     else if (st === 'done') {
       const r = d.reward;
-      const glyph = r ? `<span class="cal-glyph" style="color:${rewardTint(r.slot, r.key)}">${GLYPH[SLOT_ICON[r.slot]] || GLYPH.star}</span>` : `<span class="cal-glyph" style="color:#e3aa3a">${GLYPH.star}</span>`;
-      badge = `<span class="cal-badge done">${glyph}${d.game ? starsHTML(data.stars(n)) : `<span class="cal-check" aria-label="done">${ICONS.check}</span>`}</span>`;
+      const glyph = r ? `<span class="cal-glyph" style="color:${rewardTint(r.slot, r.key)}">${REWARD_GLYPH[`${r.slot}:${r.key}`] || GLYPH[SLOT_ICON[r.slot]] || GLYPH.star}</span>` : `<span class="cal-glyph" style="color:#e3aa3a">${GLYPH.star}</span>`;
+      badge = n === 24 && W3 ? `<span class="cal-badge done"><span class="cal-glyph" style="color:#e3aa3a">${GLYPH.star}</span></span>` : `<span class="cal-badge done">${glyph}${d.game ? starsHTML(data.stars(n)) : `<span class="cal-check" aria-label="done">${ICONS.check}</span>`}</span>`;
     }
     return `<span class="cal-n">${n}</span><span class="cal-t">${esc(d.title)}</span><span class="cal-g">${esc(sub)}</span>${badge}`;
   }
@@ -69,7 +73,8 @@ export function createPanel(ctx, data, { onHint, rewardTint }) {
   function render(force) {
     const states = [];
     for (let n = 1; n <= 24; n++) states.push(data.state(n));
-    const s = states.join(',') + states.map((st, i) => (st === 'done' ? data.stars(i + 1) : '')).join('');
+    const xm = W3 && data.isChristmas?.();
+    const s = (xm ? 'X' : '') + (W3 ? data.door24Text?.() : '') + states.join(',') + states.map((st, i) => (st === 'done' ? data.stars(i + 1) : '')).join('');
     if (s !== sig || force) {
       sig = s;
       tiles.forEach((b, i) => {
@@ -80,6 +85,9 @@ export function createPanel(ctx, data, { onHint, rewardTint }) {
         b.setAttribute('aria-label', `Door ${i + 1}: ${d?.title || ''} (${st === 'soon' ? 'coming soon' : st})`);
       });
     }
+    wrap.classList.toggle('xmas', !!xm);
+    const h2 = $('.cal-title h2'), want = xm ? `Merry Christmas, ${game.state.playerName || 'friend'}!` : 'Advent Calendar';
+    if (h2.textContent !== want) h2.textContent = want;
     // stats
     const streak = data.streak;
     streakEl.innerHTML = streak > 0 ? `<b>${streak}</b>-day streak` : 'First visit!';
@@ -99,7 +107,7 @@ export function createPanel(ctx, data, { onHint, rewardTint }) {
     if (sg === detailSig) return;
     detailSig = sg;
     detail.innerHTML = html;
-    detail.querySelector('.cal-go')?.addEventListener('click', (e) => { e.stopPropagation(); point(n); });
+    detail.querySelector('.cal-go')?.addEventListener('click', (e) => { e.stopPropagation(); if (e.currentTarget.classList.contains('cal-watch')) watchAgain(); else point(n); });
   }
 
   function showDetail(n) {
@@ -107,18 +115,30 @@ export function createPanel(ctx, data, { onHint, rewardTint }) {
     const d = data.door(n) || {};
     const st = data.state(n);
     let line = '', btn = '';
-    if (st === 'open') { line = `${esc(data.findText(n))} — ${esc(d.blurb || '')}`; btn = `<button class="knit-btn green cal-go">${ICONS.arrow}<span>Show me the way</span></button>`; }
+    if (W3 && n === 24 && st === 'done') {
+      line = `Done! Santa's gift: ${esc(data.giftLabel?.() || '')}.`;
+      btn = `<button class="knit-btn cream cal-go cal-watch">${ICONS.star}<span>Watch again</span></button>`;
+    } else if (W3 && n === 24 && st === 'locked') line = esc(data.door24Text?.() || '');
+    else if (st === 'open') { line = `${esc(n === 24 && W3 ? 'Meet Mayor Tinsel at the big tree' : data.findText(n))} — ${esc(d.blurb || '')}`; btn = `<button class="knit-btn green cal-go">${ICONS.arrow}<span>Show me the way</span></button>`; }
     else if (st === 'done') {
       const best = d.game ? data.best(d.game) : null;
       line = d.game ? `Done! ${starsHTML(data.stars(n))}${best && Number.isFinite(best.score) ? ` Best ${best.score}.` : ''} Talk to ${esc(d.giver)} to play again.` : `Done! ${esc(d.giver)} says thank you.`;
       if (d.reward?.label) line += ` <span class="cal-reward">Reward: ${esc(d.reward.label)}</span>`;
       if (d.game) btn = `<button class="knit-btn cream cal-go">${ICONS.arrow}<span>Play again</span></button>`;
+      
     } else if (st === 'locked') line = n === 24 ? 'Christmas Eve opens when doors 1–23 are done.' : `Opens after door ${n - 1}. ${esc(d.blurb || '')}`;
     else line = 'This door is stitched shut for now — new doors are coming soon!';
     const daily = data.dailyAvailable ? `<span class="cal-daily">${ICONS.gift} A daily gift is waiting by the board!</span>` : '';
     setDetail(`<div class="cal-dtxt"><b class="cal-dtitle">Door ${n} · ${esc(d.title || '')}</b><span>${line}</span>${daily}</div>${btn}`, n);
   }
 
+  const xmasMode = () => W3 && !!data.isChristmas?.();
+  function watchAgain() {
+    if (game.state.phase !== 'play') return;
+    sfx('ui');
+    api.close();
+    setTimeout(() => { try { ctx.finale?.replay?.(); } catch (e) { console.error('[calendar] replay', e); } }, 150);
+  }
   function point(n) {
     sfx('ui');
     api.close();

@@ -41,7 +41,7 @@ const store = {
 function offlineNet(reason) {
   return {
     online: false, room: 0, mode: 'off', townSpirit: { doors: 0, helpers: 0 },
-    players: () => [], recordDoor() {}, setStyle() {}, setName() {}, refreshSpirit() {}, stats: () => ({ reason }),
+    players: () => [], gather: () => () => {}, recordDoor() {}, setStyle() {}, setName() {}, refreshSpirit() {}, stats: () => ({ reason }),
   };
 }
 
@@ -82,6 +82,8 @@ function createNetImpl(ctx) {
       } catch (e) { /* never throw */ }
       return out;
     },
+    /** Draw remote players on an arc round (x, z) facing it (the finale's gathering), local only. Returns release(). */
+    gather(g) { try { return view.setGather(g); } catch (e) { return () => {}; } },
     /** Count a completed door towards Town Spirit (fire and forget; queued while offline; deduped). */
     recordDoor(n) { try { core.recordDoor(n); } catch (e) { /* never throw */ } },
     setStyle(style) {

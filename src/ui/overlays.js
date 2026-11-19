@@ -19,8 +19,12 @@ export function createOverlays(ctx, root) {
 
   // ---- toasts (pass {x, z} to add a live arrow pointing at that spot)
   const arrows = []; // {el, x, z, t}
+  // free-play rides and the cable car own the screen: "go to door N" pointers (arrow toasts) wait until the ride ends
+  const riding = () => cam.shotName === 'cablecarRide' || !!ctx.rides?.active;
+  let heldPointer = null, wasRiding = false;
   function toast(text, ms = 2800, opts = {}) {
     if (!text) return;
+    if (riding() && Number.isFinite(opts.x) && Number.isFinite(opts.z)) { heldPointer = { text, ms, opts }; return; }
     const t = document.createElement('div');
     t.className = 'tb-toast knit-card';
     if (Number.isFinite(opts.x) && Number.isFinite(opts.z)) {
@@ -135,6 +139,9 @@ export function createOverlays(ctx, root) {
   window.addEventListener('keydown', (e) => { if (e.target?.tagName !== 'INPUT') trySkip(); }, { capture: true });
 
   function update(dt) {
+    const r = riding();
+    if (wasRiding && !r && heldPointer && game.state.phase === 'play') { const h = heldPointer; heldPointer = null; setTimeout(() => { if (!riding()) toast(h.text, h.ms, h.opts); }, 900); }
+    if (r !== wasRiding) wasRiding = r;
     updateBubbles(dt);
     updateArrows();
     shotT = cam.shotSkippable ? shotT + dt : 0;

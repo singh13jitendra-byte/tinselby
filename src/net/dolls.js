@@ -191,8 +191,33 @@ export function createDollView(ctx) {
     dolls.delete(d.id);
   }
 
+  // ---- gathering (finale): remote dolls are drawn on slots of an arc round (x, z), facing it; local only
+  let gather = null; // {x, z, r, a0, a1, token}
+  let gatherToken = 0;
+  const gp = { x: 0, z: 0 };
+  function setGather(g) {
+    if (!g) { gather = null; return () => {}; }
+    const n = (v, d) => (Number.isFinite(+v) ? +v : d);
+    gather = { x: n(g.x, 0), z: n(g.z, 0), r: Math.max(0.5, n(g.r, 4.4)), a0: n(g.a0, -1.2), a1: n(g.a1, 1.2), token: ++gatherToken, slots: new Map() };
+    const mine = gather.token;
+    return () => { if (gather && gather.token === mine) gather = null; };
+  }
+  function assignSlots(wanted) {
+    const ids = wanted.map((w) => w.id).sort();
+    const n = ids.length;
+    gather.slots.clear();
+    ids.forEach((id, i) => {
+      const a = gather.a0 + ((gather.a1 - gather.a0) * (i + 0.5)) / n;
+      gp.x = gather.x + Math.sin(a) * gather.r;
+      gp.z = gather.z + Math.cos(a) * gather.r;
+      try { ctx.colliders.resolve(gp, 0.15); } catch (e) { /* keep the raw slot */ }
+      gather.slots.set(id, { x: gp.x, z: gp.z });
+    });
+  }
+
   function update(dt, wanted) {
     builds = 0;
+    if (gather) assignSlots(wanted);
     const want = new Map();
     for (const w of wanted) want.set(w.id, w);
     for (const d of dolls.values()) if (!want.has(d.id) && d.state !== 'out') { d.state = 'out'; d.t = 0; d.from = d.pop; }
@@ -228,7 +253,19 @@ export function createDollView(ctx) {
     // animate
     let nb = 0;
     for (const d of [...dolls.values()]) {
-      const w = d.w;
+      let w = d.w;
+      // gather blend: 0 = live position, 1 = on the slot (about 1 s each way)
+      const slot = gather && gather.slots.get(d.id);
+      d.gk = Math.max(0, Math.min(1, (d.gk || 0) + (slot ? dt : -dt)));
+      if (d.gk > 0) {
+        const k = d.gk * d.gk * (3 - 2 * d.gk);
+        const sx = slot ? slot.x : d.gs.x, sz = slot ? slot.z : d.gs.z;
+        if (slot) d.gs = slot;
+        const fx = gather ? gather.x : d.gf.x, fz = gather ? gather.z : d.gf.z;
+        if (gather) d.gf = { x: gather.x, z: gather.z };
+        w = { ...w, x: w.x + (sx - w.x) * k, z: w.z + (sz - w.z) * k, s: w.s * (1 - k), h: d.gk > 0.5 ? Math.atan2(fx - sx, fz - sz) : w.h };
+        d.gbob = true;
+      } else d.gbob = false;
       d.t += dt;
       if (d.state === 'in') {
         const k = Math.min(1, d.t / 0.45);
@@ -252,7 +289,7 @@ export function createDollView(ctx) {
       d.phase += dt * (walking ? 6 + d.spd * 2.4 : 0);
       const sn = Math.sin(d.phase);
       if (!walking) d.idle += dt;
-      d.mesh.position.y = Math.abs(sn) * 0.03 * k;
+      d.mesh.position.y = Math.abs(sn) * 0.03 * k + (d.gk >= 1 ? Math.abs(Math.sin(engine.time * 2.1 + d.phase)) * 0.012 : 0);
       d.mesh.rotation.z = sn * 0.13 * k;
       d.mesh.rotation.x = 0.09 * k;
       const breathe = walking ? 1 : 1 + Math.sin(d.idle * 2.2) * 0.014;
@@ -272,6 +309,7 @@ export function createDollView(ctx) {
   return {
     root,
     update,
+    setGather,
     /** Dolls currently shown (for name tags). k = 0..1 pop/fade factor. */
     visible() {
       const out = [];
