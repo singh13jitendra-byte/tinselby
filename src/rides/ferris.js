@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import { SEAT_DROP } from '../core/player.js';
 import { getFerris } from '../city/lakeside.js';
 import { icon } from '../ui/icons.js';
+import { W4 } from './flag.js';
 import './rides-wheel.css';
 
 const TAU = Math.PI * 2;
@@ -25,6 +26,9 @@ const BOTTOM = -Math.PI / 2; // gondola angle at the bottom of the wheel
 const SPIN = -1; // the wheel turns clockwise seen from its front: riders rise on the town (west) side
 const RIDE_W = 0.2, RIDE_A = 0.07; // ride speed (rad/s) and acceleration
 const TOP_PAUSE = 6;
+// Riding together (W4): each gondola has two places on its bench, seat s = gondola * 2 + j. Alone you sit in the middle;
+// with somebody beside you, j = 0 slides to −x and j = 1 to +x (gondola-local, facing +z).
+const PER = 2, PAIR_X = 0.085;
 
 export const ss = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
 export const mod = (a, m) => ((a % m) + m) % m;
@@ -141,19 +145,70 @@ export function createFerrisWheelRide(ctx) {
     update,
     stop() { if (R) finish(true); },
     /** Diagnostics / tests: { phase, k, t, view, turns }. */
-    get state() { const f = getFerris(); return R ? { phase: R.phase, k: R.k, t: +R.T.toFixed(1), view: R.view, turns: f && R.ang0 != null ? +(Math.abs(f.ang - R.ang0) / TAU).toFixed(2) : 0 } : null; },
+    get state() { const f = getFerris(); return R ? { phase: R.phase, k: R.k, j: R.j, t: +R.T.toFixed(1), view: R.view, turns: f && R.ang0 != null ? +(Math.abs(f.ang - R.ang0) / TAU).toFixed(2) : 0 } : null; },
     /** Tests: hop off / toggle the view without the DOM. */
     hopOff: () => requestLeave(),
     toggleView: () => toggleView(),
   };
 
   const f0 = getFerris();
+  const NS = (f0?.NC || 10) * PER;
+  const offs = new Float32Array(NS); // smoothed side shift per seat (gondola-local x)
+  const seatX = (s) => (W4 ? offs[s] : 0);
+  const free = (k, taken) => [0, 1].filter((j) => !taken.has(k * PER + j));
   const spot = f0 && interact.add({
     id: 'ride-ferris', x: f0.toWorld(-0.05, 1.12)[0], z: f0.toWorld(-0.05, 1.12)[1], r: 0.75, label: 'Ride the Ferris wheel', icon: 'sparkle',
     enabled: () => game.state.phase === 'play' && !R && (ctx.rides?.active ?? null) === null && !!getFerris()?.shown && !ctx.minigames?.active,
     onInteract: () => start(),
   });
   if (!f0) console.warn('[rides] ferris: no wheel found (lakeside not built)');
+  const canStart = () => game.state.phase === 'play' && !R && (ctx.rides?.active ?? null) === null && !!getFerris()?.shown && !ctx.minigames?.active;
+  const SEATED = ['settle', 'up', 'top', 'down', 'return'];
+  const _p = new THREE.Vector3(), _m = new THREE.Matrix4();
+  /** Riding together (src/rides/together.js). */
+  ride.seats = {
+    n: NS,
+    mine: () => (R && SEATED.includes(R.phase) ? R.k * PER + R.j : null),
+    /** The other place in the same gondola, then the gondolas either side, and so on round the wheel. */
+    near(s) {
+      const k = Math.floor(s / PER), out = [s ^ 1], NC = NS / PER;
+      for (let d = 1; d <= NC / 2; d++) for (const kk of [mod(k + d, NC), mod(k - d, NC)]) { if (!out.includes(kk * PER)) out.push(kk * PER, kk * PER + 1); }
+      return out.filter((q) => q !== s);
+    },
+    tick(dt, occ) {
+      const kt = 1 - Math.exp(-dt * 5);
+      for (let s = 0; s < NS; s++) {
+        const goal = occ && occ.has(s) && occ.has(s ^ 1) ? (s % PER ? PAIR_X : -PAIR_X) : 0;
+        offs[s] += (goal - offs[s]) * kt;
+        if (Math.abs(goal - offs[s]) < 1e-4) offs[s] = goal;
+      }
+    },
+    pose(s, out) {
+      const f = getFerris();
+      if (!f || !f.shown) return null;
+      const k = Math.floor(s / PER);
+      f.gondolaMatrix(k, _m);
+      _p.set(f.seat.x + offs[s], f.seat.y - SEAT_DROP * dollK(player), f.seat.z).applyMatrix4(_m);
+      out.x = _p.x; out.y = _p.y; out.z = _p.z; out.h = f.YAW;
+      out.roll = f.swing(k); // the gondola's swing (about the wheel's axis, i.e. the doll's local z)
+      out.pose = 'bench';
+      return out;
+    },
+    /** Board beside seat s: its gondola if there is a free place, else the nearest gondola with one. */
+    join(s, taken) {
+      if (!canStart()) return false;
+      const NC = NS / PER, k0 = Math.floor(s / PER);
+      for (let d = 0; d <= NC / 2; d++) {
+        for (const k of d ? [mod(k0 + d, NC), mod(k0 - d, NC)] : [k0]) {
+          const js = free(k, taken);
+          if (js.length) { start({ k, j: js.includes(s ^ 1) && k === k0 ? s ^ 1 : js[0], join: true }); return !!R; }
+        }
+      }
+      return false;
+    },
+    where: () => (spot ? { x: spot.x, z: spot.z, h: (getFerris()?.YAW ?? 0) + Math.PI } : null),
+    spots: spot ? [spot] : [],
+  };
 
   // ------------------------------------------------------------------ wheel driver (called by lakeside's update, order 5)
   /** Moves the wheel towards R.target (direction R.dir) with speed ≤ R.vmax and accel R.acc; R.hold keeps it still. */
@@ -173,25 +228,36 @@ export function createFerrisWheelRide(ctx) {
   function moveTo(target, vmax, acc, dir = 1) { R.target = target; R.vmax = vmax; R.acc = acc; R.dir = dir; R.arrived = false; R.hold = false; }
 
   // ------------------------------------------------------------------ start / leave / finish
-  function start() {
+  /** pref (riding together): { k, j, join } = this gondola and place (the wheel may turn back to bring it down). */
+  function start(pref = null) {
     const f = getFerris();
     if (R || !f || !f.shown) return;
     // the next gondola that can still stop at the bottom without braking hard
     const accB = 0.25, stopD = (Math.max(0, f.speed * SPIN) ** 2) / (2 * accB) + 0.02;
-    let k = 0, best = Infinity;
+    const taken = W4 ? (ctx.rides?.takenByOthers?.('ferris') || new Set()) : new Set();
+    let k = 0, best = Infinity, dir = SPIN, j = 0;
     for (let i = 0; i < f.NC; i++) {
+      if (taken.has(i * PER) && taken.has(i * PER + 1)) continue; // full (riding together)
       let d = mod(SPIN * (BOTTOM - f.gondolaAngle(i)), TAU); // still to go, turning the way the wheel turns
       if (d < stopD) d += TAU;
       if (d < best) { best = d; k = i; }
     }
+    if (W4 && !pref) j = free(k, taken)[0] ?? 0;
+    if (pref) {
+      // a friend's gondola: bring it down whichever way round is shorter
+      k = pref.k; j = pref.j;
+      const fwd = mod(SPIN * (BOTTOM - f.gondolaAngle(k)), TAU), back = TAU - fwd;
+      if (fwd <= back + 0.4) best = fwd; // (just short of the bottom: the wheel brakes a little harder)
+      else { best = back; dir = -SPIN; } // (turning round: the driver brakes first)
+    }
     R = {
-      k, phase: 'approach', t: 0, T: 0, view: 'eye', ang0: null, leave: false, walked: false,
+      k, j, phase: 'approach', t: 0, T: 0, view: 'eye', ang0: null, leave: false, walked: false,
       target: 0, vmax: 0.4, acc: accB, dir: 1, hold: false, arrived: false,
       from: new THREE.Vector3(), wasEye: cam.view === 'eye',
       look: dragLook(canvas), manual: false, yaw: 0, pitch: -0.1, yawS: null, pitchS: -0.1, orbit: 0, orbitS: 0,
       eyeK: 0, wideK: 0, offEsc: null, ui: null,
     };
-    moveTo(f.ang + SPIN * best, 0.4, accB, SPIN);
+    moveTo(f.ang + dir * best, 0.4, accB, dir);
     f.driver = drive;
     ctx.rides?.begin(ride);
     player.controllable = false;
@@ -263,7 +329,7 @@ export function createFerrisWheelRide(ctx) {
   function seatWorld(out) {
     const f = getFerris();
     f.gondolaMatrix(R.k, M);
-    return out.set(f.seat.x, f.seat.y - SEAT_DROP * dollK(player), f.seat.z).applyMatrix4(M);
+    return out.set(f.seat.x + seatX(R.k * PER + R.j), f.seat.y - SEAT_DROP * dollK(player), f.seat.z).applyMatrix4(M);
   }
   function update(dt) {
     if (!R) return;
@@ -363,9 +429,10 @@ export function createFerrisWheelRide(ctx) {
         const pr = cam.portrait || 0, aspect = Math.max(0.3, cam.aspect || 1.6);
         const k = dollK(player);
         f.gondolaMatrix(r.k, M);
-        eyeL.set(f.seat.x, f.seat.y - SEAT_DROP * k + EYE_H * k + 0.004, f.seat.z + 0.025);
+        const sx = f.seat.x + seatX(r.k * PER + r.j);
+        eyeL.set(sx, f.seat.y - SEAT_DROP * k + EYE_H * k + 0.004, f.seat.z + 0.025);
         eyeP.copy(eyeL).applyMatrix4(M);
-        headP.set(f.seat.x, f.seat.y - SEAT_DROP * k + 0.25 * k, f.seat.z).applyMatrix4(M);
+        headP.set(sx, f.seat.y - SEAT_DROP * k + 0.25 * k, f.seat.z).applyMatrix4(M);
         f.pivotWorld(r.k, gondP); gondP.y -= 0.4;
         // ---- look input: eye = gaze (yaw / pitch), outside = orbit round the wheel
         const L = r.look.consume();
@@ -375,7 +442,15 @@ export function createFerrisWheelRide(ctx) {
         // out over the lake at the bottom; rising on the town side and at the top, the market tree and the town; coming
         // down the far side (looking across would cut through the wheel) back towards the lake
         const westK = ss((0.6 - Math.cos(ga)) / 0.9);
-        const autoYaw = angLerp(yawTo(lake.x, lake.z), yawTo(tree.x, tree.z), ss(hgt * 1.3) * westK) + Math.sin(r.T * 0.21) * 0.1;
+        let autoYaw = angLerp(yawTo(lake.x, lake.z), yawTo(tree.x, tree.z), ss(hgt * 1.3) * westK) + Math.sin(r.T * 0.21) * 0.1;
+        // riding together: a friend beside you fills half the frame from 17 cm, so the drifting gaze stays within ~45° of
+        // straight out on their side (dragging still looks anywhere)
+        const pairK = W4 ? Math.abs(seatX(r.k * PER + r.j)) / PAIR_X : 0;
+        if (pairK > 0) {
+          const side = seatX(r.k * PER + r.j) < 0 ? 1 : -1; // the friend's side: +1 = gondola-local +x (world yaw YAW + π/2)
+          const d = Math.atan2(Math.sin(autoYaw - f.YAW), Math.cos(autoYaw - f.YAW));
+          if (d * side > 0.8) autoYaw = angLerp(autoYaw, f.YAW + side * 0.8, Math.min(1, pairK));
+        }
         // looking down onto the town from up high also keeps the front rim's arc (10-25° above the eye line at the top)
         // out of the frame; portrait's taller view needs a little more
         const autoPitch = -0.05 - (0.27 + 0.07 * pr) * hgt;

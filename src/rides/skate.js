@@ -72,11 +72,24 @@ export function createSkatingRide(ctx) {
   let R = null; // render + DOM objects while active
   let saved = null;
 
-  interact.add({
+  const spot = interact.add({
     id: 'ride-skate', x: SPOT.x, z: SPOT.z, r: 1.05, label: 'Put on skates', icon: 'skate',
     enabled: () => game.state.phase === 'play' && ctx.rides?.active === null && player.controllable && !cam.shotActive,
     onInteract: board,
   });
+  // riding together (src/rides/together.js): one place (s = 0); remote riders keep their streamed position (no seat pose)
+  ride.seats = {
+    n: 1,
+    mine: () => (ride.active ? 0 : null),
+    near: () => [],
+    join() {
+      if (game.state.phase !== 'play' || ctx.rides?.active !== null || !player.controllable) return false;
+      board();
+      return ride.active;
+    },
+    where: () => ({ x: SPOT.x, z: SPOT.z }),
+    spots: [spot],
+  };
 
   // ---------------------------------------------------------------- board
   function board() {

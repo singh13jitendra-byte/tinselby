@@ -18,7 +18,8 @@
 // horizon stays level).
 import * as THREE from 'three';
 import { getCarousel } from '../city/market.js';
-import { rideUI, dragLook, ss, angLerp, dollK, EYE_H } from './ferris.js';
+import { rideUI, dragLook, ss, angLerp, dollK, EYE_H, mod } from './ferris.js';
+import { W4 } from './flag.js';
 
 const SHOT = 'rideCarousel';
 const RIDE_W = 0.3, RIDE_TURNS = 3;
@@ -38,12 +39,41 @@ export function createCarouselRide(ctx) {
     toggleView: () => toggleView(),
   };
   const c0 = getCarousel();
-  if (c0) interact.add({
+  const spot = c0 && interact.add({
     id: 'ride-carousel', x: c0.x + 0.15, z: c0.z + 1.4, r: 0.8, label: 'Ride the carousel', icon: 'hoof',
     enabled: () => game.state.phase === 'play' && !R && (ctx.rides?.active ?? null) === null && !!getCarousel()?.shown && !ctx.minigames?.active,
     onInteract: () => start(),
   });
-  else console.warn('[rides] carousel: not found (market not built)');
+  if (!c0) console.warn('[rides] carousel: not found (market not built)');
+  const canStart = () => game.state.phase === 'play' && !R && (ctx.rides?.active ?? null) === null && !!getCarousel()?.shown && !ctx.minigames?.active;
+
+  // ------------------------------------------------------------------ riding together (src/rides/together.js): seat s = horse s
+  const NH = c0?.NH || 6;
+  const _m = new THREE.Matrix4(), _p = new THREE.Vector3();
+  ride.seats = {
+    n: NH,
+    mine: () => (R && (R.phase === 'settle' || R.phase === 'ride' || R.phase === 'stop') ? R.k : null),
+    /** The horses either side, then the next ones out. */
+    near(s) { const out = []; for (let d = 1; d <= NH / 2; d++) for (const q of [mod(s + d, NH), mod(s - d, NH)]) if (!out.includes(q) && q !== s) out.push(q); return out; },
+    pose(s, out) {
+      const c = getCarousel();
+      if (!c || !c.shown) return null;
+      c.horseMatrix(s, _m);
+      _p.copy(c.saddle).applyMatrix4(_m);
+      out.x = _p.x; out.y = _p.y - HIP; out.z = _p.z;
+      out.h = Math.atan2(_m.elements[0], _m.elements[2]); // the horse's heading (its local +x, as for your own doll)
+      out.pose = 'astride';
+      return out;
+    },
+    /** Board the horse next to s (the nearer neighbour first). */
+    join(s, taken) {
+      if (!canStart()) return false;
+      start({ near: s, taken });
+      return !!R;
+    },
+    where: () => (spot ? { x: spot.x, z: spot.z } : null),
+    spots: spot ? [spot] : [],
+  };
 
   function drive(dt) {
     const c = getCarousel();
@@ -52,10 +82,12 @@ export function createCarouselRide(ctx) {
     c.speed += Math.max(-a, Math.min(a, d));
   }
 
-  function start() {
+  /** pref (riding together): { near: horse, taken: Set } = a free horse beside that one. */
+  function start(pref = null) {
     const c = getCarousel();
     if (R || !c || !c.shown) return;
     R = {
+      pref,
       phase: 'slow', t: 0, T: 0, k: 0, view: 'out', goal: 0, acc: 0.35, turned: 0, walked: false,
       from: new THREE.Vector3(), edge: new THREE.Vector3(), look: dragLook(canvas), manual: false, rel: null, relS: null,
       pitch: -0.06, pitchS: -0.06, orbit: 0, orbitS: 0, eyeK: 0, wideK: 0, ui: null, offEsc: null,
@@ -168,9 +200,13 @@ export function createCarouselRide(ctx) {
         if (Math.abs(c.speed) < 1e-3 && R.t > 0.4) {
           // the nearest horse, and the edge spot beside it
           let best = Infinity;
+          const taken = R.pref?.taken || (W4 ? (ctx.rides?.takenByOthers?.('carousel') || new Set()) : new Set());
           for (let i = 0; i < c.NH; i++) {
+            if (taken.has(i)) continue;
             c.horseMatrix(i, M); hp.setFromMatrixPosition(M);
-            const d = Math.hypot(hp.x - player.pos.x, hp.z - player.pos.z);
+            let d = Math.hypot(hp.x - player.pos.x, hp.z - player.pos.z);
+            // riding together: the horses next to your friend's come first (then the nearer one)
+            if (R.pref) { const ring = Math.min(mod(i - R.pref.near, c.NH), mod(R.pref.near - i, c.NH)); d += ring === 0 ? 1000 : (ring - 1) * 100; }
             if (d < best) { best = d; R.k = i; }
           }
           c.horseMatrix(R.k, M); hp.setFromMatrixPosition(M);

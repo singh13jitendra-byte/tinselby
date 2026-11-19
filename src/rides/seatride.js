@@ -317,7 +317,7 @@ export function createSeat(ctx, spec) {
     st.view = st.viewGoal = 0; st.T = 0; st.idle = 0;
   }
 
-  return { st, sit, place, unsit, setPlayer, hop, seatPos, local, startShot, endShot, tick, attachLook, detachLook, resetLook, dollK,
+  return { st, spec, sit, place, unsit, setPlayer, hop, seatPos, local, startShot, endShot, tick, attachLook, detachLook, resetLook, dollK,
     get boarding() { return st.boardT >= 0 && st.boardT < BOARD; } };
 }
 

@@ -6,9 +6,21 @@
 // before that, and a held / hidden tram offers no boarding.
 import * as THREE from 'three';
 import { TRAM_SEAT, TRAM_DOOR, buildTramOpenGeometry } from '../life/tram.js';
+import { SEAT_DROP } from '../core/player.js';
 import { createSeat, createRideLayer } from './seatride.js';
+import { W4 } from './flag.js';
 
 const SHOT = 'ride-tram';
+// Riding together (W4): the free benches of the riding body (the three knitted passengers keep theirs). Seat 0 is the
+// usual rider's bench; 1 is across the aisle from it, then the benches behind / in front.
+const SEATS = [
+  { x: TRAM_SEAT.x, z: TRAM_SEAT.z },
+  { x: -TRAM_SEAT.x, z: TRAM_SEAT.z },
+  { x: TRAM_SEAT.x, z: -0.54 },
+  { x: TRAM_SEAT.x, z: 0.0 },
+  { x: -TRAM_SEAT.x, z: 0.27 },
+];
+const NEAR = SEATS.map((a, i) => SEATS.map((b, j) => [j, Math.hypot(a.x - b.x, a.z - b.z)]).filter(([j]) => j !== i).sort((p, q) => p[1] - q[1]).map(([j]) => j));
 
 export function createTramRide(ctx) {
   const { game, interact, player, layout } = ctx;
@@ -17,10 +29,12 @@ export function createTramRide(ctx) {
   const tram = () => traffic()?.tram || null;
   let openGeo = null, closedGeo = null, swapBackT = 0;
 
+  // (seat, eye and the boarding glide are changed in place for the other benches: see useSeat)
+  const seatSpec = { ...TRAM_SEAT };
   const seat = createSeat(ctx, {
     id: 'tram', shot: SHOT, icon: 'tram',
     mesh: () => tram().mesh,
-    seat: TRAM_SEAT,
+    seat: seatSpec,
     // out of the plaza-side window (local −x), turned a little towards the direction of travel
     // (leaning towards the glass: the window posts either side stay out of a landscape frame)
     eye: { yaw0: -Math.PI / 2 + 0.03, pitch0: -0.05, yawMin: -1.5, yawMax: 1.75, fov: 56, fovPortrait: 28, dx: -0.078, dz: 0.02 },
@@ -41,6 +55,24 @@ export function createTramRide(ctx) {
       out.y = (Math.sin(T * 7.1) * 0.0022 + Math.sin(T * 2.3) * 0.0016) * k;
     },
   });
+
+  /** Sit on bench i (0 = the usual one): seat, eye (out of the nearer window) and the boarding glide follow. */
+  let seatIdx = 0, wantSeat = null;
+  function useSeat(i) {
+    seatIdx = i;
+    const b = SEATS[i], side = b.x < 0 ? 1 : -1; // 1 = the plaza side (local −x)
+    seatSpec.x = b.x; seatSpec.z = b.z;
+    const sp = seat.spec;
+    sp.eye.yaw0 = side * (-Math.PI / 2 + 0.03); sp.eye.dx = side * -0.078;
+    sp.eye.yawMin = side > 0 ? -1.5 : -1.75; sp.eye.yawMax = side > 0 ? 1.75 : 1.5;
+    sp.approach[0] = side * -1.25; sp.entry[0] = side * -0.32; sp.entry[2] = b.z;
+  }
+  /** The bench to take: wanted (beside a friend) or the usual one, never one a remote rider is drawn on. */
+  function pickSeat(want) {
+    const taken = W4 ? (ctx.rides?.takenByOthers?.('tram') || new Set()) : new Set();
+    const order = want == null ? [0, ...NEAR[0]] : NEAR[want];
+    return order.find((i) => !taken.has(i)) ?? null;
+  }
 
   // ---------------------------------------------------------------- state
   // idle → wait (tram pulling in) → board (hop on + camera glides in) → ride → alight (hop off) → idle
@@ -92,11 +124,12 @@ export function createTramRide(ctx) {
   // ---------------------------------------------------------------- boarding
   const _w = new THREE.Vector3(), _d = new THREE.Vector3(), _s = new THREE.Vector3(), _o = new THREE.Vector3();
   const doorOut = () => seat.local(_d, TRAM_DOOR.x - 0.16, 0.0, TRAM_DOOR.z);
-  const doorIn = () => seat.local(_o, TRAM_SEAT.x, TRAM_SEAT.y - 0.03, TRAM_DOOR.z - 0.12);
+  const doorIn = () => seat.local(_o, seatSpec.x, TRAM_SEAT.y - 0.03, TRAM_DOOR.z - 0.12);
   const seatP = () => seat.seatPos(_s);
-  function begin(i) {
+  /** want (riding together): board in the free bench nearest this one. */
+  function begin(i, want = null) {
     if (state !== 'idle') return;
-    stopIdx = i; pendingOff = false;
+    stopIdx = i; pendingOff = false; wantSeat = want;
     prev = { ctl: player.controllable, input: ctx.input.enabled };
     player.controllable = false;
     ctx.input.enabled = false;
@@ -134,6 +167,7 @@ export function createTramRide(ctx) {
     const v = tram();
     state = 'board';
     v.rider = true;
+    useSeat(pickSeat(wantSeat) ?? 0);
     try {
       if (!openGeo) { closedGeo = v.mesh.geometry; openGeo = buildTramOpenGeometry(); }
       v.mesh.geometry = openGeo;
@@ -240,6 +274,46 @@ export function createTramRide(ctx) {
     finish(state === 'wait' ? null : { x: best[0], z: best[1] }, false);
     if (v && openGeo && v.mesh.geometry === openGeo) { v.mesh.geometry = closedGeo; swapBackT = 0; }
   }
+
+  // ---------------------------------------------------------------- riding together (src/rides/together.js)
+  const _p = new THREE.Vector3();
+  let remoteBody = false;
+  api.seats = {
+    n: SEATS.length,
+    mine: () => (state === 'ride' || (state === 'board' && seat.st.seated) ? seatIdx : null),
+    near: (s) => NEAR[s].slice(),
+    pose(s, out) {
+      const v = tram();
+      if (!v || !v.shown || v.held) return null;
+      const b = SEATS[s], m = v.mesh;
+      m.updateWorldMatrix(true, false);
+      m.localToWorld(_p.set(b.x, TRAM_SEAT.y - SEAT_DROP * seat.dollK(), b.z));
+      out.x = _p.x; out.y = _p.y; out.z = _p.z; out.h = m.rotation.y; out.pose = 'bench';
+      return out;
+    },
+    /** Board at a stop (the one you stand at, else the one the tram reaches first) beside bench s. */
+    join(s, _taken, i) {
+      if (!canWait()) return false;
+      begin(Number.isInteger(i) ? i : nextStop(), s);
+      return state !== 'idle';
+    },
+    where() { const i = nextStop(), p = spotOf(STOPS[i]); return { x: p.x, z: p.z, h: Math.atan2(STOPS[i].pos[0] - p.x, STOPS[i].pos[1] - p.z), i }; },
+    spots,
+    /** Remote riders aboard while you are not: show the riding body (open windows) so they can be seen inside. */
+    remote(on) {
+      const v = tram();
+      if (!v || state !== 'idle') { remoteBody = false; return; }
+      if (on && v.shown) {
+        try {
+          if (!openGeo) { closedGeo = v.mesh.geometry; openGeo = buildTramOpenGeometry(); }
+          if (v.mesh.geometry !== openGeo) v.mesh.geometry = openGeo;
+          remoteBody = true; swapBackT = 0;
+        } catch (e) { console.warn('[ride tram] riding body', e); }
+      } else if (remoteBody) { remoteBody = false; swapBackT = 1.5; }
+    },
+  };
+  /** The stop the tram reaches first from now. */
+  function nextStop() { let b = 0, be = Infinity; for (let i = 0; i < STOPS.length; i++) { const e = eta(i); if (e < be) { be = e; b = i; } } return b; }
 
   function update(dt) {
     const v = tram();

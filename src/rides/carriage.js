@@ -5,20 +5,27 @@
 // passengers step aside (rider body) and it grows a touch (scaleMul) so the doll fits the bench.
 import * as THREE from 'three';
 import { CARRIAGE_SEAT, CARRIAGE_STOP } from '../life/carriage.js';
+import { SEAT_DROP } from '../core/player.js';
 import { createSeat, createRideLayer } from './seatride.js';
+import { W4 } from './flag.js';
 
 const SHOT = 'ride-carriage';
 const GROW = 1.12; // carriage size while ridden
 const DOLL = 0.84; // doll size while seated (× its normal size)
+// Riding together (W4): two places on the back bench. Alone you sit where the single rider always sat (x 0.04; seat 1
+// mirrors it); side by side, where the two knitted passengers sit (x ±0.075).
+const SOLO_X = [CARRIAGE_SEAT.x, -CARRIAGE_SEAT.x], PAIR_X = [0.075, -0.075];
+const REMOTE_K = 1.15 * 0.9 * DOLL; // a remote doll's size factor while seated here (player scale × doll design scale × DOLL)
 
 export function createCarriageRide(ctx) {
   const { game, interact, player, layout } = ctx;
   const carriage = () => ctx.life?._debug?.traffic?.carriage || null;
 
+  const seatSpec = { ...CARRIAGE_SEAT }; // x slides over when somebody sits beside you (riding together)
   const seat = createSeat(ctx, {
     id: 'carriage', shot: SHOT, icon: 'hoof',
     mesh: () => carriage().mesh,
-    seat: CARRIAGE_SEAT, dollMul: DOLL,
+    seat: seatSpec, dollMul: DOLL,
     // forward past the horse (sitting on the left of the bench, turned a touch left: the driver sits front-right)
     eye: { yaw0: 0.1, pitch0: -0.1, yawMin: -1.9, yawMax: 1.9, fov: 56, fovPortrait: 28, dx: 0.06, dz: 0.03 },
     approach: [0.95, 0.8, -1.55], entry: [0.24, 0.56, -0.48],
@@ -35,6 +42,13 @@ export function createCarriageRide(ctx) {
   });
 
   let state = 'idle', layer = null, step = null, offs = [], lastSay = '', waitT = 0;
+  let seatIdx = 0, wantSeat = null, remoteBody = false;
+  const seatX = Float32Array.from(SOLO_X); // smoothed x of each place
+  /** The place to take: beside a friend (want) or the usual one; null = both drawn as taken by remote riders. */
+  function pickSeat(want) {
+    const taken = W4 ? (ctx.rides?.takenByOthers?.('carriage') || new Set()) : new Set();
+    return (want == null ? [0, 1] : [1 - want]).find((i) => !taken.has(i)) ?? null;
+  }
   const api = {
     id: 'carriage',
     get active() { return state !== 'idle'; },
@@ -98,13 +112,15 @@ export function createCarriageRide(ctx) {
     offs.push(game.on('camera:toggle', () => { if (state === 'ride') toggleView(); }));
     offs.push(game.on('game:start', () => stop()));
   }
-  function begin() {
+  function begin(want = null) {
     if (state !== 'idle') return;
+    wantSeat = want;
     enter();
     board();
   }
-  function wait() {
+  function wait(want = null) {
     if (state !== 'idle') return;
+    wantSeat = want;
     enter();
     state = 'wait'; waitT = 0;
     player.faceTowards(CARRIAGE_STOP.pos[0], CARRIAGE_STOP.pos[1]);
@@ -120,6 +136,9 @@ export function createCarriageRide(ctx) {
     layer.offLabel('Hop off');
     layer.status('Whoa there… climb aboard!');
     state = 'board';
+    seatIdx = pickSeat(wantSeat) ?? 0;
+    seatSpec.x = seatX[seatIdx];
+    remoteBody = false;
     v.wait = Math.max(v.wait, 1.6); // pull up
     v.rider = true;
     v.scaleMul = GROW;
@@ -185,6 +204,44 @@ export function createCarriageRide(ctx) {
     const v = carriage();
     finish(v && v.shown && state !== 'wait' ? roadside() : null, false);
   }
+
+  // ---------------------------------------------------------------- riding together (src/rides/together.js)
+  const _p = new THREE.Vector3();
+  api.seats = {
+    n: 2,
+    mine: () => (state === 'ride' || state === 'board' ? (seat.st.seated ? seatIdx : null) : null),
+    near: (s) => [1 - s],
+    tick(dt, occ) {
+      const pair = !!occ && occ.has(0) && occ.has(1), kt = 1 - Math.exp(-dt * 5);
+      for (let i = 0; i < 2; i++) seatX[i] += ((pair ? PAIR_X[i] : SOLO_X[i]) - seatX[i]) * kt;
+      if (state !== 'idle') seatSpec.x = seatX[seatIdx];
+    },
+    pose(s, out) {
+      const v = carriage();
+      if (!v || !v.shown || v.held) return null;
+      const m = v.mesh;
+      m.updateWorldMatrix(true, false);
+      m.localToWorld(_p.set(seatX[s], CARRIAGE_SEAT.y - SEAT_DROP * REMOTE_K, CARRIAGE_SEAT.z));
+      out.x = _p.x; out.y = _p.y; out.z = _p.z; out.h = m.rotation.y; out.pose = 'bench';
+      out.scale = DOLL; // (as your own doll while seated here)
+      return out;
+    },
+    /** Hop on beside them (at the stop: wait for it if it is not there yet). */
+    join(s, _taken, i) {
+      if (!canBoard() || pickSeat(s) == null) return false;
+      if (i === 1 && !near()) wait(s); else begin(s);
+      return state !== 'idle';
+    },
+    where() { const v = carriage(); if (!v || !v.shown) return null; const r = roadside(); return { x: r.x, z: r.z, h: r.heading + Math.PI }; },
+    spots: [spot, stopSpot],
+    /** Remote riders aboard while you are not: the rider body (no back passengers) and the bigger size, as when you ride. */
+    remote(on) {
+      const v = carriage();
+      if (!v || state !== 'idle') return;
+      if (on && !remoteBody) { remoteBody = true; v.scaleMul = GROW; try { v.rig?.setRider?.(true); } catch (e) { /* keep going */ } }
+      else if (!on && remoteBody) { remoteBody = false; v.scaleMul = 1; try { v.rig?.setRider?.(false); } catch (e) { /* keep going */ } }
+    },
+  };
 
   function update(dt) {
     const v = carriage();
