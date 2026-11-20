@@ -50,7 +50,7 @@ export function createUI(ctx) {
     const gameArrow = focused || (!focus && !!ctx.tasks?.objective);
     hud.setHint(gameArrow ? null : { x: s.x, z: s.z, text: find, n });
     game.emit('hint:target', { x: s.x, z: s.z, n, text: find });
-    overlays.toast(text || find, 4800, { x: s.x, z: s.z });
+    // the HUD goal card (and ctx.guide's edge arrow / marker) now carry this; no separate arrow toast
   }
 
   // door flow: newly opened doors get a toast + hint; the wave-end teaser follows the last available door

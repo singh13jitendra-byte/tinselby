@@ -162,42 +162,43 @@
 /* ------------------------------------------------------------------ HUD */
 #ui [hidden] { display: none !important; }
 .tb-hud { position: absolute; inset: 0; }
-.tb-tl { position: absolute; top: calc(12px + var(--safe-t)); left: calc(12px + var(--safe-l)); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
-.tb-task {
-  display: flex; align-items: center; gap: 10px; max-width: min(30vw, 320px); min-height: 44px; padding: 6px 16px 6px 6px;
-  background: var(--cream); border-radius: 999px; box-shadow: var(--shadow); outline: 2px dashed rgba(184, 48, 45, 0.5); outline-offset: -5px;
-  font: 600 15px/1.2 var(--font); color: var(--ink);
+/* top-left: ONE goal card (door, what to do now, distance, "?"), the Town Spirit / online chips under it. The mini-map circle
+   (src/map) sits top-right under the round-button row, so the column's width stops short of it on phones. */
+.tb-tl {
+  position: absolute; top: calc(12px + var(--safe-t)); left: calc(12px + var(--safe-l)); display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  width: min(340px, 38vw); pointer-events: none;
 }
-.tb-task.flash { animation: tbPop .45s ease; }
-.tb-task-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--red); color: #fff; display: grid; place-items: center; }
-.tb-task-ico svg { width: 20px; height: 20px; }
-.tb-task-txt { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.tb-hintpill {
-  display: flex; align-items: center; gap: 8px; max-width: min(30vw, 300px); padding: 5px 14px 5px 5px; border-radius: 999px;
-  background: rgba(36, 44, 72, 0.82); color: var(--cream); font: 600 13px/1.2 var(--font); box-shadow: 0 6px 18px rgba(10, 10, 30, 0.3);
+.tb-goal {
+  --goal-accent: var(--red);
+  position: relative; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto;
+  grid-template-areas: "n l1" "n l2"; column-gap: 10px; row-gap: 1px; align-items: center; padding: 7px 8px 8px 8px; border-radius: 20px; cursor: pointer; pointer-events: auto;
+  background: var(--cream); color: var(--ink); box-shadow: 0 4px 0 #cdb38a, 0 10px 20px rgba(10, 10, 30, 0.28);
+  outline: 2px dashed color-mix(in srgb, var(--goal-accent) 55%, transparent); outline-offset: -5px; text-align: left;
 }
-.tb-hintpill.pop { animation: tbPop .4s ease; }
-.tb-hint-arrow { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--gold); color: #5b3a0c; display: grid; place-items: center; }
-.tb-hint-arrow svg { width: 20px; height: 20px; }
-.tb-hint-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.tb-tc { position: absolute; top: calc(10px + var(--safe-t)); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 36vw; }
-.tb-door {
-  display: flex; align-items: center; gap: 8px; min-height: 44px; max-width: 100%; padding: 5px 16px 5px 5px; border: 0; border-radius: 999px; cursor: pointer;
-  background: var(--red); color: var(--cream); font: 500 15px/1.15 var(--font); box-shadow: 0 5px 0 var(--red-dark), 0 10px 20px rgba(10, 10, 30, 0.3);
-  outline: 2px dashed rgba(255, 244, 226, 0.55); outline-offset: -5px; pointer-events: auto;
-}
-.tb-door:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--red-dark); }
-.tb-door.flash { animation: tbStarPop .7s cubic-bezier(.3, 1.6, .5, 1); }
+.tb-goal:active { transform: translateY(2px); }
+.tb-goal.flash { animation: tbPop .45s ease; }
+.tb-goal.hinted { --goal-accent: #b97a10; background: #fff3d2; }
+.tb-goal.quiet { --goal-accent: var(--green); }
 .tb-door-n {
-  flex: none; min-width: 34px; height: 34px; padding: 0 6px; border-radius: 10px; display: grid; place-items: center; font: 700 18px/1 var(--font);
-  background: #fff4e2; color: var(--red); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12); outline: 1.5px dashed rgba(184, 48, 45, 0.5); outline-offset: -4px;
+  grid-area: n; align-self: start; min-width: 34px; height: 34px; padding: 0 6px; box-sizing: border-box; border-radius: 11px; display: grid; place-items: center; font: 700 18px/1 var(--font);
+  background: var(--goal-accent); color: #fff4e2; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
 }
-.tb-door-txt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-door-txt { grid-area: l1; min-width: 0; padding-right: 30px; font: 700 12.5px/1.2 var(--font); color: var(--goal-accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-door-txt b { font-weight: 700; }
-.tb-chips { display: flex; gap: 6px; }
+.tb-goal-main { grid-area: l2; min-width: 0; display: block; font: 600 15px/1.2 var(--font); }
+.tb-goal-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.tb-goal.full .tb-goal-txt { -webkit-line-clamp: 6; }
+.tb-goal-dist { white-space: nowrap; font-weight: 700; color: var(--goal-accent); }
+.tb-hint-arrow { position: absolute; left: 28px; top: 28px; width: 20px; height: 20px; border: 2px solid var(--cream); border-radius: 50%; background: var(--gold); color: #5b3a0c; display: grid; place-items: center; }
+.tb-hint-arrow svg { width: 13px; height: 13px; }
+.tb-goal-help {
+  position: absolute; top: 6px; right: 7px; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; pointer-events: auto;
+  background: color-mix(in srgb, var(--goal-accent) 14%, #fff); color: var(--goal-accent); font: 700 15px/1 var(--font); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+}
+.tb-goal-help:active { transform: translateY(1px); }
+.tb-stats { display: flex; flex-wrap: wrap; gap: 6px; }
 .tb-chip {
-  display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 3px 10px 3px 6px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 3px 10px 3px 6px; border-radius: 999px; pointer-events: auto;
   background: rgba(36, 44, 72, 0.8); color: var(--cream); font: 700 13px/1 var(--font); box-shadow: 0 4px 12px rgba(10, 10, 30, 0.25);
   outline: 1.5px dashed rgba(255, 244, 226, 0.3); outline-offset: -4px;
 }
@@ -330,12 +331,13 @@
 
 /* small landscape phones: tighten the HUD */
 @media (max-height: 430px) {
-  .tb-task { font-size: 13px; max-width: 28vw; min-height: 40px; }
-  .tb-task-ico { width: 30px; height: 30px; }
-  .tb-hintpill { font-size: 12px; max-width: 28vw; }
-  .tb-door { min-height: 40px; font-size: 13.5px; padding-right: 12px; }
+  .tb-tl { gap: 6px; }
+  .tb-goal { padding: 6px 7px 7px; column-gap: 8px; }
   .tb-door-n { min-width: 30px; height: 30px; font-size: 16px; }
-  .tb-tc { max-width: 34vw; }
+  .tb-goal-main { font-size: 13.5px; }
+  .tb-door-txt { font-size: 11.5px; }
+  .tb-goal-help { width: 24px; height: 24px; top: 5px; right: 6px; }
+  .tb-door-txt { padding-right: 26px; }
   .tb-tr { gap: 6px; }
   .tb-tr .knit-btn.round { width: 48px; height: 48px; }
   .tb-tr .knit-btn.round svg { width: 23px; height: 23px; }
@@ -361,21 +363,18 @@
 .tb-framing .tb-tl { opacity: 0; pointer-events: none; }
 
 /* cable car ride (eye-level ride shot): HUD fades out except the mute button; 'Tap to skip' is a separate overlay */
-.tb-hud .tb-tc, .tb-hud .tb-act, .tb-hud .tb-keys, .tb-hud .tb-tr .knit-btn:not(.tb-mute) { transition: opacity .35s ease; }
-.tb-ride .tb-door, .tb-ride .tb-hintpill { visibility: hidden; }
+.tb-hud .tb-act, .tb-hud .tb-keys, .tb-hud .tb-tr .knit-btn:not(.tb-mute) { transition: opacity .35s ease; }
 /* during every ride (tram, carriage, wheel, carousel, skating, sledging, cable car) the door pill and "go to door N" arrow toasts step aside */
 #ui:has(> .tb-hud.tb-ride) .tb-toast.has-arrow, #ui:has(> .tb-hud.tb-ride) .tb-banner { opacity: 0; visibility: hidden; pointer-events: none; }
-.tb-ride .tb-tl, .tb-ride .tb-tc, .tb-ride .tb-act, .tb-ride .tb-keys, .tb-ride .tb-tr .knit-btn:not(.tb-mute) { opacity: 0; pointer-events: none; }
+.tb-ride .tb-tl, .tb-ride .tb-act, .tb-ride .tb-keys, .tb-ride .tb-tr .knit-btn:not(.tb-mute) { opacity: 0; pointer-events: none; }
 
-/* very small landscape phones (e.g. 667x375): keep top-centre clear of top-right, cards clear of the joystick */
+/* very small landscape phones (e.g. 667x375): cards clear of the joystick */
 @media (max-height: 380px) and (max-width: 720px) {
-  .tb-tc { max-width: 37vw; }
-  .tb-tc .tb-door { min-height: 38px; font-size: 12.5px; padding-right: 10px; gap: 6px; }
-  .tb-door-n { min-width: 28px; height: 28px; font-size: 15px; }
+  .tb-tl { width: min(300px, 40vw); }
+  .tb-goal-main { font-size: 13px; }
   .tb-tr { gap: 4px; }
   .tb-tr .knit-btn.round { width: 44px; height: 44px; }
   .tb-tr .knit-btn.round svg { width: 22px; height: 22px; }
-  .tb-task, .tb-hintpill { max-width: 27vw; }
   .tb-cards { left: calc(152px + var(--safe-l)); transform: none; width: min(440px, calc(100vw - 172px - var(--safe-l) - var(--safe-r))); bottom: calc(86px + var(--safe-b)); }
   .tb-bubble { max-width: min(260px, 52vw); padding: 7px 12px 9px; }
   .tb-bubble-txt { font-size: 14px; }
@@ -408,20 +407,12 @@
   .tb-row-end .knit-btn { min-height: 50px; }
   .tb-primary { flex: 1; padding: 12px 18px; }
 
-  /* ---- HUD: row 1 = Town Spirit / online chips (left) + round buttons (right); row 2 = door chip; row 3 = goal chip + hint */
+  /* ---- HUD: row 1 = round buttons (right); under it the goal card + chips (left), leaving the right 104 px for the mini-map circle */
   .tb-tr { top: calc(10px + var(--safe-t)); right: calc(10px + var(--safe-r)); gap: 6px; }
   .tb-tr .knit-btn.round { width: 46px; height: 46px; }
   .tb-tr .knit-btn.round svg { width: 23px; height: 23px; }
-  .tb-tc {
-    top: calc(10px + var(--safe-t)); left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); transform: none; max-width: none;
-    flex-direction: column-reverse; align-items: flex-start; gap: 10px;
-  }
-  .tb-chips { min-height: 46px; align-items: center; flex-wrap: wrap; max-width: calc(100% - 4 * 46px - 3 * 6px - 8px); }
-  .tb-door { max-width: 100%; min-height: 42px; font-size: 14.5px; }
-  .tb-tl { top: calc(118px + var(--safe-t)); left: calc(10px + var(--safe-l)); right: calc(10px + var(--safe-r)); gap: 6px; }
-  .tb-task { max-width: 100%; min-height: 42px; font-size: 14px; padding-right: 14px; }
-  .tb-task-ico { width: 32px; height: 32px; }
-  .tb-hintpill { max-width: 62vw; }
+  .tb-tl { top: calc(64px + var(--safe-t)); left: calc(10px + var(--safe-l)); width: calc(100% - 20px - 120px - var(--safe-l) - var(--safe-r)); max-width: 340px; gap: 6px; }
+  .tb-goal-main { font-size: 14.5px; }
   .tb-framing .tb-tl { opacity: 0; }
 
   .tb-joy { left: calc(20px + var(--safe-l)); bottom: calc(24px + var(--safe-b)); width: 132px; height: 132px; }
@@ -471,10 +462,13 @@
 /* small portrait phones (360×740 and below): a touch tighter */
 @media (orientation: portrait) and (max-width: 374px) {
   .tb-tr .knit-btn.round { width: 44px; height: 44px; }
-  .tb-chips { min-height: 44px; max-width: calc(100% - 4 * 44px - 3 * 6px - 6px); }
   .tb-chip { padding: 3px 8px 3px 5px; font-size: 12px; }
-  .tb-tl { top: calc(114px + var(--safe-t)); }
-  .tb-door { font-size: 13.5px; }
+  .tb-tl { top: calc(62px + var(--safe-t)); }
+  .tb-goal { column-gap: 8px; padding-left: 7px; }
+  .tb-door-n { min-width: 30px; height: 30px; font-size: 16px; }
+  .tb-door-txt { font-size: 12px; padding-right: 26px; }
+  .tb-hint-arrow { left: 24px; top: 24px; }
+  .tb-goal-main { font-size: 13.5px; }
   .tb-joy { width: 124px; height: 124px; left: calc(16px + var(--safe-l)); }
   .tb-act { max-width: calc(100vw - 172px - var(--safe-l) - var(--safe-r)); font-size: 15.5px; }
   .tb-rowlab { width: 52px; }
@@ -521,3 +515,7 @@
 /* the house decorate panel owns the screen: HUD, joystick, toasts, cards and bubbles step aside (like in mini-games) */
 #ui.tb-house-open .tb-hud, #ui.tb-house-open .tb-joylayer, #ui.tb-house-open .tb-toasts, #ui.tb-house-open .tb-cards,
 #ui.tb-house-open .tb-bubbles, #ui.tb-house-open .tb-banner, #ui.tb-house-open .tb-nettoasts, #ui.tb-house-open .tb-skip { display: none !important; }
+
+/* hints (calendar "Go there", newly opened doors) live in the top-left goal card with its live arrow + distance;
+   the old arrow toast would duplicate it (and sit under the Guide's target marker), so it never shows */
+#ui .tb-toast.has-arrow { display: none !important; }
