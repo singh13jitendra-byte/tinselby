@@ -1,0 +1,63 @@
+/* Guide layer: edge arrow + "!" marker (src/guide). Under the HUD (z 5+), above speech bubbles. */
+.tbg-root { position: absolute; inset: 0; pointer-events: none; z-index: 4; overflow: hidden; }
+.tbg-safe { position: absolute; visibility: hidden; padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l); }
+
+/* ---- edge arrow */
+.tbg-edge { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.tbg-badge {
+  position: absolute; left: -23px; top: -23px; width: 46px; height: 46px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--cream); color: var(--red); box-shadow: 0 3px 0 rgba(60, 30, 20, 0.28), 0 6px 14px rgba(20, 15, 40, 0.35);
+  display: grid; place-items: center; cursor: pointer; pointer-events: auto; touch-action: manipulation;
+  animation: tbgPulse 1.6s ease-in-out infinite;
+}
+.tbg-badge::before { /* running stitch round the rim */
+  content: ''; position: absolute; inset: 3px; border-radius: 50%; border: 2px dashed rgba(184, 48, 45, 0.45);
+}
+.tbg-ico { position: relative; width: 22px; height: 22px; display: grid; place-items: center; }
+.tbg-ico svg { width: 22px; height: 22px; }
+.tbg-edge[data-kind='person'] .tbg-ico { color: var(--green); }
+.tbg-rot { position: absolute; inset: -11px; pointer-events: none; transition: transform .12s linear; }
+.tbg-tip { /* the arrowhead on the rim, pointing out towards the target */
+  position: absolute; left: 50%; top: 0; width: 0; height: 0; transform: translateX(-50%);
+  border-left: 9px solid transparent; border-right: 9px solid transparent; border-bottom: 13px solid var(--red);
+  filter: drop-shadow(0 1px 0 rgba(255, 244, 226, 0.95)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+}
+.tbg-lab {
+  position: absolute; white-space: nowrap; font: 600 12px/1 var(--font); color: var(--ink);
+  background: rgba(255, 244, 226, 0.94); border-radius: 999px; padding: 5px 9px 5px 8px;
+  box-shadow: 0 2px 0 rgba(60, 30, 20, 0.2); display: flex; gap: 5px; align-items: baseline;
+}
+.tbg-lab b { font-weight: 700; max-width: 112px; overflow: hidden; text-overflow: ellipsis; }
+.tbg-dist { color: var(--red); font-size: 11px; }
+.tbg-edge[data-side='l'] .tbg-lab { left: 30px; top: -11px; }
+.tbg-edge[data-side='r'] .tbg-lab { right: 30px; top: -11px; }
+.tbg-edge[data-side='t'] .tbg-lab { top: 30px; left: 0; transform: translateX(-50%); }
+.tbg-edge[data-side='b'] .tbg-lab { bottom: 30px; left: 0; transform: translateX(-50%); }
+.tbg-edge:is([data-side='t'], [data-side='b'])[data-align='<'] .tbg-lab { left: -20px; transform: none; }
+.tbg-edge:is([data-side='t'], [data-side='b'])[data-align='>'] .tbg-lab { left: auto; right: -20px; transform: none; }
+@keyframes tbgPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.09); } }
+
+/* ---- "!" bubble over a person / pin over a spot (anchor = bottom centre) */
+.tbg-mark { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.tbg-bob { position: absolute; left: -17px; bottom: 0; width: 34px; animation: tbgBob 1.1s ease-in-out infinite; }
+.tbg-bang {
+  position: relative; width: 34px; height: 34px; border-radius: 50%; background: #ffd25a; color: var(--red-dark);
+  font: 700 23px/34px var(--font); text-align: center; box-shadow: 0 0 0 3px #fff4e2, 0 0 16px 4px rgba(255, 200, 80, 0.75), 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+.tbg-bang::after { /* speech-bubble tail */
+  content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%);
+  border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 10px solid #ffd25a;
+  filter: drop-shadow(0 2px 0 #fff4e2);
+}
+.tbg-ring { display: none; }
+.tbg-mark[data-kind='spot'] .tbg-bob, .tbg-mark[data-kind='area'] .tbg-bob { bottom: 14px; }
+.tbg-mark[data-kind='spot'] .tbg-bang, .tbg-mark[data-kind='area'] .tbg-bang { display: grid; place-items: center; color: var(--red); }
+.tbg-mark[data-kind='spot'] .tbg-bang svg, .tbg-mark[data-kind='area'] .tbg-bang svg { width: 21px; height: 21px; }
+.tbg-mark[data-kind='spot'] .tbg-ring, .tbg-mark[data-kind='area'] .tbg-ring {
+  display: block; position: absolute; left: -22px; top: -9px; width: 44px; height: 18px; border-radius: 50%;
+  border: 3px solid rgba(255, 210, 90, 0.95); box-shadow: 0 0 12px 3px rgba(255, 190, 70, 0.7), inset 0 0 8px rgba(255, 220, 120, 0.8);
+  animation: tbgRing 1.4s ease-out infinite;
+}
+@keyframes tbgBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes tbgRing { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.35); opacity: 0.15; } }
+@media (prefers-reduced-motion: reduce) { .tbg-badge, .tbg-bob, .tbg-ring { animation: none; } }
