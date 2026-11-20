@@ -1,0 +1,41 @@
+/* Tinselby tips: first-time coach marks + the "?" help card. Knitted callouts over the real HUD elements. */
+.tbt-root { position: absolute; inset: 0; z-index: 12; pointer-events: none; }
+.tbt-ring {
+  position: absolute; border-radius: 18px; pointer-events: none; opacity: 0; transition: opacity .25s ease;
+  border: 3px dashed var(--gold); box-shadow: 0 0 0 3px rgba(255, 244, 226, 0.35), 0 0 18px 4px rgba(255, 200, 90, 0.7);
+  animation: tbtPulse 1.5s ease-in-out infinite;
+}
+.tbt-ring.on { opacity: 1; }
+@keyframes tbtPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+.tbt-call {
+  position: absolute; left: 0; top: 0; width: min(250px, calc(100vw - 24px)); padding: 12px 14px 12px; border-radius: 18px;
+  display: flex; flex-direction: column; gap: 8px; pointer-events: auto; opacity: 0; transition: opacity .25s ease;
+  --ax: 50%;
+}
+.tbt-call.on { opacity: 1; }
+.tbt-call::after {
+  content: ''; position: absolute; width: 18px; height: 18px; background: var(--cream); border-radius: 4px;
+  left: var(--ax); transform: translateX(-50%) rotate(45deg); box-shadow: 3px 3px 0 rgba(60, 30, 20, 0.18);
+  animation: tbtBob 1.1s ease-in-out infinite;
+}
+.tbt-call.down::after { bottom: -8px; }
+.tbt-call.up::after { top: -8px; box-shadow: -3px -3px 0 rgba(60, 30, 20, 0.12); }
+.tbt-call.none::after { display: none; }
+@keyframes tbtBob { 0%, 100% { margin: 0; } 50% { margin: 3px 0 -3px; } }
+.tbt-call.up::after { animation-name: tbtBobUp; }
+@keyframes tbtBobUp { 0%, 100% { margin: 0; } 50% { margin: -3px 0 3px; } }
+.tbt-txt { font: 600 15px/1.3 var(--font); color: var(--ink); }
+.tbt-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tbt-row .knit-btn { font-size: 15px; padding: 8px 18px; min-height: 40px; }
+.tbt-skip { background: none; border: 0; font: 500 13px/1 var(--font); color: rgba(58, 42, 36, 0.7); text-decoration: underline; padding: 10px 4px; cursor: pointer; }
+/* help card */
+.tbt-help {
+  position: absolute; left: 50%; bottom: calc(170px + var(--safe-b)); transform: translateX(-50%); width: min(340px, calc(100vw - 24px));
+  display: flex; flex-direction: column; gap: 10px; pointer-events: auto; animation: tbtIn .3s ease both;
+}
+.tbt-help[hidden], .tbt-call[hidden] { display: none; }
+.tbt-help .tbt-txt { font-size: 16px; }
+.tbt-help .tbt-row { justify-content: flex-end; }
+@media (max-height: 460px) { .tbt-help { bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(380px, 60vw); } }
+.tbt-hide .tbt-call, .tbt-hide .tbt-ring { opacity: 0 !important; pointer-events: none; }
+@keyframes tbtIn { from { opacity: 0; } to { opacity: 1; } }
