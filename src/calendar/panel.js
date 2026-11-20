@@ -92,13 +92,19 @@ export function createPanel(ctx, data, { onHint, rewardTint }) {
     const streak = data.streak;
     streakEl.innerHTML = streak > 0 ? `<b>${streak}</b>-day streak` : 'First visit!';
     const ts = data.townSpirit();
-    spiritEl.innerHTML = `<b>${ts.doors.toLocaleString()}</b> door${ts.doors === 1 ? '' : 's'}${ts.helpers ? ` · <b>${ts.helpers.toLocaleString()}</b> helper${ts.helpers === 1 ? '' : 's'}` : ''}`;
+    spiritEl.innerHTML = `Town Spirit · <b>${ts.doors.toLocaleString()}</b> door${ts.doors === 1 ? '' : 's'} opened${ts.helpers ? ` by <b>${ts.helpers.toLocaleString()}</b> helper${ts.helpers === 1 ? '' : 's'}` : ''}`;
     const pc = data.playerCount();
     playersEl.innerHTML = data.online ? `<b>${pc}</b> in your town` : 'Playing offline';
     $('.cal-players').classList.toggle('off', !data.online);
     tiles.forEach((b, i) => b.classList.toggle('sel', selected === i + 1));
     showDetail(selected);
+    if (isOpen && !wrap.hidden && selected && selected !== lastShown) reveal(selected);
+    lastShown = selected;
   }
+
+  let lastShown = null;
+  // keep the selected tile inside the scrolling grid
+  function reveal(n) { try { tiles[n - 1]?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { /* */ } }
 
   let detailSig = null;
   // Re-render only when the content changes: the board poll refreshes every ~1.5 s, and rebuilding the strip mid-tap lost the button press.
@@ -175,10 +181,12 @@ export function createPanel(ctx, data, { onHint, rewardTint }) {
       if (isOpen) { if (n) { selected = n; render(); } return; }
       if (game.state.phase !== 'play') return;
       isOpen = true;
+      lastShown = null;
       selected = n || data.current() || null;
       render(true);
       wrap.hidden = false;
       wrap.classList.remove('in'); void wrap.offsetWidth; wrap.classList.add('in');
+      if (selected) reveal(selected);
       // freeze walking while the panel is up
       const { player, input } = ctx;
       restore = { ctrl: player.controllable, input: input.enabled };
