@@ -17,9 +17,8 @@ JS = """(() => {
   add('joy', document.querySelector('.tb-joy'));
   document.querySelectorAll('.tbs-corner button, .tbs-corner .tbs-pill').forEach((e, i) => add('soc' + i, e));
   document.querySelectorAll('.tb-toast, .tb-nettoast').forEach((e, i) => add('toast' + i, e));
-  const tr = document.querySelector('.tb-tr').getBoundingClientRect(), W = innerWidth;
-  const m = innerHeight < 430 ? 12 : 10;
-  out.push({ n: 'MAPSLOT', x: W - m - 104, y: tr.bottom + 8, w: 104, h: 104 });
+  const W = innerWidth;
+  add('minimap', document.querySelector('.tbm-mini:not([hidden])')); // the real mini-map (top-left corner)
   const g = document.querySelector('.tb-goal');
   return JSON.stringify({ rects: out, goal: g ? g.innerText.replace(/\\n/g, ' | ') : null, W, H: innerHeight });
 })()"""

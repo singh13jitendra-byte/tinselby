@@ -1,4 +1,4 @@
-// Town map (GUIDE.md "Mini-map slot"): a knitted 104 px mini-map under the top-right button row + a full town map card.
+// Town map: a small, slightly see-through knitted mini-map in the top-left corner + a full town map card.
 //
 //   ctx.map = createMap(ctx)
 //   map.open() / map.close() / map.isOpen   full town map overlay
@@ -120,38 +120,53 @@ export function createMap(ctx) {
   };
   const placeOn = (p) => (p.when ? p.when() : true);
 
-  // ------------------------------------------------------------------ mini-map placement (under the top-right row)
-  let size = 104, lastRect = '';
+  // ------------------------------------------------------------------ mini-map placement (top-left corner)
+  // User (20 Nov): the map lives in the top-left corner, smaller and a little see-through; the goal card uses the
+  // rest of the width. Portrait: the map sits in the empty corner left of the round-button row (or, on narrow phones,
+  // just under it) and the goal card spans the screen below; landscape/desktop: map top-left, goal card beside it up to
+  // the round buttons. We place the HUD's goal column (.tb-tl) here too, since we're the ones measuring.
+  let size = 72, lastRect = '';
   function layoutMini() {
     const vw = window.innerWidth, vh = window.innerHeight;
-    size = vw < 380 ? 88 : 104;
+    const hud = uiRoot.querySelector('.tb-hud');
+    const tl = uiRoot.querySelector('.tb-hud .tb-tl');
     const tr = uiRoot.querySelector('.tb-hud .tb-tr');
     const r = tr && tr.getBoundingClientRect();
-    let top, right;
-    if (r && r.width > 0 && r.height > 0) { top = r.bottom + 8; right = Math.max(4, vw - r.right); } else { top = 72; right = 12; }
-    // keep clear of the goal card (top-left) and the top-centre chips if they ever reach this far right
-    const x0 = vw - right - size;
-    for (const sel of ['.tb-hud .tb-tl > *:not([hidden])', '.tb-hud .tb-tc']) {
-      for (const el of uiRoot.querySelectorAll(sel)) {
-        const q = el.getBoundingClientRect();
-        if (q.width && q.right > x0 - 6 && q.left < vw - right && q.bottom > top - 4 && q.top < top + size) top = Math.max(top, q.bottom + 8);
+    const has = r && r.width > 0 && r.height > 0;
+    const L = 10; // px from the left safe edge
+    let top, tlTop, tlLeft, tlW;
+    if (vh > vw) {
+      const rowTop = has ? r.top : 10, rowH = has ? r.height : 46, rowBottom = has ? r.bottom : 56;
+      const gap = (has ? r.left : vw) - L - 8;
+      if (gap >= 52) { // fits in the corner beside the buttons
+        size = Math.min(66, Math.floor(gap), Math.round(rowH + 14));
+        top = Math.max(6, rowTop + (rowH - size) / 2);
+        tlTop = Math.max(rowBottom, top + size) + 8; tlLeft = L; tlW = vw - 2 * L;
+      } else { // narrow phone: just under the row, goal card beside it
+        size = 60; top = rowBottom + 8;
+        tlTop = top; tlLeft = L + size + 8; tlW = vw - tlLeft - L;
       }
+    } else {
+      size = vh <= 500 ? 62 : 80;
+      top = 12;
+      tlTop = 12; tlLeft = L + 2 + size + 10;
+      const right = has ? r.left - 10 : vw - 12;
+      tlW = Math.max(180, Math.min(520, right - tlLeft));
     }
-    // short landscape: stay above the bottom-right social stack / interact button
-    let floor = vh - 8;
-    for (const sel of ['.tbs-corner', '.tb-hud .tb-act:not([hidden])']) {
-      const el = uiRoot.querySelector(sel);
-      const q = el && el.getBoundingClientRect();
-      if (q && q.height && q.left < vw - right && q.right > x0) floor = Math.min(floor, q.top - 8);
-    }
-    if (top + size > floor) size = Math.max(64, Math.floor(floor - top));
-    const key = `${top}|${right}|${size}`;
+    const key = `${top}|${size}|${tlTop}|${tlLeft}|${tlW}`;
     if (key !== lastRect) {
       lastRect = key;
-      mini.style.top = `${Math.round(top)}px`; mini.style.right = `${Math.round(right)}px`;
+      mini.style.top = `${Math.round(top)}px`; mini.style.right = 'auto';
+      mini.style.left = `calc(var(--safe-l, 0px) + ${L}px)`;
       mini.style.width = mini.style.height = `${size}px`;
       const px = Math.round(size * dpr());
       mc.width = mc.height = px;
+      if (hud && tl) {
+        tl.classList.add('tbm-placed'); // keep the slot even while the map hides briefly (no jumping card)
+        hud.style.setProperty('--tl-top', `${Math.round(tlTop)}px`);
+        hud.style.setProperty('--tl-left', `${Math.round(tlLeft)}px`);
+        hud.style.setProperty('--tl-w', `${Math.round(tlW)}px`);
+      }
     }
   }
   let layoutT = 0;
