@@ -24,6 +24,9 @@ import { createNet } from './net/index.js';
 import { createWorld } from './world/index.js';
 import { createPhoto } from './photo/index.js';
 import { createSocial } from './social/index.js';
+import { createTips } from './tips/index.js';
+import { createGuide } from './guide/index.js';
+import { createMap } from './map/index.js';
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
@@ -56,6 +59,9 @@ ctx.net = createNet(ctx);
 ctx.finale = createFinale(ctx);
 ctx.rides = createRides(ctx); // free-play rides: tram, carriage, Ferris wheel, carousel, skating, sledging
 ctx.social = createSocial(ctx); // wave 4 Play together UI (behind ?w4): friends button, emote wheel, people card
+ctx.tips = createTips(ctx); // first-time coach marks + the "?" help card
+ctx.guide = createGuide(ctx); // where to go: edge arrow, "!" over the target, footprint trail (src/guide)
+ctx.map = createMap(ctx); // mini-map under the top-right buttons + full town map (src/map)
 let rideT = 0;
 engine.addUpdate((dt) => { rideT += dt; ctx.rides.update(dt, rideT); }, 50);
 // the wave-end card asks for a sky teaser: use the world's moon fly-by
