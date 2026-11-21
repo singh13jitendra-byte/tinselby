@@ -38,6 +38,24 @@
   content: ''; position: absolute; left: -3px; bottom: -4px; width: 8px; height: 8px; border-radius: 50%;
   background: #ffd25a; box-shadow: 0 0 6px 2px rgba(255, 200, 80, .7);
 }
+/* ---- edge signs: the spot is off-screen / under the HUD → a compact tag pinned inside the play area with an arrow */
+.tba-safe { position: absolute; visibility: hidden; padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l); }
+.tba-arr {
+  display: none; flex: none; width: 20px; height: 20px; border-radius: 50%; place-items: center; margin-right: -1px;
+  background: var(--red); color: var(--cream); box-shadow: inset 0 0 0 1.5px rgba(255, 244, 226, .5), 0 1px 0 rgba(90, 20, 20, .35);
+  outline: 1px dashed rgba(255, 244, 226, .7); outline-offset: -4px;
+}
+.tba-arr svg { width: 14px; height: 14px; transform: rotate(var(--rot, 0deg)); transition: transform .2s ease; }
+.tba-sign.edge.tap { pointer-events: auto; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.tba-sign.edge .tba-tail { display: none; }
+.tba-sign.edge .tba-arr { display: grid; }
+.tba-sign.edge .tba-in { padding: 3px 10px 3px 3px; gap: 5px; }
+.tba-sign.edge.ar .tba-in { padding: 3px 3px 3px 3px; }
+.tba-sign.edge.ar .tba-arr { order: 9; margin: 0 0 0 1px; }
+.tba-sign.edge.ar .tba-txt { margin-right: 5px; } /* same width either way */
+.tba-sign.edge .tba-in { animation: tbaEdge .3s cubic-bezier(.3, 1.5, .5, 1) both; }
+@keyframes tbaEdge { from { transform: scale(.82); } to { transform: none; } }
+
 /* bigger screens: a touch larger */
 @media (min-width: 900px) and (min-height: 600px) {
   .tba-txt { font-size: 15px; }

@@ -80,7 +80,7 @@ export function buildActivities(ctx) {
 
   for (const a of A) {
     a.district = L.districtAt(a.x, a.z);
-    a.dist = Infinity; a.locked = false; a.on = false; // live fields (refreshed by index.js)
+    a.dist = Infinity; a.rank = Infinity; a.locked = false; a.on = false; // live fields (refreshed by index.js)
   }
   return A;
 }
