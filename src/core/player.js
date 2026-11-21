@@ -15,9 +15,9 @@ const cyl = (rt, rb, h, c, k = KNIT, seg = 12) => part(new THREE.CylinderGeometr
  * Wave 3 rewards (doors 17–23): coat cocoa, lantern, elf; hat tophat, parcel; scarf postal, frost. Santa's wish gifts (door 24):
  * coat santa, hat starlight, scarf aurora (each carries a few GLOW beads). Accents live in the geometry here too. */
 export const STYLE_OPTIONS = {
-  coat: { red: '#b5332e', teal: '#4b8f8b', cream: '#ecdcc0', mustard: '#d59f3c', green: '#6f9463', plum: '#7b3b63', navy: '#34486e', gingerbread: '#a3653a', forest: '#2f5e3e', icy: '#a9cfe0', snowy: '#f3efe6', midnight: '#26305a', cocoa: '#6b4130', lantern: '#d9822b', elf: '#3c8d4a', santa: '#c4262e' },
+  coat: { red: '#b5332e', teal: '#4b8f8b', cream: '#ecdcc0', mustard: '#d59f3c', green: '#6f9463', plum: '#7b3b63', navy: '#34486e', gingerbread: '#a3653a', forest: '#2f5e3e', icy: '#a9cfe0', snowy: '#f3efe6', midnight: '#26305a', cocoa: '#6b4130', lantern: '#d9822b', elf: '#3c8d4a', santa: '#c4262e', rosy: '#d9849a', sunny: '#f2c94c' }, // rosy / sunny: play-streak rewards (src/streaks)
   hat: { bobble: 'Bobble beanie', earflap: 'Ear-flap hat', earmuffs: 'Earmuffs', none: 'No hat', santa: 'Santa hat', reindeer: 'Reindeer hat', elf: 'Elf hat', conductor: "Conductor's cap", bow: 'Ribbon bow', gnome: 'Gnome hat', tophat: "Caroller's top hat", parcel: 'Present hat', starlight: 'Starlight crown' },
-  scarf: { green: '#5d8a58', red: '#b5332e', white: P.snow, striped: 'striped', candycane: 'repeating-linear-gradient(135deg,#b5332e 0 6px,#f5f1ea 6px 12px)', gold: '#e3aa3a', berry: '#9c2f55', sky: '#86b4d8', mint: '#9fd3b4', holly: '#3f7a4a', jingle: '#b5332e', postal: '#c0392b', frost: '#dce8f2', aurora: '#4fb3a6' },
+  scarf: { green: '#5d8a58', red: '#b5332e', white: P.snow, striped: 'striped', candycane: 'repeating-linear-gradient(135deg,#b5332e 0 6px,#f5f1ea 6px 12px)', gold: '#e3aa3a', berry: '#9c2f55', sky: '#86b4d8', mint: '#9fd3b4', holly: '#3f7a4a', jingle: '#b5332e', postal: '#c0392b', frost: '#dce8f2', aurora: '#4fb3a6', lilac: '#ab90d6' }, // lilac: 3-day play-streak reward
   hair: { none: 'Classic', tousled: 'Tousled', bob: 'Bob', bunches: 'Bunches', long: 'Long' },
   hairColor: { brown: '#7a4a2c', dark: '#3a2820', ginger: '#c2632b', blonde: '#dfb562' },
   skin: { light: P.skin, tan: '#deb08a', brown: '#a8714e', deep: '#6f4a33' },

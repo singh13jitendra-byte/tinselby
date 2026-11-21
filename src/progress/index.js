@@ -11,7 +11,7 @@
 // ?xmas → api._clock), date-gated door 24, post-Christmas unlock of doors 1–23, wish / finaleGift / flags / markEveWatched,
 // events wish:set {id}, progress:change {eve:true}, door:open {n:24} (date flip, 30 s timer + _checkEve()).
 import { STYLE_OPTIONS, DEFAULT_STYLE } from '../core/player.js';
-import { DOORS, FINALE_DOOR, W3, WISH_REWARDS, door, doorForGame, DEFAULT_UNLOCKED, GATED_SLOTS, DAILY_REWARDS, DAILY_TREATS, REWARDS, festiveLevel } from './doors.js';
+import { DOORS, FINALE_DOOR, W3, WISH_REWARDS, door, doorForGame, DEFAULT_UNLOCKED, GATED_SLOTS, DAILY_REWARDS, DAILY_TREATS, REWARDS, festiveLevel, STREAK_REWARDS } from './doors.js';
 import { SAVE_KEY, blankSave, defaultStorage, load, store, wipe, dayKey, prevDay, cleanHouse, isWishId, FLAG_RE, MAX_FLAGS } from './save.js';
 
 export { DOORS, REWARDS, DAILY_REWARDS, WISH_REWARDS, festiveLevel };
@@ -183,13 +183,15 @@ export function createProgress(ctx = {}, opts = {}) {
       return all.filter((k) => own.has(k));
     },
     isUnlocked(slot, k) { return wardrobe.unlocked(slot).includes(k); },
-    /** Where an option comes from: {door, title, label} | {daily: true, label} | null (always available). */
+    /** Where an option comes from: {door, title, label} | {daily: true, label} | {streak: days, label} | null (always available). */
     source(slot, k) {
       if (!GATED_SLOTS.includes(slot) || DEFAULT_UNLOCKED[slot]?.includes(k)) return null;
       const wr = WISH_REWARDS.find((x) => x.slot === slot && x.key === k);
       if (wr) return { santa: true, label: wr.label };
       const d = DOORS.find((x) => x.reward && x.reward.slot === slot && x.reward.key === k);
       if (d) return { door: d.n, title: d.title, label: d.reward.label };
+      const sr = STREAK_REWARDS.find((x) => x.slot === slot && x.key === k); // play streaks (src/streaks)
+      if (sr) return { streak: sr.days, label: sr.label };
       const dr = DAILY_REWARDS.find((x) => x.slot === slot && x.key === k);
       return dr ? { daily: true, label: dr.label } : null;
     },

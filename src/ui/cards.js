@@ -83,7 +83,7 @@ export function createCards(ctx, data, { wear, tint, modalOpen, onShowDoors }) {
     const label = r.label || (wearable(r) ? data.rewardLabel(r.slot, r.key) : 'A little surprise');
     push({
       kind: 'reward', ...rewardIcon(r), sound: 'gift',
-      kicker: door ? `Door ${door.n} reward` : 'A present for you',
+      kicker: door ? `Door ${door.n} reward` : r.kicker || 'A present for you', // r.kicker: e.g. play-streak rewards (src/streaks)
       title: `New: ${label}!`,
       sub: wearable(r) ? 'It’s in your wardrobe now.' : '',
       buttons: wearable(r) ? [{ label: 'Wear it', cls: 'green', fn: () => wear(r.slot, r.key) }, { label: 'Later', cls: 'cream' }] : [{ label: 'Yay!', cls: 'green' }],

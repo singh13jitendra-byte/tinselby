@@ -1,0 +1,21 @@
+/* Play-streak popover (src/streaks): a small knitted card under the mitten chip. The chip itself lives in src/ui/ui.css. */
+#ui .tb-streak-pop {
+  position: absolute; z-index: 9; width: max-content; max-width: min(250px, calc(100vw - 16px)); padding: 10px 14px 11px; border-radius: 16px;
+  outline-offset: -6px; text-align: left; cursor: pointer; animation: tbkIn .22s cubic-bezier(.3, 1.3, .5, 1) both; transform-origin: var(--ax, 50%) -8px;
+  transition: opacity .2s ease, transform .2s ease;
+}
+#ui .tb-streak-pop::before { /* little stitched tail pointing up at the chip */
+  content: ''; position: absolute; top: -7px; left: var(--ax, 50%); width: 14px; height: 14px; margin-left: -7px; transform: rotate(45deg);
+  background: var(--cream); border-radius: 3px 0 0 0;
+}
+#ui .tb-streak-pop.out { opacity: 0; transform: translateY(-4px) scale(.96); }
+.tb-streak-pop .tbk-t { position: relative; font: 700 16px/1.15 var(--font); color: var(--red); }
+.tb-streak-pop .tbk-s { position: relative; margin-top: 3px; font: 600 13px/1.25 var(--font); color: var(--ink); }
+.tb-streak-pop .tbk-x { position: relative; display: flex; align-items: center; gap: 6px; margin-top: 6px; font: 600 12px/1.2 var(--font); color: #5a6b88; }
+.tb-streak-pop .tbk-x svg { flex: none; width: 16px; height: 16px; color: #6f9fd0; }
+@keyframes tbkIn { from { opacity: 0; transform: translateY(-6px) scale(.9); } to { opacity: 1; transform: none; } }
+@media (max-height: 420px) {
+  #ui .tb-streak-pop { padding: 8px 12px 9px; }
+  .tb-streak-pop .tbk-t { font-size: 15px; }
+  .tb-streak-pop .tbk-x { margin-top: 4px; }
+}

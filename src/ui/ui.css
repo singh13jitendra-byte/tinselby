@@ -209,6 +209,9 @@ button.tb-chip::before { content: ""; position: absolute; inset: -8px -3px; }
 button.tb-chip:active { transform: translateY(1px); }
 .tb-spirit svg { color: #bfe0ff; }
 .tb-online svg { color: #a8e0a8; }
+/* play streak chip (src/streaks): a knitted mitten + the number of days in a row */
+.tb-streak svg { width: 19px; height: 19px; margin: -1px -1px 0 0; }
+.tb-streak.bump { animation: tbPop .5s ease both; }
 @keyframes tbStarPop { 0% { transform: scale(.6); } 60% { transform: scale(1.12); } 100% { transform: none; } }
 @keyframes tbPop { 0% { transform: scale(.85); } 60% { transform: scale(1.06); } 100% { transform: none; } }
 

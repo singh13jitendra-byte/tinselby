@@ -32,6 +32,7 @@ function lockOf(ctx, data, slot, key) {
   let src = null;
   try { src = ctx.progress?.wardrobe?.source?.(slot, key); } catch (e) { /* stub */ }
   if (src?.santa || (!src && WISH_KEYS.has(`${slot}:${key}`))) return { santa: true };
+  if (src?.streak) return { streak: src.streak, label: src.label }; // play-streak pieces (src/streaks)
   return data.lockInfo(slot, key);
 }
 const nice = (k) => k.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
@@ -104,7 +105,7 @@ export function createStyleTray(ctx, data, opts = {}) {
       b.classList.toggle('locked', !!info);
       b.setAttribute('aria-pressed', String(style[slot] === key));
       const lk = b.querySelector('.tb-lock');
-      if (info) { lk.hidden = false; lk.innerHTML = `${ICONS.lock}<span>${info.santa ? 'Santa\u2019s gift' : info.door ? `Door ${info.door}` : 'Gift'}</span>`; b.setAttribute('aria-disabled', 'true'); }
+      if (info) { lk.hidden = false; lk.innerHTML = `${ICONS.lock}<span>${info.santa ? 'Santa\u2019s gift' : info.door ? `Door ${info.door}` : info.streak ? `${info.streak} days` : 'Gift'}</span>`; b.setAttribute('aria-disabled', 'true'); }
       else { lk.hidden = true; lk.innerHTML = ''; b.removeAttribute('aria-disabled'); }
     });
     el.querySelectorAll('.tb-preset').forEach((b) => {
@@ -133,8 +134,8 @@ export function createStyleTray(ctx, data, opts = {}) {
     const info = lockOf(ctx, data, slot, key);
     if (info) {
       b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope');
-      const what = data.rewardLabel(slot, key);
-      say(info.santa ? `A wish for Santa: pick the ${what} at Door 22 and he brings it on Christmas Eve.` : info.door ? `The ${what} unlocks at Door ${info.door}: ${data.door(info.door)?.title || ''}` : `The ${what} comes in a daily gift box.`);
+      const what = info.label || data.rewardLabel(slot, key);
+      say(info.streak ? `The ${what} unlocks when you play ${info.streak} days in a row (a door or a game each day).` : info.santa ? `A wish for Santa: pick the ${what} at Door 22 and he brings it on Christmas Eve.` : info.door ? `The ${what} unlocks at Door ${info.door}: ${data.door(info.door)?.title || ''}` : `The ${what} comes in a daily gift box.`);
       sfx('ui');
       return;
     }

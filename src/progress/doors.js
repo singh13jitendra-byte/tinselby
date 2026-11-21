@@ -72,8 +72,15 @@ export const DAILY_TREATS = [
 /** Wave 3, door 22: the player wishes for one of these; Santa brings it in the finale (progress.wish / finaleGift). */
 export const WISH_REWARDS = [reward('coat', 'santa', 'Santa coat'), reward('hat', 'starlight', 'Starlight crown'), reward('scarf', 'aurora', 'Aurora scarf')];
 
+/** Play streaks (src/streaks): coming back on 3, 7 and 14 days in a row unlocks one of these (never taken away). */
+export const STREAK_REWARDS = [
+  { days: 3, ...reward('scarf', 'lilac', 'Lilac scarf') },
+  { days: 7, ...reward('coat', 'rosy', 'Rosy coat') },
+  { days: 14, ...reward('coat', 'sunny', 'Sunshine coat') },
+];
+
 /** Every wardrobe reward by id. */
-export const REWARDS = Object.fromEntries([...DOORS.filter((d) => d.reward).map((d) => d.reward), ...DAILY_REWARDS, ...WISH_REWARDS].map((r) => [r.id, r]));
+export const REWARDS = Object.fromEntries([...DOORS.filter((d) => d.reward).map((d) => d.reward), ...DAILY_REWARDS, ...WISH_REWARDS, ...STREAK_REWARDS.map(({ days, ...r }) => r)].map((r) => [r.id, r]));
 
 /** Doors done → the festive level (0–4) that drives city lights, music layers and the evening sky. */
 export function festiveLevel(done) {

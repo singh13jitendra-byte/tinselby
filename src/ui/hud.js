@@ -5,6 +5,7 @@
 import { ICONS } from './icons.js';
 import { createJoystick } from './joystick.js';
 import { W3 } from '../progress/doors.js';
+import { MITTEN } from '../streaks/icon.js';
 
 export function createHUD(ctx, root, data, ui) {
   const { game, interact, player, cam, engine } = ctx;
@@ -23,6 +24,7 @@ export function createHUD(ctx, root, data, ui) {
       <div class="tb-stats">
         <span class="tb-chip tb-spirit" title="Town Spirit: doors opened by everyone">${ICONS.snowflake}<b></b></span>
         <button class="tb-chip tb-online" hidden title="People in your town" aria-label="People in your town">${ICONS.people}<b></b></button>
+        <button class="tb-chip tb-streak" hidden title="Days in a row" aria-label="Play streak">${MITTEN}<b></b></button>
       </div>
     </div>
     <div class="tb-tr">
@@ -38,6 +40,7 @@ export function createHUD(ctx, root, data, ui) {
   const goalTxt = $('.tb-goal-txt'), goalT = $('.tb-goal-t'), goalDist = $('.tb-goal-dist'), goalHelp = $('.tb-goal-help'), pillArrow = $('.tb-hint-arrow');
   const doorChip = $('.tb-door'), doorN = $('.tb-door-n'), doorTxt = $('.tb-door-txt');
   const spiritB = $('.tb-spirit b'), online = $('.tb-online'), onlineB = $('.tb-online b');
+  const streakChip = $('.tb-streak'), streakB = $('.tb-streak b'); // play streak (src/streaks), shown at 2+ days
   const act = $('.tb-act'), actLab = $('.tb-act-lab'), actIco = $('.tb-act-ico');
   const calBtn = $('.tb-cal'), calDot = $('.tb-dot'), wardBtn = $('.tb-ward'), camBtn = $('.tb-cam'), muteBtn = $('.tb-mute');
   const keys = $('.tb-keys');
@@ -50,6 +53,8 @@ export function createHUD(ctx, root, data, ui) {
   muteBtn.addEventListener('click', tap(() => game.emit('audio:toggle')));
   calBtn.addEventListener('click', tap(() => ctx.calendar?.open?.()));
   online.addEventListener('click', tap(() => ctx.social?.openRoster?.())); // "People in your town" sheet (src/social/roster.js)
+  streakChip.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); ctx.streaks?.popover?.(streakChip); });
+  streakChip.addEventListener('pointerdown', (e) => e.stopPropagation());
   doorChip.addEventListener('click', tap(() => ctx.calendar?.open?.()));
   doorChip.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ctx.calendar?.open?.(); } });
   // "?" → the Tips module's help card; until it exists, briefly show the whole goal text
@@ -85,7 +90,7 @@ export function createHUD(ctx, root, data, ui) {
 
   // ---- per-frame sync (only touches the DOM when something changed)
   let lastDist = null, lastLabel = null, lastIcon = null, lastTask = null, lastMuted = null, lastMode = null, lastShow = null, lastJoy = null, lastRide = false;
-  let lastDoor = null, lastSpirit = null, lastOnline = null, lastDot = null, slow = 0;
+  let lastDoor = null, lastSpirit = null, lastOnline = null, lastDot = null, lastStreak = null, slow = 0;
   function update(dt) {
     const modal = ui.modalOpen();
     const show = S.phase === 'play' && !modal;
@@ -163,6 +168,13 @@ export function createHUD(ctx, root, data, ui) {
       if (ts !== lastSpirit) { lastSpirit = ts; spiritB.textContent = ts.toLocaleString(); }
       const on = data.online ? data.playerCount() : 0;
       if (on !== lastOnline) { lastOnline = on; online.hidden = !on; onlineB.textContent = String(on); }
+      let sk = 0; try { sk = ctx.streaks?.chipValue?.() | 0; } catch (e) { /* */ }
+      if (sk !== lastStreak) {
+        const up = lastStreak !== null && sk > lastStreak;
+        lastStreak = sk; streakChip.hidden = sk < 2; streakB.textContent = String(sk);
+        streakChip.setAttribute('aria-label', `${sk}-day play streak`);
+        if (up) { streakChip.classList.remove('bump'); void streakChip.offsetWidth; streakChip.classList.add('bump'); }
+      }
       const dot = data.dailyAvailable;
       if (dot !== lastDot) { lastDot = dot; calDot.hidden = !dot; }
     }
