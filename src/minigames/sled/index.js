@@ -35,6 +35,7 @@ export default {
   district: 'hill',
   icon: '🛷',
   intro: 'Two runs down Sledge Hill! Steer with ← → (or A / D), or hold the left or right side of the screen. Zip through the flag gates, grab the gold stars, and dodge gnomes, pines and snow lumps.',
+  introTouch: 'Two runs down Sledge Hill! Hold the left or right side of the screen to steer. Zip through the flag gates, grab the gold stars, and dodge gnomes, pines and snow lumps.',
   start(ctx, mg) { return startSled(ctx, mg, { variant: 'day' }); },
 };
 

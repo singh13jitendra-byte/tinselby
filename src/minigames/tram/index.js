@@ -34,6 +34,7 @@ export default {
   district: 'market',
   icon: ICON,
   intro: 'Drive the festive tram round Tinselby! Hold anywhere (or BRAKE, Space, S) to brake and let go to roll on. Stop so the door lines up with the glowing platform: gentle, on time, and everyone hops aboard.',
+  introTouch: 'Drive the festive tram round Tinselby! Press and hold anywhere on the screen (or the BRAKE button) to brake, and let go to roll on. Stop so the door lines up with the glowing platform: gentle, on time, and everyone hops aboard.',
   start(ctx, mg) { return startTram(ctx, mg); },
 };
 

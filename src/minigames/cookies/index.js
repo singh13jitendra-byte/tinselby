@@ -236,6 +236,7 @@ export default {
   district: 'market',
   icon: '',
   intro: 'Cut the cookies, bake them golden, then sprinkle! Just tap (or press Space) at the right moment.',
+  introTouch: 'Cut the cookies, bake them golden, then sprinkle! Just tap the big TAP button at the right moment.',
 
   async start(ctx, mg) {
     const { engine, cam, uiRoot } = ctx;

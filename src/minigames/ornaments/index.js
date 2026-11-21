@@ -177,6 +177,7 @@ const PICK_ICON = ICONS.hand || '';
 export default {
   id: 'ornaments', title: 'Ornament Hunt', district: 'market',
   intro: 'Mr Pine hid five knitted ornaments, and left a riddle for each. Read the clue, find the landmark, and follow the Cold-to-Hot meter. Stuck? A sparkle beam rises after a while. Press E or tap Pick up. 105 seconds!',
+  introTouch: 'Mr Pine hid five knitted ornaments, and left a riddle for each. Read the clue, find the landmark, and follow the Cold-to-Hot meter. Stuck? A sparkle beam rises after a while. Tap Pick up when you are close. 105 seconds!',
   async start(ctx, mg, opts = {}) {
     const { engine, colliders, interact, player, audio, cam } = ctx;
     const A = ARENAS.ornaments;

@@ -40,6 +40,7 @@ export default {
   district: 'lakeside',
   icon: ICON,
   intro: 'Glide the glowing patterns and pass each star on the beat. Hold left or right (or ← →) to curve. Tap (Space) to twirl inside the gold rings.',
+  introTouch: 'Glide the glowing patterns and pass each star on the beat. Hold the left or right side of the screen to curve. Tap to twirl inside the gold rings.',
   async start(ctx, mg) {
     const { engine, cam, audio, game } = ctx;
     const params = ctx.params || new URLSearchParams(location.search);

@@ -61,6 +61,7 @@ export default {
   district: 'park',
   icon: '❄️',
   intro: 'Tap a kid to throw a snowball: +10, and quick hits in a row earn a streak bonus. Spare the friendly snowman! When a red ring appears at your feet, step aside with ◀ ▶ (A / D or arrow keys).',
+  introTouch: 'Tap a kid to throw a snowball: +10, and quick hits in a row earn a streak bonus. Spare the friendly snowman! When a red ring appears at your feet, step aside with the ◀ ▶ buttons.',
   async start(ctx, mg) {
     const { engine, player, cam, audio, colliders } = ctx;
     const params = ctx.params || new URLSearchParams(location.search);

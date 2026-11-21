@@ -81,7 +81,7 @@
 }
 @media (max-height: 420px) and (orientation: landscape) {
   .cr-ui { --hit-b: calc(50px + var(--safe-b)); }
-  .cr-lanes { top: calc(66px + var(--safe-t)); width: min(236px, 30vw); }
+  .cr-lanes { top: calc(82px + var(--safe-t)); width: min(236px, 30vw); } /* clears the ✕ quit button and the timer chip */
   .cr-scene { right: calc(min(236px, 30vw) + 18px + var(--safe-r)); }
   .cr-target { width: 58px; height: 58px; margin: 0 0 -29px -29px; }
   .cr-note { width: 46px; height: 50px; margin: -28px 0 0 -23px; }

@@ -38,6 +38,7 @@ export default {
   district: 'market',
   icon: ICON,
   intro: 'Ride the tram and toss a present to everyone waving! Tap the left or right side of the screen (or the THROW buttons, or the arrow keys) as you roll past. Throw when their ring glows gold for a perfect catch.',
+  introTouch: 'Ride the tram and toss a present to everyone waving! Tap the left or right side of the screen (or the THROW buttons) as you roll past. Throw when their ring glows gold for a perfect catch.',
   start(ctx, mg) { return startPresents(ctx, mg); },
 };
 

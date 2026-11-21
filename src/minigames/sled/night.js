@@ -12,5 +12,6 @@ export default {
   district: 'hill',
   icon: ICON,
   intro: 'The hill after dark! Two night runs between glowing lanterns. Steer with ← → (or A / D), or hold the left or right side of the screen. Slip through the lantern gates, ring the jingle bells, and mind the gnomes, pines and snow lumps.',
+  introTouch: 'The hill after dark! Two night runs between glowing lanterns. Hold the left or right side of the screen to steer. Slip through the lantern gates, ring the jingle bells, and mind the gnomes, pines and snow lumps.',
   start: (ctx, mg) => startSled(ctx, mg, { variant: 'night' }),
 };

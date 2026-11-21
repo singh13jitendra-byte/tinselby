@@ -80,7 +80,7 @@ export function createMiniGames(ctx) {
       /** Best previous result for this game, if the progress module tracks it. */
       get best() { return ctx.progress?.best?.(def.id) ?? null; },
       /** Show the intro card and the 3-2-1 countdown. Resolves when play should begin. */
-      intro({ title = def.title, text = def.intro, icon = def.icon } = {}) {
+      intro({ title = def.title, text = (def.introTouch && (engine.isMobile || matchMedia('(pointer: coarse)').matches)) ? def.introTouch : def.intro, icon = def.icon } = {}) {
         return new Promise((resolve) => {
           const card = el('div', 'knit-card mg-intro interactive', layer);
           if (icon && String(icon).trim().startsWith('<svg')) el('div', 'mg-icon', card).innerHTML = icon; // SVG only (no emoji)
