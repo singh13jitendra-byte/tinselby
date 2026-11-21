@@ -28,7 +28,11 @@ import { createTips } from './tips/index.js';
 import { createGuide } from './guide/index.js';
 import { createMap } from './map/index.js';
 import { createActivities } from './activities/index.js';
+import { createCards } from './cards/index.js';
 import { createAnalytics } from './analytics/index.js';
+import { createInvite } from './invite/index.js';
+import { createPwa } from './pwa/index.js';
+import { createStreaks } from './streaks/index.js';
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
@@ -65,7 +69,11 @@ ctx.tips = createTips(ctx); // first-time coach marks + the "?" help card
 ctx.guide = createGuide(ctx); // where to go: edge arrow, "!" over the target, footprint trail (src/guide)
 ctx.map = createMap(ctx); // mini-map under the top-right buttons + full town map (src/map)
 ctx.activities = createActivities(ctx); // floating signs + glow rings at rides / things to do (src/activities)
+ctx.cards = createCards(ctx); // "Send a Christmas card": card maker + share link (src/cards), from the Friends card / photo mode
 ctx.analytics = createAnalytics(ctx); // anonymous PostHog events (src/analytics, ANALYTICS.md): production host only, no cookies
+ctx.invite = createInvite(ctx); // card / invite links (?from=Name): welcome on the start card, clean URL (src/invite); after analytics
+ctx.pwa = createPwa(ctx); // install as an app: service worker, "Add to home screen" card after a door, offline toast (src/pwa); after analytics
+ctx.streaks = createStreaks(ctx); // play streaks: days in a row → mitten chip + wardrobe pieces at 3/7/14 days (src/streaks)
 let rideT = 0;
 engine.addUpdate((dt) => { rideT += dt; ctx.rides.update(dt, rideT); }, 50);
 // the wave-end card asks for a sky teaser: use the world's moon fly-by

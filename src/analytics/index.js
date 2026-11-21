@@ -56,6 +56,7 @@ export function createAnalytics(ctx) {
       lang: clip(navigator.language || '', 5),
       referrer_domain: refDomain,
       town_link: params.has('town'), // arrived from a friends-town invite (the code itself is never sent)
+      standalone: (() => { try { return navigator.standalone === true || matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches; } catch (e) { return false; } })(), // opened as an installed app (src/pwa)
     };
     for (const k of ['source', 'medium', 'campaign']) { const v = params.get('utm_' + k); if (v) p['utm_' + k] = clip(v, 40); }
     track('session_start', p);
@@ -81,8 +82,21 @@ export function createAnalytics(ctx) {
   on('ride:end', ({ id: rid }) => { const p = { id: id24(rid) }; const s = secsSince(S.rideT); if (s != null) p.secs = s; track('ride_end', p); });
   on('photo:taken', () => track('photo_taken', {}));
   on('photo:shared', () => track('photo_shared', {}));
+  on('card:open', ({ where }) => track('card_opened', { where: where === 'photo' ? 'photo' : 'friends' })); // Christmas cards (src/cards): ids only, never the name
+  on('card:created', ({ scene, greeting, frame }) => track('card_created', { scene: id24(scene), greeting: id24(greeting), frame: id24(frame) }));
+  on('card:shared', ({ method }) => track('card_shared', { method: id24(method) }));
   on('map:open', () => { S.mapOpen = true; track('map_opened', {}); });
   on('tips:skipped', () => track('tips_skipped', {}));
+  on('invite:open', ({ hasCard, hasTown }) => track('invite_opened', { has_card: !!hasCard, has_town: !!hasTown })); // never the sender's name
+  on('invite:played', () => track('invite_played', {}));
+  // install as an app (src/pwa): platform android | ios | desktop
+  const plat = (p) => (p === 'android' || p === 'ios' ? p : 'desktop');
+  on('pwa:prompt', ({ platform }) => track('install_prompt_shown', { platform: plat(platform) }));
+  on('pwa:accept', ({ platform }) => track('install_accepted', { platform: plat(platform) }));
+  on('pwa:dismiss', ({ platform, native }) => track('install_dismissed', { platform: plat(platform), native: !!native }));
+  on('pwa:installed', ({ via }) => track('installed', { via: via === 'prompt' ? 'prompt' : 'launch' }));
+  on('streak:day', ({ streak, snowDayUsed }) => track('streak_day', { streak: Math.max(0, Math.min(9999, +streak | 0)), snow_day_used: !!snowDayUsed })); // play streaks (src/streaks)
+  on('streak:reward', ({ days }) => track('streak_reward', { days: +days | 0 }));
   const finaleDone = () => { if (!S.finale) return; track('finale_watched', { secs: secsSince(S.finale.t), replay: !!S.finale.replay }); S.finale = null; };
   on('finale:start', ({ preview, replay }) => { if (!preview) S.finale = { t: performance.now(), replay: !!replay }; });
   on('finale:exit', ({ preview }) => { if (!preview) finaleDone(); });

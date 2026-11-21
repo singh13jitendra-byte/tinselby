@@ -1,6 +1,6 @@
 # Analytics (PostHog only)
 
-Code: `src/analytics/` (config.js, client.js, index.js). One line in `src/main.js`; three one-line emits (`photo:taken`, `photo:shared` in src/photo/index.js, `tips:skipped` in src/tips/index.js).
+Code: `src/analytics/` (config.js, client.js, index.js). One line in `src/main.js` (`ctx.invite` must come after it: invite_opened is emitted while the modules are built); three one-line emits (`photo:taken`, `photo:shared` in src/photo/index.js, `tips:skipped` in src/tips/index.js).
 
 ## How it loads
 - Only on the production host (hostname ends with `vercel.app`, see `PROD_HOST_SUFFIX` / `PROD_EXTRA_HOSTS`). Never on file://, localhost, `?capture`, or when Do Not Track / Global Privacy Control is on. Those runs make zero PostHog requests.
@@ -14,10 +14,14 @@ PostHog project settings to flip: Settings > Project > "Discard client IP data" 
 ## Events
 `$pageview`, `$pageleave` (posthog-js, for Web analytics: visitors, referrers, UTMs, devices, countries), plus:
 session_start {device, orientation, viewport, returning, lang, referrer_domain, town_link, utm_*}, name_entered, door_opened {n} (door unlocked), door_completed {n, stars, secs}, minigame_start {id}, minigame_end {id, score, stars, quit, secs}, ride_start {id}, ride_end {id, secs}, photo_taken, photo_shared, friend_town_created, friend_town_joined, emote_sent {id}, phrase_sent {id}, snowball_thrown, gift_sent, gift_accepted, map_opened, show_way {source: map|other}, tips_skipped, finale_watched {secs, replay}, perf {fps_bucket, fps, load_ms} (5 s window after 25 s), error {message}, session_end {minutes visible, final} (sent on every hide; take the max per session).
+Christmas cards (src/cards): card_opened {where: friends|photo}, card_created {scene: tree|wheel|park|photo, greeting: g1..g5, frame: f1..f3} (first Send / WhatsApp / Copy / Save of a design in that sitting), card_shared {method: share|whatsapp|copy|save} (share = the share sheet finished; whatsapp = wa.me opened). Ids only, never the sender name.
+Invite links (src/invite): invite_opened {has_card, has_town} (page opened from a link with `?from=`; has_card = a valid `card=`, has_town = a valid `town=` code), invite_played (that visitor entered their name, once per page load). Never the sender's name or the code.
+Install as an app (src/pwa): install_prompt_shown {platform: android|ios|desktop} (the "Add Tinselby to your home screen" card appeared, after a door in free play; max 3 times, 3 days apart), install_accepted {platform} (android/desktop: the browser's install dialog was accepted; ios: Add tapped, the 2-step Share > Add to Home Screen guide was shown), install_dismissed {platform, native} (Not now; native = the browser dialog was dismissed), installed {via: prompt|launch} (appinstalled event, or the first launch as an app with ?source=pwa / display-mode standalone; once per device). session_start also carries standalone: true|false.
+Play streaks (src/streaks): streak_day {streak, snow_day_used} (the first door completed or mini-game finished on a new local day; snow_day_used = a free snow day bridged one missed day), streak_reward {days: 3|7|14} (a streak wardrobe piece was handed out). Numbers only, no names.
 
 ## Suggested dashboard
 1. Funnel (Insights > Funnel, unique users, 1 day window): session_start > name_entered > door_completed where n = 1 > door_completed where n = 5.
-2. Retention: first event session_start, returning event session_start, daily.
+2. Retention: first event session_start, returning event session_start, daily. Streaks: Trends, streak_day, breakdown by `streak`; streak_reward count by `days`.
 3. Doors per day: Trends, door_completed, total count, interval day, breakdown by `n`.
 4. Mini-game quits: Trends, minigame_end where quit = true, breakdown by `id` (compare to minigame_start).
 5. Rides: Trends, ride_start, breakdown by `id`.
