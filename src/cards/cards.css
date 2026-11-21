@@ -1,0 +1,115 @@
+/* Christmas card maker (src/cards). Knitted panel like the invite / wardrobe cards. Phone first: 360×640, 390×844,
+   844×390 (landscape: preview left, choices right), desktop. */
+.tbc-layer { z-index: 23; overflow: hidden; }
+.tbc-layer[hidden], .tbc-busy[hidden], .tbc-msg[hidden], .tbc-actions [hidden], .tbc-chip[hidden] { display: none !important; }
+.tbc-panel {
+  position: relative; width: min(440px, 100%); max-height: calc(100vh - 34px - var(--safe-t) - var(--safe-b)); max-height: calc(100dvh - 34px - var(--safe-t) - var(--safe-b));
+  padding: 26px 16px 14px; display: flex; flex-direction: column; animation: calIn .32s cubic-bezier(.3, 1.4, .5, 1) both;
+}
+.tbc-panel .tb-modal-title, .tbc-panel .tb-modal-close { z-index: 2; }
+.tbc-tico { display: inline-grid; place-items: center; }
+.tbc-tico svg { width: 20px; height: 20px; }
+.tbc-body { display: flex; flex-direction: column; gap: 10px; min-height: 0; flex: 1; }
+
+/* preview: the real 1080×1350 canvas, scaled down */
+.tbc-preview {
+  position: relative; flex: none; align-self: center; height: clamp(150px, calc(100vh - 400px), 52vh); height: clamp(150px, calc(100dvh - 400px), 52dvh);
+  aspect-ratio: 4 / 5; border-radius: 10px; box-shadow: 0 4px 0 rgba(60, 30, 20, .2), 0 8px 18px rgba(20, 15, 40, .25); background: #2b3452;
+}
+.tbc-canvas { display: block; width: 100%; height: 100%; border-radius: 10px; }
+.tbc-busy {
+  position: absolute; inset: 0; display: grid; place-items: center; border-radius: 10px;
+  background: radial-gradient(ellipse at 50% 50%, rgba(43, 52, 82, .55), rgba(43, 52, 82, .8));
+}
+.tbc-busy span {
+  font: 600 14px/1.2 var(--font); color: var(--cream); background: rgba(30, 34, 60, .7); padding: 8px 14px; border-radius: 999px;
+  animation: tbcPulse 1.1s ease-in-out infinite alternate;
+}
+@keyframes tbcPulse { from { opacity: .6; } to { opacity: 1; } }
+
+.tbc-side { display: flex; flex-direction: column; gap: 10px; min-height: 0; flex: 1; }
+.tbc-scroll { overflow-y: auto; overflow-x: hidden; min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; padding: 2px 2px 4px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.tbc-lab { font: 700 11.5px/1 var(--font); letter-spacing: .12em; text-transform: uppercase; color: var(--green); margin-top: 4px; }
+.tbc-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.tbc-chip {
+  display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 0 10px; border: 0; border-radius: 999px; cursor: pointer;
+  font: 600 14px/1.1 var(--font); color: var(--ink); background: var(--cream-2); box-shadow: 0 3px 0 #cdb38a;
+  outline: 1.5px dashed rgba(184, 48, 45, .35); outline-offset: -4px; transition: transform .08s ease;
+}
+.tbc-chip:active { transform: translateY(2px); box-shadow: 0 1px 0 #cdb38a; }
+.tbc-chip.on { background: var(--red); color: #fff; box-shadow: 0 3px 0 var(--red-dark); outline-color: rgba(255, 255, 255, .6); }
+.tbc-chip.on .tbc-sw { box-shadow: 0 0 0 2px #fff4e2, 0 1px 2px rgba(0, 0, 0, .3); }
+.tbc-chip .tbc-ci { display: inline-grid; place-items: center; font-style: normal; }
+.tbc-chip .tbc-ci svg { width: 18px; height: 18px; }
+.tbc-chip .tbc-lock { display: none; font-style: normal; }
+.tbc-chip .tbc-lock svg { width: 14px; height: 14px; }
+.tbc-chip.locked { opacity: .55; }
+.tbc-chip.locked .tbc-lock { display: inline-grid; }
+.tbc-chip.locked .tbc-ci { display: none; }
+.tbc-scenes .tbc-chip { padding: 0 10px; }
+.tbc-sw { width: 20px; height: 20px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .7), 0 1px 2px rgba(0, 0, 0, .3); }
+.tbc-sw-f3 { box-shadow: inset 0 0 0 2px #b8302d, 0 1px 2px rgba(0, 0, 0, .3); }
+.tbc-msg { font: 600 13px/1.25 var(--font); color: var(--red); }
+
+.tbc-actions { display: flex; gap: 8px; flex: none; flex-wrap: wrap; }
+.tbc-actions .knit-btn { flex: 1 1 0; min-height: 50px; padding: 0 12px; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; }
+.tbc-actions .knit-btn svg { width: 20px; height: 20px; flex: none; }
+.tbc-actions .tbc-send { flex-grow: 1.4; }
+.tbc-actions.fb .tbc-save { flex: 0.8 1 0; }
+.tbc-actions .knit-btn.wait { opacity: .6; }
+.tbc-copy.done { background: #2f7a4a; color: #fff; }
+.tbc-wa { background: #2f8f4e; box-shadow: 0 5px 0 #1f6236, 0 10px 18px rgba(0, 0, 0, .25); }
+
+/* portrait: every .tb-modal is a full-width bottom sheet (src/ui/ui.css, padding-top 60 px): match it */
+@media (orientation: portrait) {
+  .tbc-panel {
+    width: 100%; max-width: 640px; border-radius: 24px 24px 0 0;
+    max-height: calc(100vh - 60px - var(--safe-t)); max-height: calc(100dvh - 60px - var(--safe-t));
+    padding: 24px calc(14px + var(--safe-r)) calc(12px + var(--safe-b)) calc(14px + var(--safe-l));
+  }
+  .tbc-panel .tb-modal-close { right: calc(12px + var(--safe-r)); top: -22px; }
+  .tbc-panel .tb-modal-title { left: calc(16px + var(--safe-l)); top: -16px; }
+  .tbc-preview { height: clamp(150px, calc(100vh - 430px), 52vh); height: clamp(150px, calc(100dvh - 430px), 52dvh); }
+}
+@media (orientation: portrait) and (max-height: 700px) {
+  .tbc-preview { height: clamp(140px, calc(100vh - 438px), 52vh); height: clamp(140px, calc(100dvh - 438px), 52dvh); }
+}
+/* phones: scene chips without icons so the three fit one row; the fallback row WhatsApp / Copy link / Save fits one line */
+@media (max-width: 440px) {
+  .tbc-scenes .tbc-chip .tbc-ci { display: none; }
+  .tbc-actions.fb .tbc-long { display: none; }
+  .tbc-actions.fb .knit-btn { padding: 0 8px; gap: 6px; }
+}
+/* short portrait phones (360×640): tighter rows so the preview can stay bigger */
+@media (orientation: portrait) and (max-height: 700px) {
+  .tbc-chip { min-height: 38px; }
+  .tbc-lab { margin-top: 2px; }
+  .tbc-scroll { gap: 5px; }
+  .tbc-actions .knit-btn { min-height: 46px; }
+}
+/* small phones */
+@media (max-width: 380px) {
+  .tbc-panel { padding: 24px calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l)); }
+  .tbc-chip { font-size: 13.5px; padding: 0 9px; }
+  .tbc-scenes .tbc-chip { padding: 0 8px; gap: 4px; }
+  .tbc-chip .tbc-ci svg { width: 16px; height: 16px; }
+  .tbc-actions .knit-btn { font-size: 15px; padding: 0 8px; }
+}
+/* landscape: preview on the left, choices on the right */
+@media (orientation: landscape) and (min-width: 560px) {
+  .tbc-panel { width: min(780px, 100%); }
+  .tbc-body { flex-direction: row; gap: 16px; align-items: stretch; }
+  .tbc-preview { align-self: flex-start; height: min(520px, calc(100vh - 92px - var(--safe-t) - var(--safe-b))); height: min(520px, calc(100dvh - 92px - var(--safe-t) - var(--safe-b))); }
+}
+@media (orientation: landscape) and (max-height: 460px) {
+  .tbc-panel { padding: 22px 14px 10px; }
+  .tbc-lab { margin-top: 2px; }
+  .tbc-chip { min-height: 38px; }
+  .tbc-actions .knit-btn { min-height: 44px; }
+}
+
+/* hooks in other cards: "Send a Christmas card" (invite card) and "Make a card" (photo result) */
+.tbc-from-invite { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; font-size: 16px; padding: 12px 14px; }
+.tbc-from-invite svg, .tb-ph-mkcard svg { width: 22px; height: 22px; flex: none; }
+.tb-ph-actions .tb-ph-mkcard { grid-column: 1 / -1; }
+.tb-ph-mkcard[hidden] { display: none !important; }

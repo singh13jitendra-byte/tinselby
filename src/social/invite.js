@@ -30,6 +30,7 @@ export function createInvite(ctx, social) {
             </div>
             <div class="tbs-here"></div>
           </div>
+          <button class="knit-btn tbc-from-invite" hidden><span class="tbc-fi-ico"></span><span>Send a Christmas card</span></button>
         </section>
         <section class="tbs-inv-b">
           <label class="tbs-kicker" for="tbs-code-in">Join with a code</label>
@@ -127,6 +128,10 @@ export function createInvite(ctx, social) {
     social.sfx('ui');
     try { await navigator.share({ title: 'Tinselby', text: 'Come and play in my Tinselby town!', url: t.url }); } catch (err) { /* cancelled */ }
   });
+  // "Send a Christmas card" (src/cards): only when the card maker exists
+  const cardBtn = $('.tbc-from-invite');
+  cardBtn.addEventListener('click', (e) => { stop(e); if (!ctx.cards) return; close(); if (!ctx.cards.open('friends')) open(); });
+
   back.addEventListener('click', (e) => {
     stop(e);
     social.sfx('ui');
@@ -164,6 +169,7 @@ export function createInvite(ctx, social) {
     if (isOpen || !social.free()) return false;
     social.closeAll('invite');
     isOpen = true; el.hidden = false; lastKey = '';
+    cardBtn.hidden = !ctx.cards; if (ctx.cards && !cardBtn.dataset.ico) { cardBtn.dataset.ico = '1'; cardBtn.querySelector('.tbc-fi-ico').outerHTML = ctx.cards.icon || ''; }
     setMsg('');
     render();
     social.sfx('ui');

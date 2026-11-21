@@ -136,6 +136,7 @@ export function createPhoto(ctx) {
         <div class="tb-ph-rlab">Greeting</div>
         <div class="tb-ph-row">${GREETINGS.map((g) => chip('greeting', g.id, g.label)).join('')}</div>
         <div class="tb-ph-actions">
+          <button class="knit-btn tb-ph-mkcard" hidden><span class="tb-ph-mkico"></span><span>Make a Christmas card</span></button>
           <button class="knit-btn green tb-ph-share" hidden>${IC.share}<span>Share</span></button>
           <button class="knit-btn cream tb-ph-save">${IC.save}<span>Save image</span></button>
           <button class="knit-btn cream tb-ph-copy">${IC.link}<span>Copy link</span></button>
@@ -167,6 +168,7 @@ export function createPhoto(ctx) {
     if (b === shareBtn) { share(); return; }
     if (b.classList.contains('tb-ph-save')) { save(); return; }
     if (b.classList.contains('tb-ph-copy')) { copyLink(); return; }
+    if (b.classList.contains('tb-ph-mkcard')) { const ph = photoCv; if (!ph || !ctx.cards) return; sfx('ui'); close(); ctx.cards.open('photo', { photo: ph }); return; } // src/cards
   });
 
   function toast(text, ms = 2200) {
@@ -614,6 +616,9 @@ export function createPhoto(ctx) {
       let can = false;
       try { can = !!(navigator.share && navigator.canShare && f && navigator.canShare({ files: [f] })); } catch (e) { can = false; }
       shareBtn.hidden = !can;
+      const mk = root.querySelector('.tb-ph-mkcard'); // "Make a Christmas card" (src/cards)
+      mk.hidden = !ctx.cards;
+      if (ctx.cards && !mk.dataset.ico) { mk.dataset.ico = '1'; mk.querySelector('.tb-ph-mkico').outerHTML = ctx.cards.icon || ''; }
       root.querySelector('.tb-ph-save').classList.toggle('green', shareBtn.hidden);
       root.querySelector('.tb-ph-save').classList.toggle('cream', !shareBtn.hidden);
     }
