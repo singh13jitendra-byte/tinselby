@@ -1,0 +1,59 @@
+/* PWA install card (src/pwa). Sits in its own .tb-cards layer, so it inherits the reward cards' placement rules
+   (bottom centre above the joystick row; small landscape: right of the joystick; portrait: full width above the thumbs). */
+.tb-pwa-layer { pointer-events: none; }
+.tb-pwa-card { pointer-events: auto; background-color: #fff6e4; }
+.tb-pwa-card.parked { opacity: 0; visibility: hidden; pointer-events: none; animation: none; }
+.tb-pwa-ico { padding: 0; overflow: hidden; background: radial-gradient(circle at 50% 40%, #3e4d7c, #232b4d); animation: none; }
+.tb-pwa-app { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: inherit; }
+.tb-pwa-card .tb-card-title { line-height: 1.15; }
+.tb-pwa-card .tb-card-btns .knit-btn { min-width: 92px; }
+
+/* iPhone / iPad: the two-step picture guide */
+.tb-pwa-gbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.tb-pwa-gbody .tb-card-title { padding-left: 2px; }
+.tb-pwa-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; }
+.tb-pwa-steps li {
+  flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 14px;
+  background: rgba(243, 227, 198, 0.75); box-shadow: inset 0 0 0 2px rgba(184, 48, 45, 0.18);
+}
+.tb-pwa-n {
+  flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 13px/1 var(--font); color: #fff; background: var(--red); box-shadow: 0 2px 0 var(--red-dark);
+}
+.tb-pwa-pic {
+  flex: none; width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; color: #2f7bf6;
+  background: #fff; box-shadow: 0 2px 0 rgba(60, 30, 20, 0.15), inset 0 0 0 1.5px rgba(58, 42, 36, 0.12);
+}
+.tb-pwa-pic svg { width: 26px; height: 26px; }
+.tb-pwa-st { font: 500 14px/1.2 var(--font); color: var(--ink); min-width: 0; }
+.tb-pwa-st b { font-weight: 700; color: var(--red); }
+.tb-pwa-st small { display: block; font: 500 11.5px/1.2 var(--font); opacity: .7; margin-top: 1px; }
+.tb-pwa-card.guide { width: min(560px, 94vw); align-items: center; }
+.tb-pwa-card.guide .tb-card-title { font-size: 18px; }
+
+/* small landscape phones (844x390, 667x375): a little tighter */
+@media (max-height: 430px) {
+  .tb-pwa-card.guide { padding: 8px 10px; }
+  .tb-pwa-pic { width: 34px; height: 34px; }
+  .tb-pwa-pic svg { width: 22px; height: 22px; }
+  .tb-pwa-st { font-size: 13px; }
+  .tb-pwa-st small { font-size: 10.5px; }
+  .tb-pwa-card.guide .tb-card-title { font-size: 16px; }
+  .tb-pwa-card .tb-card-sub { font-size: 12.5px; }
+}
+
+/* portrait phones: buttons in a row under the text, the guide steps stacked */
+@media (orientation: portrait) {
+  .tb-pwa-card { flex-wrap: wrap; }
+  .tb-pwa-card .tb-card-btns { flex-basis: 100%; flex-direction: row; }
+  .tb-pwa-card .tb-card-btns .knit-btn { flex: 1; }
+  .tb-pwa-card.guide { width: min(470px, 92vw); }
+  .tb-pwa-steps { flex-direction: column; gap: 6px; }
+}
+@media (orientation: portrait) and (max-width: 370px) {
+  .tb-pwa-card .tb-card-title { font-size: 16px; }
+  .tb-pwa-st { font-size: 13.5px; }
+}
+
+/* the offline toast sits above the floating activity signs (z 3) and guide chips (z 4), below cards (8) and panels */
+#ui .tb-toasts:has(> .tb-pwa-toast) { z-index: 6; }

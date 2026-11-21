@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Tinselby",
+  "short_name": "Tinselby",
+  "description": "Explore a cosy knitted Christmas city, open advent doors and play with friends.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#2b3452",
+  "theme_color": "#2b3452",
+  "lang": "en",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
