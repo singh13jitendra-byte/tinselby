@@ -27,6 +27,7 @@ import { createSocial } from './social/index.js';
 import { createTips } from './tips/index.js';
 import { createGuide } from './guide/index.js';
 import { createMap } from './map/index.js';
+import posthog, { posthogLogger } from './posthog.js';
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
@@ -81,6 +82,10 @@ engine.addUpdate((dt) => {
       const prev = district;
       district = d;
       game.emit('district:enter', { id: d, first, prev });
+      if (first) {
+        posthog?.capture('district_discovered', { district_id: d });
+        posthogLogger?.info('district discovered', { district_id: d });
+      }
     }
   }
   interact.update(player.pos.x, player.pos.z, player.controllable);
@@ -90,6 +95,16 @@ engine.addUpdate((dt) => cam.update(dt), 100);
 game.on('camera:toggle', () => { if (!cam.shotActive) cam.toggleView(); });
 game.on('input:gesture', () => ctx.audio.start?.());
 game.on('spirit:change', ({ value, max }) => engine.setEvening(value / max));
+game.on('door:complete', ({ n, stars, score }) => {
+  posthog?.capture('door_completed', { door_number: n, stars, score });
+  posthogLogger?.info('door completed', { door_number: n, stars, score });
+});
+game.on('daily:claim', ({ reward, streak }) => {
+  posthog?.capture('daily_gift_claimed', {
+    streak,
+    reward_type: reward?.slot ? 'wardrobe' : 'treat',
+  });
+});
 
 // entry screen → play
 cam.setMode('attract');
@@ -100,6 +115,8 @@ game.on('game:start', ({ name, style }) => {
   player.teleport(layout.SPAWN.x, layout.SPAWN.z, layout.SPAWN.heading);
   cam.setMode('follow');
   player.controllable = true;
+  posthog?.capture('game_started');
+  posthogLogger?.info('game started');
 });
 
 // ---------------------------------------------------------------- test / capture hooks

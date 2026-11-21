@@ -18,6 +18,7 @@ import { backToPlay } from './play.js';
 import {
   createCinemaRig, treeStarPose, greetPose, giftClosePose, giftOpenPose, crowdPose, pullbackPose,
 } from '../camera/shots.js';
+import posthog from '../posthog.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const ss = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
@@ -192,6 +193,7 @@ export function createEve(ctx, rig, trail, overlay, sfx, pxScale) {
         ctx.cam.setShotPortrait?.('cinema', { keep: KEEP, lift: 0 });
         cut(replay ? crowdPose(ctx) : treeStarPose(ctx), 0);
         game.emit('finale:start', { replay, preview: false });
+        posthog?.capture('finale_started', { is_replay: replay });
         safe('net.refreshSpirit', () => ctx.net?.refreshSpirit?.());
         sfx('bell', { vol: 0.8 });
       }],
@@ -375,6 +377,7 @@ export function createEve(ctx, rig, trail, overlay, sfx, pxScale) {
           onAgain: () => { api.exit(); api.start({ replay: true }); },
         });
         game.emit('game:end', {});
+        posthog?.capture('finale_completed', { is_replay: run.replay });
       }],
     ];
     if (clover) {

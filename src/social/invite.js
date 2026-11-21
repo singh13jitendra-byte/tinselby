@@ -1,6 +1,7 @@
 // "Play with friends": create a private friends town, copy / share the link, join with a 6-character code, or go back
 // to the big (public) town. The code box is the ONLY text input in the whole game.
 import { SOCIAL_ICONS } from './wheel.js';
+import posthog from '../posthog.js';
 
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // same as the net's town codes
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -110,6 +111,7 @@ export function createInvite(ctx, social) {
     try { code = net().newTownCode(); if (net().joinTown(code) === false) code = null; } catch (err) { code = null; }
     if (!code) { setMsg('Couldn’t make a town. Are you online?', true); return; }
     pending = code; pendingT = performance.now();
+    posthog?.capture('friends_town_created');
     setMsg('');
     lastKey = ''; render();
     social.toast(`Friends town ${code} is ready. Share the link!`);
@@ -152,6 +154,7 @@ export function createInvite(ctx, social) {
     if (net().town?.code === code) { setMsg('You’re already in that town.'); return; }
     try { if (net().joinTown(code) === false) throw new Error('refused'); } catch (err) { setMsg('Couldn’t join that code. Are you online?', true); return; }
     pending = code; pendingT = performance.now();
+    posthog?.capture('friends_town_joined');
     input.value = ''; joinBtn.disabled = true; input.blur();
     setMsg(`Joining ${code}…`);
     lastKey = ''; render();

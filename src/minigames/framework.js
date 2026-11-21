@@ -3,6 +3,7 @@
 // start() sets up its props/camera/controls, runs, and eventually calls mg.finish({ score, stars, text }).
 // The framework owns: phase switching, intro card + 3-2-1, the in-game HUD (score / timer / goal),
 // the results card (stars, best, Play again / Done), and automatic cleanup of everything registered via mg.
+import posthog from '../posthog.js';
 import './minigames.css';
 
 const params = new URLSearchParams(location.search);
@@ -51,6 +52,7 @@ export function createMiniGames(ctx) {
           });
           active = mg;
           game.emit('minigame:start', { id });
+          posthog?.capture('minigame_started', { minigame_id: id });
           try {
             const r = def.start(ctx, mg, opts);
             if (r && r.catch) r.catch((e) => { console.error('[minigame ' + id + ']', e); mg.finish({ score: 0, stars: 0, text: 'Oops — something went wrong.' }); });
@@ -153,6 +155,14 @@ export function createMiniGames(ctx) {
         const result = { score, stars: Math.max(0, Math.min(3, stars | 0)), text, quit, completed: !quit && stars >= 1 };
         result.newBest = !quit && (best == null || score > (best.score ?? -Infinity));
         ctx.progress?.recordMiniGame?.(def.id, result);
+        if (result.completed) {
+          posthog?.capture('minigame_completed', {
+            minigame_id: def.id,
+            score: result.score,
+            stars: result.stars,
+            is_new_best: result.newBest,
+          });
+        }
         hud?.remove(); hud = null;
         setTimeout(() => onFinish(result), 350);
       },
