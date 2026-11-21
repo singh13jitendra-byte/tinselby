@@ -15,13 +15,18 @@ Wave-3 parts (all use ?w3; shots/e2e3_*.png):
   w3tris     renderer triangles: market high view, finale reference view, lantern runway shot (cap 580k)
   ux         phone UX (touch, 390x844 / 844x390 / 360x780): calendar tap+swipe, HUD overlaps, goal card + ? help, guide arrow,
              mini-map + full map + Show the way, roster, activities (skips if absent), 0 console errors; shots/rqa_*.png
-Usage: python3 tools/playthrough.py [desktop|games|phone|w3games|w3cal|w3finale|w3tasks|w3tris|ux ...]   (default: all)"""
+  p1         phase 1/2 on a phone (touch, 390x844 + 844x390 layout): Christmas card maker from the Friends card (every scene /
+             greeting / frame by tap, stubbed Web Share → one 1080x1350 JPEG + greeting + card link, no-share fallback, ✕),
+             invite welcome (?from=Ava&card=… entry card → taps/typing → play, URL cleaned, toast; junk name injects nothing),
+             install card (Android UA + faked beforeinstallprompt, door 1 → card, Not now), streak chip (?streak=5, skips if
+             ctx.streaks missing) clear of the HUD, 0 console errors; shots/p1_*.png
+Usage: python3 tools/playthrough.py [desktop|games|phone|w3games|w3cal|w3finale|w3tasks|w3tris|ux|p1 ...]   (default: all)"""
 import fcntl, json, os, sys, time
 from playwright.sync_api import sync_playwright
 
 DIST = os.environ.get('PT_DIST', '/home/claude/tinselby/dist')  # point at another build (npx vite build --outDir ...)
 BASE = f'file://{DIST}/index.html?capture&net=off&tod=17.5'
-PARTS = set(sys.argv[1:]) or {'desktop', 'games', 'phone', 'w3games', 'w3cal', 'w3finale', 'w3tasks', 'w3tris', 'ux'}
+PARTS = set(sys.argv[1:]) or {'desktop', 'games', 'phone', 'w3games', 'w3cal', 'w3finale', 'w3tasks', 'w3tris', 'ux', 'p1'}
 GAMES = ['ornaments', 'cookies', 'snowball', 'sled', 'skate', 'tram', 'giftwrap', 'snowman', 'sled2']
 W2_GAMES = {'skate', 'tram', 'giftwrap', 'snowman', 'sled2'}
 lock = open('/tmp/tinselby-chrome.lock', 'w'); fcntl.flock(lock, fcntl.LOCK_EX)
@@ -337,46 +342,48 @@ with sync_playwright() as p:
             check(FIN_TRIS['runway'] < CAP, f'triangles: lantern runway {FIN_TRIS["runway"]} < {CAP}')
         else: skip('triangles: finale reference / runway need the w3finale part')
 
+    # ------------------------------------------------------------------ phone touch helpers (ux, p1)
+    RECT = """(s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+      return (r.width < 1 || r.height < 1 || cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity < 0.05 || e.closest('[hidden]')) ? null : { x: r.left, y: r.top, w: r.width, h: r.height }; }"""
+    HUDJS = """(() => {
+      const vis = (e) => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e); return r.width > 1 && r.height > 1 && cs.visibility !== 'hidden' && cs.display !== 'none' && +cs.opacity > 0.05 && !e.closest('[hidden]'); };
+      const out = []; const add = (n, e) => { if (!e || !vis(e)) return; const r = e.getBoundingClientRect(); out.push({ n, x: r.left, y: r.top, w: r.width, h: r.height }); };
+      add('goal', document.querySelector('.tb-goal'));
+      document.querySelectorAll('.tb-stats .tb-chip').forEach((e, i) => add('chip' + i, e));
+      document.querySelectorAll('.tb-tr > *').forEach((e, i) => add('btn' + i, e));
+      add('act', document.querySelector('.tb-act')); add('joy', document.querySelector('.tb-joy'));
+      add('minimap', document.querySelector('.tbm-mini:not([hidden])')); add('social', document.querySelector('.tbs-corner'));
+      return JSON.stringify(out); })()"""
+    def overl(a, b): return a['x'] < b['x'] + b['w'] - .5 and b['x'] < a['x'] + a['w'] - .5 and a['y'] < b['y'] + b['h'] - .5 and b['y'] < a['y'] + a['h'] - .5
+    def inside(r, w, h): return r['x'] >= -.5 and r['y'] >= -.5 and r['x'] + r['w'] <= w + .5 and r['y'] + r['h'] <= h + .5
+    def rect(pg, sel): return pg.evaluate(f'({RECT})({json.dumps(sel)})')
+    def cstep(pg, n=8):
+        pg.evaluate(f'window.__tinselby.step(1/30,{n})'); pg.evaluate('document.getAnimations().forEach(a => { try { a.finish(); } catch (e) {} })')
+    def tap_el(pg, sel, label):  # a real touch tap at the element's centre (hit-tested: the element or a child must be under the finger)
+        r = rect(pg, sel)
+        if not r: return False
+        x, y = r['x'] + r['w'] / 2, r['y'] + r['h'] / 2
+        top = pg.evaluate(f'(() => {{ const t = document.elementFromPoint({x}, {y}); return !!t && !!t.closest({json.dumps(sel)}); }})()')
+        if not top: print(f'  (tap {label}: something else is on top of {sel} at {x:.0f},{y:.0f})'); return False
+        pg.touchscreen.tap(x, y); wait_ms(pg, 150); cstep(pg, 4); return True
+    def swipe(pg, cdp, x, y0, y1, steps=8):  # real touch drag through CDP
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y0, 'id': 1}]})
+        for i in range(1, steps + 1):
+            cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': x, 'y': y0 + (y1 - y0) * i / steps, 'id': 1}]}); wait_ms(pg, 25)
+        cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); wait_ms(pg, 250)
+    def new_phone(w, h, tag, init=None, **kw):  # kw: extra context options (user_agent, ...); init: an init script
+        c = b.new_context(viewport={'width': w, 'height': h}, is_mobile=True, has_touch=True, device_scale_factor=1, **kw)
+        if init: c.add_init_script(init)
+        pg = c.new_page(); pg.set_default_timeout(120000); attach(pg, tag); return c, pg
+
     # ------------------------------------------------------------------ phone UX (touch)
     if 'ux' in PARTS:
         UXURL = f'file://{DIST}/index.html?capture&net=off&tod=17.5&play&reset&reveal=all&doors='
         SH = '/home/claude/tinselby/shots/rqa_'
-        RECT = """(s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
-          return (r.width < 1 || r.height < 1 || cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity < 0.05 || e.closest('[hidden]')) ? null : { x: r.left, y: r.top, w: r.width, h: r.height }; }"""
-        HUDJS = """(() => {
-          const vis = (e) => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e); return r.width > 1 && r.height > 1 && cs.visibility !== 'hidden' && cs.display !== 'none' && +cs.opacity > 0.05 && !e.closest('[hidden]'); };
-          const out = []; const add = (n, e) => { if (!e || !vis(e)) return; const r = e.getBoundingClientRect(); out.push({ n, x: r.left, y: r.top, w: r.width, h: r.height }); };
-          add('goal', document.querySelector('.tb-goal'));
-          document.querySelectorAll('.tb-stats .tb-chip').forEach((e, i) => add('chip' + i, e));
-          document.querySelectorAll('.tb-tr > *').forEach((e, i) => add('btn' + i, e));
-          add('act', document.querySelector('.tb-act')); add('joy', document.querySelector('.tb-joy'));
-          add('minimap', document.querySelector('.tbm-mini:not([hidden])')); add('social', document.querySelector('.tbs-corner'));
-          return JSON.stringify(out); })()"""
-        def overl(a, b): return a['x'] < b['x'] + b['w'] - .5 and b['x'] < a['x'] + a['w'] - .5 and a['y'] < b['y'] + b['h'] - .5 and b['y'] < a['y'] + a['h'] - .5
-        def inside(r, w, h): return r['x'] >= -.5 and r['y'] >= -.5 and r['x'] + r['w'] <= w + .5 and r['y'] + r['h'] <= h + .5
-        def rect(pg, sel): return pg.evaluate(f'({RECT})({json.dumps(sel)})')
-        def cstep(pg, n=8):
-            pg.evaluate(f'window.__tinselby.step(1/30,{n})'); pg.evaluate('document.getAnimations().forEach(a => { try { a.finish(); } catch (e) {} })')
-        def tap_el(pg, sel, label):  # a real touch tap at the element's centre (hit-tested: the element or a child must be under the finger)
-            r = rect(pg, sel)
-            if not r: return False
-            x, y = r['x'] + r['w'] / 2, r['y'] + r['h'] / 2
-            top = pg.evaluate(f'(() => {{ const t = document.elementFromPoint({x}, {y}); return !!t && !!t.closest({json.dumps(sel)}); }})()')
-            if not top: print(f'  (tap {label}: something else is on top of {sel} at {x:.0f},{y:.0f})'); return False
-            pg.touchscreen.tap(x, y); wait_ms(pg, 150); cstep(pg, 4); return True
-        def swipe(pg, cdp, x, y0, y1, steps=8):  # real touch drag through CDP
-            cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y0, 'id': 1}]})
-            for i in range(1, steps + 1):
-                cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': x, 'y': y0 + (y1 - y0) * i / steps, 'id': 1}]}); wait_ms(pg, 25)
-            cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); wait_ms(pg, 250)
         def uxload(pg, doors, w, h):
             pg.set_viewport_size({'width': w, 'height': h})
             pg.goto(UXURL + str(doors), wait_until='commit'); pg.wait_for_function('window.__tinselby && window.__tinselby.ready', timeout=300000)
             cstep(pg, 30)
-
-        def new_phone(w, h, tag):
-            c = b.new_context(viewport={'width': w, 'height': h}, is_mobile=True, has_touch=True, device_scale_factor=1)
-            pg = c.new_page(); pg.set_default_timeout(120000); attach(pg, tag); return c, pg
 
         # ---- 1. calendar: tap open, detail strip + main button inside the viewport; touch-swipe scrolls on 360x640
         for (w, h) in ((390, 844), (844, 390), (360, 640)):
@@ -522,6 +529,167 @@ with sync_playwright() as p:
         pg.close(); c.close()
         ue = [e for e in errs if e.startswith('[ux')]
         check(not ue, f'ux: 0 console errors ({len(ue)}) {ue[:3]}')
+
+    # ------------------------------------------------------------------ Phase 1/2: card maker, invite welcome, install card, streaks
+    if 'p1' in PARTS:
+        import re
+        from urllib.parse import quote
+        T1 = time.time()
+        SH1 = '/home/claude/tinselby/shots/p1_'
+        P1URL = f'file://{DIST}/index.html?capture&net=off&tod=17.5'
+        def p1load(pg, q, steps=12):
+            pg.goto(P1URL + q, wait_until='commit'); pg.wait_for_function('window.__tinselby && window.__tinselby.ready', timeout=300000)
+            if steps: cstep(pg, steps)
+        def relayout(pg, w, h):
+            pg.set_viewport_size({'width': w, 'height': h}); pg.evaluate('new Promise(r => requestAnimationFrame(() => setTimeout(r, 80)))'); cstep(pg, 8)
+        def card_ready(pg, label):
+            try: pg.wait_for_function(f'{CTX}.cards.isOpen && !!{CTX}.cards.file', timeout=300000, polling=300); return True
+            except Exception as e: check(False, f'{label}: card picture never finished ({str(e)[:80]})'); return False
+        def ptap(pg, sel, label):  # scroll the element into view inside its panel (as a finger would), then a real tap
+            pg.evaluate(f'document.querySelector({json.dumps(sel)})?.scrollIntoView({{ block: "nearest", inline: "nearest" }})'); return tap_el(pg, sel, label)
+        SHARE_STUB = r"""window.__shares = []; window.__opens = [];
+          Object.defineProperty(navigator, 'share', { configurable: true, value: async (d) => { const f = (d.files || [])[0];
+            const bm = f ? await createImageBitmap(f) : null;
+            window.__shares.push({ files: (d.files || []).length, type: f && f.type, w: bm && bm.width, h: bm && bm.height, text: d.text, url: d.url }); } });
+          Object.defineProperty(navigator, 'canShare', { configurable: true, value: (d) => !!(d && d.files && d.files.length) });
+          window.open = (u) => { window.__opens.push(String(u)); return {}; };"""
+
+        # ---- 1. Christmas card maker (Friends card → Send a Christmas card), 390x844 then 844x390; same page: streak chip (4.)
+        tag = 'p1_card'; c, pg = new_phone(390, 844, tag, init=SHARE_STUB)
+        p1load(pg, '&play&reset&reveal=all&doors=7&streak=5', 30); print('[p1] card page loaded', flush=True)
+        check(tap_el(pg, '.tb-tr .tbs-friends-btn', 'Friends'), 'card: Friends button tapped')
+        check(bool(rect(pg, '.tbs-invite')), 'card: Friends card opens')
+        tapped = tap_el(pg, '.tbc-from-invite', 'Send a Christmas card'); check(tapped, 'card: "Send a Christmas card" tapped')
+        if tapped:
+            check(pg.evaluate(f'{CTX}.cards.isOpen && {CTX}.cards.state.where === "friends"') and bool(rect(pg, '.tbc-panel')), 'card: card maker panel opens')
+            check(not rect(pg, '.tbs-invite'), 'card: Friends card closed behind it')
+            card_ready(pg, 'card first')
+            for sc, gr, fr in (('wheel', 'g2', 'f2'), ('park', 'g3', 'f1'), ('tree', 'g5', 'f3')):  # every scene, then the final design
+                okt = all([ptap(pg, f'.tbc-chip[data-g="scene"][data-id="{sc}"]', sc), ptap(pg, f'.tbc-chip[data-g="greeting"][data-id="{gr}"]', gr),
+                           ptap(pg, f'.tbc-chip[data-g="frame"][data-id="{fr}"]', fr)])
+                card_ready(pg, f'card {sc}')
+                st = pg.evaluate(f'{CTX}.cards.state')
+                check(okt and (st['scene'], st['greeting'], st['frame']) == (sc, gr, fr), f'card: tapped scene/greeting/frame {sc}/{gr}/{fr} → {st["scene"]}/{st["greeting"]}/{st["frame"]}')
+            pg.screenshot(path=SH1 + 'card_390x844.png')
+            pr = rect(pg, '.tbc-panel'); check(bool(pr) and inside(pr, 390, 844), f'card 390x844: panel inside the viewport ({pr})')
+            # Send → Web Share: one 1080x1350 JPEG, greeting in the text, card link
+            check(ptap(pg, '.tbc-send', 'Send'), 'card: Send tapped')
+            try: pg.wait_for_function('window.__shares.length > 0', timeout=15000, polling=200)
+            except Exception: pass
+            sh = pg.evaluate('window.__shares'); print('  shares', sh)
+            check(len(sh) == 1 and sh[0]['files'] == 1 and sh[0]['type'] == 'image/jpeg' and (sh[0]['w'], sh[0]['h']) == (1080, 1350), f'card: Send → one navigator.share call with one 1080x1350 JPEG ({sh})')
+            if sh:
+                check('Ho ho ho!' in (sh[0]['text'] or ''), f'card: share text has the greeting ({sh[0]["text"]!r})')
+                check(re.search(r'\?from=.+&card=(tree|wheel|park)\.g[1-5]\.f[1-3]', sh[0]['url'] or '') is not None and 'card=tree.g5.f3' in sh[0]['url'], f'card: share url {sh[0]["url"]}')
+            # no Web Share → WhatsApp / Copy link / Save picture
+            pg.evaluate("Object.defineProperty(navigator, 'share', { configurable: true, value: undefined }); Object.defineProperty(navigator, 'canShare', { configurable: true, value: undefined })")
+            check(ptap(pg, '.tbc-send', 'Send (no share)'), 'card: Send tapped without navigator.share'); wait_ms(pg, 300); cstep(pg, 2)
+            fb = {k: bool(rect(pg, s)) for k, s in (('wa', '.tbc-wa'), ('copy', '.tbc-copy'), ('save', '.tbc-save'), ('send', '.tbc-send'))}
+            check(fb['wa'] and fb['copy'] and fb['save'] and not fb['send'], f'card: fallback WhatsApp + Copy link + Save picture shown ({fb})')
+            pg.screenshot(path=SH1 + 'card_fallback_390x844.png')
+            relayout(pg, 844, 390); wait_ms(pg, 200)
+            pr = rect(pg, '.tbc-panel'); check(bool(pr) and inside(pr, 844, 390), f'card 844x390: panel inside the viewport ({pr})')
+            acts = [rect(pg, s) for s in ('.tbc-wa', '.tbc-copy', '.tbc-save', '.tbc-x')]
+            check(all(a and inside(a, 844, 390) for a in acts), f'card 844x390: action buttons + close inside the viewport ({acts})')
+            pg.screenshot(path=SH1 + 'card_844x390.png')
+            relayout(pg, 390, 844)
+            check(tap_el(pg, '.tbc-x', 'close'), 'card: ✕ tapped'); cstep(pg, 4)
+            check(pg.evaluate(f'!{CTX}.cards.isOpen && {CTX}.player.controllable && {CTX}.input.enabled !== false') and not rect(pg, '.tbc-panel'), 'card: ✕ closes, player controllable again')
+            # a real tap on open ground sets a walk target
+            pg.evaluate(f'{CTX}.input.clearTap?.()')
+            onCanvas = pg.evaluate('document.elementFromPoint(195, 330)?.tagName')
+            pg.touchscreen.tap(195, 330); cstep(pg, 2)
+            tt = pg.evaluate(f'!!{CTX}.input.tapTarget')
+            check(onCanvas == 'CANVAS' and tt, f'card: after closing, a tap on the ground walks (element {onCanvas}, tapTarget {tt})')
+        # ---- 4. streak chip (?streak=5): shows 5, clear of goal card / stats chip / round buttons / mini-map
+        if pg.evaluate(f'!!{CTX}.streaks'):
+            STREAKJS = HUDJS.replace("document.querySelectorAll('.tb-stats .tb-chip')", "document.querySelectorAll('.tb-stats .tb-chip:not(.tb-streak)')").replace(
+                "return JSON.stringify(out);", "add('streak', document.querySelector('.tb-streak')); return JSON.stringify(out);")
+            for (w, h) in ((390, 844), (844, 390)):
+                relayout(pg, w, h); cstep(pg, 6)
+                R = json.loads(pg.evaluate(STREAKJS)); sk = next((r for r in R if r['n'] == 'streak'), None)
+                txt = pg.evaluate('document.querySelector(".tb-streak b")?.textContent || ""')
+                check(bool(sk) and txt == '5', f'streak {w}x{h}: chip visible with 5 ({txt!r}, {sk})')
+                if sk:
+                    bad = [r['n'] for r in R if r['n'] != 'streak' and overl(sk, r)]
+                    names = sorted(r['n'] for r in R)
+                    check(not bad and inside(sk, w, h) and {'goal', 'minimap'} <= set(names), f'streak {w}x{h}: chip clear of the HUD ({names}) overlaps {bad}')
+                pg.screenshot(path=SH1 + f'streak_{w}x{h}.png')
+        else: skip('streaks: ctx.streaks missing')
+        c.close()
+
+        # ---- 2. invite welcome (entry card, no &play): text inside the viewport, real taps through to play, URL cleaned, toast
+        tag = 'p1_invite'; c, pg = new_phone(390, 844, tag); dialogs = []
+        pg.on('dialog', lambda d: (dialogs.append(d.message), d.dismiss()))
+        p1load(pg, '&reset&from=Ava&card=tree.g1.f2', 2); print('[p1] invite page loaded', flush=True)
+        wt = pg.evaluate("document.querySelector('.tbi-welcome')?.innerText.replace(/\\s+/g, ' ') || ''")
+        check('Ava invited you to Tinselby' in wt and 'Ava sent you: Merry Christmas!' in wt, f'invite: welcome text ({wt!r})')
+        for s in ('.tbi-welcome', '.tbi-l1', '.tbi-l2', '#tb-name', '.tb-enter'):
+            r = rect(pg, s); check(bool(r) and inside(r, 390, 844), f'invite: {s} inside the viewport ({r})')
+        pg.screenshot(path=SH1 + 'invite_390x844.png')
+        relayout(pg, 844, 390)
+        lr = [rect(pg, s) for s in ('.tbi-welcome', '#tb-name', '.tb-enter')]
+        check(all(r and inside(r, 844, 390) for r in lr), f'invite 844x390: welcome, name field, button inside the viewport ({lr})')
+        pg.screenshot(path=SH1 + 'invite_844x390.png'); relayout(pg, 390, 844)
+        check(tap_el(pg, '#tb-name', 'name field'), 'invite: name field tapped'); pg.keyboard.type('Mia')
+        check(tap_el(pg, '.tb-enter', 'Next'), 'invite: "Next" tapped'); wait_ms(pg, 500); cstep(pg, 4)
+        # toasts live ~3.6 s of real time and Chrome here renders ~1 frame/s: record every toast as it appears (text + rect)
+        pg.evaluate("""(() => { window.__toasts = []; new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) {
+          if (n.nodeType === 1 && n.classList.contains('tb-toast')) setTimeout(() => { const r = n.getBoundingClientRect();
+            window.__toasts.push({ t: n.textContent, x: r.left, y: r.top, w: r.width, h: r.height }); }, 60); } })
+          .observe(document.body, { childList: true, subtree: true }); })()""")
+        check(tap_el(pg, '.tb-entry .tb-primary', 'wardrobe primary'), 'invite: wardrobe primary button tapped')
+        st = pg.evaluate(f'[{CTX}.game.state.phase, {CTX}.game.state.playerName, location.search]')
+        check(st[0] == 'play' and st[1] == 'Mia', f'invite: in play as Mia ({st[:2]})')
+        check('from=' not in st[2] and 'card=' not in st[2], f'invite: URL no longer has from / card ({st[2]})')
+        toast = None
+        for _ in range(20):  # the toast comes ~1.6 s (real time) after game:start
+            toast = pg.evaluate("window.__toasts.find(t => t.t.includes('Ava is waving hello!')) || null")
+            if toast: break
+            wait_ms(pg, 300)
+        if toast: pg.screenshot(path=SH1 + 'invite_toast_390x844.png')
+        check(bool(toast) and inside(toast, 390, 844), f'invite: toast "Ava is waving hello!" shown ({toast}; all toasts {pg.evaluate("window.__toasts.map(t => t.t)")})')
+        # junk sender name: no element injected
+        p1load(pg, '&reset&from=' + quote('<img src=x onerror=alert(1)>'), 2)
+        wait_ms(pg, 400)
+        j = pg.evaluate("""(() => { const w = document.querySelector('.tbi-welcome');
+          return { welcome: !!w, name: w ? w.querySelector('.tbi-l1 b')?.textContent : null, imgInWelcome: w ? w.querySelectorAll('img').length : -1,
+                   imgX: [...document.images].filter(i => i.getAttribute('src') === 'x').length }; })()""")
+        check(j['welcome'] and j['imgInWelcome'] == 0 and j['imgX'] == 0 and not dialogs and '<' not in (j['name'] or ''), f'invite: junk ?from=<img …> injects no img ({j}, dialogs {dialogs})')
+        pg.screenshot(path=SH1 + 'invite_junk_390x844.png')
+        c.close()
+
+        # ---- 3. install card: Android UA + a faked beforeinstallprompt, door 1 done → card in free play; "Not now" hides it
+        UA_ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36'
+        tag = 'p1_pwa'; c, pg = new_phone(390, 844, tag, user_agent=UA_ANDROID)
+        p1load(pg, '&play&reset&reveal=all&doors=0&pwa', 6); print('[p1] pwa page loaded', flush=True)
+        if pg.evaluate(f'!!{CTX}.pwa'):
+            pg.evaluate("""(() => { const e = new Event('beforeinstallprompt', { cancelable: true }); e.prompt = () => Promise.resolve();
+              e.userChoice = Promise.resolve({ outcome: 'dismissed', platform: 'web' }); window.dispatchEvent(e); })()""")
+            check(pg.evaluate(f'{CTX}.pwa.platform') == 'android' and not pg.evaluate(f'{CTX}.pwa.cardShown'), 'install: android platform, no card before a door is done')
+            pg.evaluate(f'{CTX}.progress.complete(1, {{ stars: 3 }})'); cstep(pg, 5)
+            for _ in range(6):  # tap through the door reward card(s)
+                if not pg.evaluate(f'!!{CTX}.ui.cards.busy'): break
+                if not tap_el(pg, '.tb-cards:not(.tb-pwa-layer) .tb-card:not(.out) .knit-btn', 'reward card'):
+                    pg.evaluate("document.querySelector('.tb-cards:not(.tb-pwa-layer) .tb-card:not(.out) .knit-btn')?.click()")
+                wait_ms(pg, 400); cstep(pg, 3)
+            for _ in range(14):
+                cstep(pg, 4); wait_ms(pg, 500)
+                if pg.evaluate(f'{CTX}.pwa.cardShown'): break
+            shown = pg.evaluate(f'{CTX}.pwa.cardShown'); cr = rect(pg, '.tb-pwa-card')
+            check(shown and bool(cr) and inside(cr, 390, 844), f'install: card shown in free play after door 1, inside the viewport ({cr}, {pg.evaluate(f"JSON.stringify({CTX}.pwa.state)")})')
+            pg.screenshot(path=SH1 + 'install_390x844.png')
+            if shown:
+                check(tap_el(pg, '.tb-pwa-later', 'Not now'), 'install: "Not now" tapped'); wait_ms(pg, 450); cstep(pg, 3)
+                check(not pg.evaluate(f'{CTX}.pwa.cardShown') and not rect(pg, '.tb-pwa-card'), 'install: "Not now" hides the card')
+        else: skip('install: ctx.pwa missing')
+        c.close()
+
+        # ---- 5. console errors across the part (Google Fonts can't load here: no network for file:// runs)
+        pe = [e for e in errs if e.startswith('[p1') and not re.search(r'fonts\.(googleapis|gstatic)\.com', e)]
+        ign = len([e for e in errs if e.startswith('[p1')]) - len(pe)
+        check(not pe, f'p1: 0 console errors ({len(pe)}; {ign} offline Google Fonts errors ignored) {pe[:3]}')
+        print(f'[p1] {round(time.time() - T1)} s', flush=True)
 
     b.close()
 
