@@ -31,6 +31,13 @@
 .tb-pwa-card.guide { width: min(560px, 94vw); align-items: center; }
 .tb-pwa-card.guide .tb-card-title { font-size: 18px; }
 
+/* Android menu guide: the inline "⋮" in the step text, a touch more room for the longer lines */
+.tb-pwa-dots { display: inline-block; width: 6px; height: 15px; vertical-align: -2px; margin: 0 3px; color: var(--ink); }
+.tb-pwa-card.guide.android .tb-pwa-pic { color: #3a7d44; }
+.tb-pwa-card.guide.android .tb-pwa-st { font-size: 13.5px; }
+/* desktop hint (no install prompt available) */
+.tb-pwa-card.hint .tb-card-sub b { color: var(--red); }
+
 /* small landscape phones (844x390, 667x375): a little tighter */
 @media (max-height: 430px) {
   .tb-pwa-card.guide { padding: 8px 10px; }
@@ -40,6 +47,8 @@
   .tb-pwa-st small { font-size: 10.5px; }
   .tb-pwa-card.guide .tb-card-title { font-size: 16px; }
   .tb-pwa-card .tb-card-sub { font-size: 12.5px; }
+  .tb-pwa-card.guide.android .tb-pwa-st { font-size: 12.5px; }
+  .tb-pwa-card.guide.android .tb-pwa-steps li { padding: 5px 7px; gap: 6px; }
 }
 
 /* portrait phones: buttons in a row under the text, the guide steps stacked */

@@ -3,6 +3,7 @@
 //   ctx.tips = createTips(ctx)
 //   tips.help()          toggle the help card: one friendly sentence about the current step + "Show me the way" / "OK"
 //   tips.closeHelp()     tips.resetAll() forget everything (tests)   tips.skipAll()   tips.current → step id | null
+//   (the help card also has an "Add Tinselby to your home screen" row → ctx.pwa.offer(); hidden when running installed)
 //   tips.enabled         false under ?capture unless &tips (so tools/playthrough.py taps are never blocked); help() always works
 //
 // Coach marks are remembered in localStorage `tinselby.tips.v1` = { off: bool, done: { id: 1 } }. They only show in free
@@ -43,10 +44,12 @@ export function createTips(ctx) {
     <div class="tbt-help knit-card" hidden>
       <div class="tbt-txt"></div>
       <div class="tbt-row"><button class="knit-btn cream tbt-way" type="button">Show me the way</button><button class="knit-btn green tbt-hok" type="button">OK</button></div>
+      <button class="tbt-install" type="button" hidden><img class="tbt-install-ico" src="./icons/icon-192.png" alt="" draggable="false"><span class="tbt-install-t">Add Tinselby to your home screen</span><span class="tbt-install-go" aria-hidden="true">›</span></button>
     </div>`;
   uiRoot.appendChild(root);
   const ring = root.querySelector('.tbt-ring'), call = root.querySelector('.tbt-call'), callTxt = call.querySelector('.tbt-txt');
   const help = root.querySelector('.tbt-help'), helpTxt = help.querySelector('.tbt-txt'), wayBtn = help.querySelector('.tbt-way');
+  const installBtn = help.querySelector('.tbt-install'); // src/pwa: "Add Tinselby to your home screen" on demand
   const sfx = (n) => { try { ctx.audio?.sfx?.(n); } catch (e) { /* */ } };
   const tap = (el, fn) => {
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -205,11 +208,16 @@ export function createTips(ctx) {
     if (cur) dismiss(false);
     helpTxt.textContent = helpText();
     wayBtn.hidden = !ctx.guide?.showTrail;
+    let canInstall = false;
+    try { canInstall = !!ctx.pwa?.helpAvailable; } catch (e) { /* */ }
+    installBtn.hidden = !canInstall; // hidden when already running as the installed app, or nothing to offer here
+    if (canInstall) installBtn.querySelector('.tbt-install-t').textContent = ctx.pwa.helpLabel || 'Add Tinselby to your home screen';
     help.hidden = false;
     return true;
   }
   tap(help.querySelector('.tbt-hok'), closeHelp);
   tap(wayBtn, () => { try { ctx.guide?.showTrail?.(20); } catch (e) { /* */ } closeHelp(); });
+  tap(installBtn, () => { closeHelp(); try { ctx.pwa?.offer?.({ trigger: 'help' }); } catch (e) { console.error('[tips] pwa.offer', e); } });
 
   return {
     enabled,
