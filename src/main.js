@@ -27,6 +27,8 @@ import { createSocial } from './social/index.js';
 import { createTips } from './tips/index.js';
 import { createGuide } from './guide/index.js';
 import { createMap } from './map/index.js';
+import { createActivities } from './activities/index.js';
+import { createAnalytics } from './analytics/index.js';
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
@@ -62,6 +64,8 @@ ctx.social = createSocial(ctx); // wave 4 Play together UI (behind ?w4): friends
 ctx.tips = createTips(ctx); // first-time coach marks + the "?" help card
 ctx.guide = createGuide(ctx); // where to go: edge arrow, "!" over the target, footprint trail (src/guide)
 ctx.map = createMap(ctx); // mini-map under the top-right buttons + full town map (src/map)
+ctx.activities = createActivities(ctx); // floating signs + glow rings at rides / things to do (src/activities)
+ctx.analytics = createAnalytics(ctx); // anonymous PostHog events (src/analytics, ANALYTICS.md): production host only, no cookies
 let rideT = 0;
 engine.addUpdate((dt) => { rideT += dt; ctx.rides.update(dt, rideT); }, 50);
 // the wave-end card asks for a sky teaser: use the world's moon fly-by

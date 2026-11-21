@@ -129,6 +129,12 @@ export function glyph(g, icon, s, col = INK) {
       g.fillStyle = '#3f6e45'; g.fillRect(-h * 0.5, -h * 0.6, h, h * 0.45);
       B(); g.moveTo(-h * 0.5, h * 0.65); g.lineTo(-h * 0.8, h); g.moveTo(h * 0.5, h * 0.65); g.lineTo(h * 0.8, h); g.stroke();
       break;
+    case 'gift':
+      g.fillRect(-h * 0.8, -h * 0.25, h * 1.6, h * 1.1);
+      g.fillRect(-h * 0.9, -h * 0.55, h * 1.8, h * 0.35);
+      g.fillStyle = BADGE.landmark; g.fillRect(-h * 0.14, -h * 0.55, h * 0.28, h * 1.4);
+      B(); g.ellipse(-h * 0.35, -h * 0.8, h * 0.32, h * 0.2, 0.5, 0, Math.PI * 2); g.ellipse(h * 0.35, -h * 0.8, h * 0.32, h * 0.2, -0.5, 0, Math.PI * 2); g.fill();
+      break;
     default:
       B(); g.arc(0, 0, h * 0.45, 0, Math.PI * 2); g.fill();
   }

@@ -4,6 +4,9 @@
 //   map.open() / map.close() / map.isOpen   full town map overlay
 //   map.select(placeId) / map.showWay(placeId?)   (tests) pick a place on the full map / point the way there
 //   map.places → [{ id, kind, name, x, z, gx, gz, district }]   map.state() → diagnostics
+//   map.open('todo') / map.setTab('map'|'todo') / map.tab / map.todo()   the "Things to do" tab (src/activities list, each
+//   row with district, distance, locked note and "Show the way" → map.wayTo({ id, name, gx, gz }) → ctx.guide.showWay)
+//   Mini-map: activities within 12 m pulse (gold halo behind their icon).
 //
 // Canvas 2D only (0 WebGL draw calls). The city is painted once into an offscreen canvas (base.js) from the layout data
 // and repainted only when a district's pop-up reveal changes; the mini-map redraws at ~15 fps while visible.
@@ -18,6 +21,7 @@ const VIEW_R = 11; // metres from the centre to the mini-map's rim
 const FPS = 15;
 const MINI_ICON = 15; // css px
 const GOLD = '#e3aa3a';
+const PULSE_R = 12; // metres: activities this close pulse on the mini-map
 
 export function createMap(ctx) {
   const { game, player, cam, uiRoot, layout: L } = ctx;
@@ -26,6 +30,8 @@ export function createMap(ctx) {
   const base = createBase(L, { residentialHouses: ctx.city?.residential?.houses });
   const places = buildPlaces(L, ctx);
   const DIDS = L.DISTRICTS.map((d) => d.id);
+  const placeById = {};
+  for (const p of places) placeById[p.id] = p;
 
   // ------------------------------------------------------------------ DOM
   const mini = document.createElement('button');
@@ -42,9 +48,13 @@ export function createMap(ctx) {
   full.hidden = true;
   full.innerHTML = `
     <div class="tbm-card knit-card" role="dialog" aria-label="Town map">
-      <div class="tbm-title">${ICONS.mountain}<span>Tinselby</span></div>
+      <div class="tbm-tabs" role="tablist">
+        <button class="tbm-tab on" type="button" role="tab" data-tab="map" aria-selected="true">${ICONS.mountain}<span>Map</span></button>
+        <button class="tbm-tab" type="button" role="tab" data-tab="todo" aria-selected="false">${ICONS.star}<span>Things to do</span></button>
+      </div>
       <button class="knit-btn cream round tbm-x" aria-label="Close map">${ICONS.close}</button>
       <div class="tbm-stage"><canvas class="tbm-canvas"></canvas></div>
+      <div class="tbm-list" role="list" hidden></div>
       <div class="tbm-foot">
         <div class="tbm-tip">Tap a place to find your way</div>
         <div class="tbm-info" hidden>
@@ -59,6 +69,7 @@ export function createMap(ctx) {
   const tip = full.querySelector('.tbm-tip'), info = full.querySelector('.tbm-info');
   const infoName = full.querySelector('.tbm-info-txt b'), infoSub = full.querySelector('.tbm-info-txt span');
   const goBtn = full.querySelector('.tbm-go'), xBtn = full.querySelector('.tbm-x');
+  const list = full.querySelector('.tbm-list'), foot = full.querySelector('.tbm-foot'), tabs = full.querySelectorAll('.tbm-tab');
 
   const sfx = (n) => { try { ctx.audio?.sfx?.(n); } catch (e) { /* */ } };
   const stop = (e) => e.stopPropagation();
@@ -68,6 +79,14 @@ export function createMap(ctx) {
   full.addEventListener('click', (e) => { if (e.target === full) { e.stopPropagation(); close(); } });
   goBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); sfx('ui'); showWay(); });
   fc.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); tapFull(e.clientX, e.clientY); });
+  for (const b of tabs) b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); sfx('ui'); setTab(b.dataset.tab); });
+  list.addEventListener('click', (e) => {
+    const b = e.target.closest?.('.tbm-rgo');
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation(); sfx('ui');
+    const a = ctx.activities?.get?.(b.dataset.id);
+    if (a) wayTo({ id: 'act-' + a.id, name: a.sub ? `${a.name} · ${a.sub}` : a.name, gx: a.x, gz: a.z });
+  });
   window.addEventListener('keydown', (e) => { if (isOpen && e.key === 'Escape') { e.preventDefault(); close(); } }, true);
 
   // ------------------------------------------------------------------ base map (rebuilt when reveals change)
@@ -199,6 +218,24 @@ export function createMap(ctx) {
     g.setTransform(1, 0, 0, 1, 0, 0);
     // icons stay upright: rides + the big tree (only in revealed districts)
     const lim = rIn - MINI_ICON * d * 0.4;
+    // activities within PULSE_R (src/activities): a soft gold pulse behind the icon (+ the icon itself when the mini-map
+    // doesn't normally draw that place, e.g. the cocoa hut or the daily gift)
+    const acts = ctx.activities?.items;
+    if (acts) {
+      const pk = 0.5 + 0.5 * Math.sin(ctx.engine.time * 4.2);
+      for (const a of acts) {
+        if (!a.on || a.locked || !(a.dist <= PULSE_R)) continue;
+        const p = placeById[a.place];
+        if (p && p.district !== 'streets' && !revealed.has(p.district)) continue;
+        const [sx, sy] = w2s(p ? p.x : a.x, p ? p.z : a.z);
+        if (Math.hypot(sx - c, sy - c) > lim) continue;
+        g.fillStyle = `rgba(255,205,90,${(0.55 - 0.35 * pk).toFixed(3)})`;
+        g.beginPath(); g.arc(sx, sy, MINI_ICON * d * (0.62 + 0.38 * pk), 0, Math.PI * 2); g.fill();
+        g.strokeStyle = `rgba(255,236,170,${(0.95 - 0.5 * pk).toFixed(3)})`; g.lineWidth = 1.6 * d;
+        g.beginPath(); g.arc(sx, sy, MINI_ICON * d * (0.6 + 0.3 * pk), 0, Math.PI * 2); g.stroke();
+        if (!p || p.kind !== 'ride') badge(g, sx, sy, MINI_ICON * d, a.glyph, BADGE.ride);
+      }
+    }
     for (const p of places) {
       if (!(p.kind === 'ride' || p.id === 'tree') || !placeOn(p)) continue;
       if (p.district !== 'streets' && !revealed.has(p.district)) continue;
@@ -345,6 +382,10 @@ export function createMap(ctx) {
   function showWay(id) {
     const p = id ? places.find((q) => q.id === id) : sel;
     if (!p) return false;
+    return wayTo(p);
+  }
+  /** Point the way to { id, name, gx, gz } (a map place or an activity from the Things to do list). */
+  function wayTo(p) {
     const text = `Head to ${p.name}`;
     const h = { x: p.gx, z: p.gz, text, label: p.name, place: p.name, kind: 'place', id: 'map-' + p.id };
     close();
@@ -359,6 +400,51 @@ export function createMap(ctx) {
     return true;
   }
   let lastWay = null;
+
+  // ------------------------------------------------------------------ "Things to do" tab (src/activities)
+  let tab = 'map', tabWanted = null;
+  function setTab(t) {
+    tab = t === 'todo' && ctx.activities ? 'todo' : 'map';
+    for (const b of tabs) { const on = b.dataset.tab === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
+    card.classList.toggle('todo', tab === 'todo');
+    stage.hidden = tab === 'todo'; foot.hidden = tab === 'todo'; list.hidden = tab !== 'todo';
+    if (tab === 'todo') { select(null); renderList(); list.scrollTop = 0; }
+    else { sizeFull(); drawFull(); }
+    return tab;
+  }
+  /** One row per activity, nearest first (the four tram stops fold into one row: the nearest stop); locked ones last. */
+  function todoRows() {
+    const acts = ctx.activities?.items || [];
+    const px = player.pos.x, pz = player.pos.z, rows = [];
+    let tram = null;
+    for (const a of acts) {
+      const d = Math.hypot(a.x - px, a.z - pz), locked = !a.unlocked();
+      if (a.group === 'tram') { if (!tram || d < tram.d) tram = { a, d, locked }; continue; }
+      rows.push({ a, d, locked });
+    }
+    if (tram) rows.push(tram);
+    const rank = (r) => (r.locked ? 2 : r.a.available && !r.a.available() ? 1 : 0);
+    rows.sort((p, q) => rank(p) - rank(q) || p.d - q.d);
+    return rows;
+  }
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function renderList() {
+    const rows = todoRows();
+    if (!rows.length) { list.innerHTML = '<div class="tbm-empty">Nothing to do… yet!</div>'; return; }
+    list.innerHTML = rows.map(({ a, d, locked }) => {
+      const dist = d < 2 ? 'right here' : `${Math.round(d)} m`;
+      const where = placeName(a.x, a.z);
+      const away = a.available && !a.available();
+      const name = a.group === 'tram' ? `Tram · ${a.sub}` : a.name;
+      const note = locked ? `<em class="tbm-lock">${ICONS.lock}Opens with Door ${a.door}</em>`
+        : away ? '<em class="tbm-soon">Back tomorrow</em>' : `<em class="tbm-verb">${esc(a.verb)}</em>`;
+      return `<div class="tbm-row${locked ? ' locked' : ''}${away ? ' away' : ''}" role="listitem" data-id="${a.id}">
+        <span class="tbm-ri">${ctx.activities.iconOf(a.icon)}</span>
+        <span class="tbm-rt"><b>${esc(name)}</b><span>${note}<i>${esc(where)} · ${dist}</i></span></span>
+        <button class="knit-btn ${locked || away ? 'cream' : 'green'} tbm-rgo" type="button" data-id="${a.id}" aria-label="Show the way to ${esc(name)}">${ICONS.arrow}<span>Show the way</span></button>
+      </div>`;
+    }).join('');
+  }
   function open() {
     if (isOpen) return;
     refreshBase(false);
@@ -366,8 +452,8 @@ export function createMap(ctx) {
     full.hidden = false;
     mini.classList.remove('on');
     select(null);
-    sizeFull();
-    drawFull();
+    setTab(tabWanted || 'map');
+    tabWanted = null;
     game.emit('map:open', {});
   }
   function close() {
@@ -392,7 +478,7 @@ export function createMap(ctx) {
       if (show) { mini.hidden = false; layoutT = 0; acc = 1; layoutMini(); void mini.offsetWidth; mini.classList.add('on'); }
       else { mini.classList.remove('on'); setTimeout(() => { if (!visible) mini.hidden = true; }, 260); }
     }
-    if (isOpen) { fullT -= dt; if (fullT <= 0 || fullDirty) { fullT = 0.25; drawFull(); } return; }
+    if (isOpen) { fullT -= dt; if (tab === 'map' && (fullT <= 0 || fullDirty)) { fullT = 0.25; drawFull(); } return; }
     if (!visible) return;
     layoutT -= dt;
     if (layoutT <= 0) { layoutT = 0.5; layoutMini(); }
@@ -402,7 +488,12 @@ export function createMap(ctx) {
   game.on('game:start', () => { revealKey = ''; });
 
   const api = {
-    open, close, select, showWay, places,
+    open(t) { if (isOpen) { if (t) setTab(t); return; } tabWanted = t || null; open(); }, close, select, showWay, wayTo, places,
+    /** 'map' | 'todo' (the full map's tab). */
+    setTab(t) { return isOpen ? setTab(t) : tab; },
+    get tab() { return tab; },
+    /** Tests: the Things to do rows as shown. */
+    todo() { return [...list.querySelectorAll('.tbm-row')].map((r) => ({ id: r.dataset.id, text: r.innerText.replace(/\s+/g, ' ').trim() })); },
     get isOpen() { return isOpen; },
     get visible() { return visible; },
     get selected() { return sel?.id || null; },
