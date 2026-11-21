@@ -93,7 +93,7 @@ export function createTips(ctx) {
     cur = null; hideCall(); quiet = 1.2;
   }
   function hideCall() { call.classList.remove('on'); ring.classList.remove('on'); setTimeout(() => { if (!cur) call.hidden = true; }, 260); }
-  function skipAll() { store.off = true; save(); dismiss(false); }
+  function skipAll() { store.off = true; save(); dismiss(false); game.emit('tips:skipped', {}); }
   tap(call.querySelector('.tbt-ok'), () => dismiss(true));
   tap(call.querySelector('.tbt-skip'), skipAll);
 

@@ -601,7 +601,7 @@ export function createPhoto(ctx) {
     await new Promise((r) => setTimeout(r, 40)); // let the flash paint before the heavy frame
     const c = await develop();
     shutter.classList.remove('busy');
-    if (c) { showResult(true); sfx('bell'); }
+    if (c) { showResult(true); sfx('bell'); game.emit('photo:taken', {}); }
     return c;
   }
 
@@ -631,6 +631,7 @@ export function createPhoto(ctx) {
     try {
       if (!navigator.canShare || !navigator.canShare({ files: [f] })) throw new Error('no file share');
       await navigator.share(data);
+      game.emit('photo:shared', {});
     } catch (err) {
       if (err && err.name === 'AbortError') return; // the player closed the share sheet
       toast('Sharing isn’t available here, so we saved it instead.');
