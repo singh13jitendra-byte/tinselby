@@ -13,12 +13,15 @@ Wave-3 parts (all use ?w3; shots/e2e3_*.png):
   w3finale   ?eve&finale runs to the end card, gift awarded, Keep exploring; replay() + exit() early; HUD/town restored
   w3tasks    ctx.tasks.selfTest({reset:true}) without and with ?w3
   w3tris     renderer triangles: market high view, finale reference view, lantern runway shot (cap 580k)
-Usage: python3 tools/playthrough.py [desktop|games|phone|w3games|w3cal|w3finale|w3tasks|w3tris ...]   (default: all)"""
-import fcntl, json, sys, time
+  ux         phone UX (touch, 390x844 / 844x390 / 360x780): calendar tap+swipe, HUD overlaps, goal card + ? help, guide arrow,
+             mini-map + full map + Show the way, roster, activities (skips if absent), 0 console errors; shots/rqa_*.png
+Usage: python3 tools/playthrough.py [desktop|games|phone|w3games|w3cal|w3finale|w3tasks|w3tris|ux ...]   (default: all)"""
+import fcntl, json, os, sys, time
 from playwright.sync_api import sync_playwright
 
-BASE = 'file:///home/claude/tinselby/dist/index.html?capture&net=off&tod=17.5'
-PARTS = set(sys.argv[1:]) or {'desktop', 'games', 'phone', 'w3games', 'w3cal', 'w3finale', 'w3tasks', 'w3tris'}
+DIST = os.environ.get('PT_DIST', '/home/claude/tinselby/dist')  # point at another build (npx vite build --outDir ...)
+BASE = f'file://{DIST}/index.html?capture&net=off&tod=17.5'
+PARTS = set(sys.argv[1:]) or {'desktop', 'games', 'phone', 'w3games', 'w3cal', 'w3finale', 'w3tasks', 'w3tris', 'ux'}
 GAMES = ['ornaments', 'cookies', 'snowball', 'sled', 'skate', 'tram', 'giftwrap', 'snowman', 'sled2']
 W2_GAMES = {'skate', 'tram', 'giftwrap', 'snowman', 'sled2'}
 lock = open('/tmp/tinselby-chrome.lock', 'w'); fcntl.flock(lock, fcntl.LOCK_EX)
@@ -333,6 +336,192 @@ with sync_playwright() as p:
             check(FIN_TRIS['ref'] < CAP, f'triangles: finale reference view {FIN_TRIS["ref"]} < {CAP}')
             check(FIN_TRIS['runway'] < CAP, f'triangles: lantern runway {FIN_TRIS["runway"]} < {CAP}')
         else: skip('triangles: finale reference / runway need the w3finale part')
+
+    # ------------------------------------------------------------------ phone UX (touch)
+    if 'ux' in PARTS:
+        UXURL = f'file://{DIST}/index.html?capture&net=off&tod=17.5&play&reset&reveal=all&doors='
+        SH = '/home/claude/tinselby/shots/rqa_'
+        RECT = """(s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+          return (r.width < 1 || r.height < 1 || cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity < 0.05 || e.closest('[hidden]')) ? null : { x: r.left, y: r.top, w: r.width, h: r.height }; }"""
+        HUDJS = """(() => {
+          const vis = (e) => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e); return r.width > 1 && r.height > 1 && cs.visibility !== 'hidden' && cs.display !== 'none' && +cs.opacity > 0.05 && !e.closest('[hidden]'); };
+          const out = []; const add = (n, e) => { if (!e || !vis(e)) return; const r = e.getBoundingClientRect(); out.push({ n, x: r.left, y: r.top, w: r.width, h: r.height }); };
+          add('goal', document.querySelector('.tb-goal'));
+          document.querySelectorAll('.tb-stats .tb-chip').forEach((e, i) => add('chip' + i, e));
+          document.querySelectorAll('.tb-tr > *').forEach((e, i) => add('btn' + i, e));
+          add('act', document.querySelector('.tb-act')); add('joy', document.querySelector('.tb-joy'));
+          add('minimap', document.querySelector('.tbm-mini:not([hidden])')); add('social', document.querySelector('.tbs-corner'));
+          return JSON.stringify(out); })()"""
+        def overl(a, b): return a['x'] < b['x'] + b['w'] - .5 and b['x'] < a['x'] + a['w'] - .5 and a['y'] < b['y'] + b['h'] - .5 and b['y'] < a['y'] + a['h'] - .5
+        def inside(r, w, h): return r['x'] >= -.5 and r['y'] >= -.5 and r['x'] + r['w'] <= w + .5 and r['y'] + r['h'] <= h + .5
+        def rect(pg, sel): return pg.evaluate(f'({RECT})({json.dumps(sel)})')
+        def cstep(pg, n=8):
+            pg.evaluate(f'window.__tinselby.step(1/30,{n})'); pg.evaluate('document.getAnimations().forEach(a => { try { a.finish(); } catch (e) {} })')
+        def tap_el(pg, sel, label):  # a real touch tap at the element's centre (hit-tested: the element or a child must be under the finger)
+            r = rect(pg, sel)
+            if not r: return False
+            x, y = r['x'] + r['w'] / 2, r['y'] + r['h'] / 2
+            top = pg.evaluate(f'(() => {{ const t = document.elementFromPoint({x}, {y}); return !!t && !!t.closest({json.dumps(sel)}); }})()')
+            if not top: print(f'  (tap {label}: something else is on top of {sel} at {x:.0f},{y:.0f})'); return False
+            pg.touchscreen.tap(x, y); wait_ms(pg, 150); cstep(pg, 4); return True
+        def swipe(pg, cdp, x, y0, y1, steps=8):  # real touch drag through CDP
+            cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': x, 'y': y0, 'id': 1}]})
+            for i in range(1, steps + 1):
+                cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': x, 'y': y0 + (y1 - y0) * i / steps, 'id': 1}]}); wait_ms(pg, 25)
+            cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []}); wait_ms(pg, 250)
+        def uxload(pg, doors, w, h):
+            pg.set_viewport_size({'width': w, 'height': h})
+            pg.goto(UXURL + str(doors), wait_until='commit'); pg.wait_for_function('window.__tinselby && window.__tinselby.ready', timeout=300000)
+            cstep(pg, 30)
+
+        def new_phone(w, h, tag):
+            c = b.new_context(viewport={'width': w, 'height': h}, is_mobile=True, has_touch=True, device_scale_factor=1)
+            pg = c.new_page(); pg.set_default_timeout(120000); attach(pg, tag); return c, pg
+
+        # ---- 1. calendar: tap open, detail strip + main button inside the viewport; touch-swipe scrolls on 360x640
+        for (w, h) in ((390, 844), (844, 390), (360, 640)):
+            tag = f'ux_cal_{w}x{h}'; c, pg = new_phone(w, h, tag); uxload(pg, 7, w, h); print(f'[ux] calendar {w}x{h}', flush=True)
+            check(tap_el(pg, '.tb-cal', 'calendar button'), f'calendar {w}x{h}: HUD calendar button tapped')
+            opened = pg.evaluate('!!document.querySelector(".cal-wrap") && getComputedStyle(document.querySelector(".cal-wrap")).display !== "none"')
+            check(opened, f'calendar {w}x{h}: opens on a real tap')
+            cstep(pg, 10); wait_ms(pg, 400)
+            det, go = rect(pg, '.cal-detail'), rect(pg, '.cal-go')
+            if not (det and go):  # select a door whose detail shows a button
+                pg.evaluate('document.querySelector(\'.cal-door[data-n="8"]\')?.click()'); cstep(pg, 4); det, go = rect(pg, '.cal-detail'), rect(pg, '.cal-go')
+            check(bool(det) and inside(det, w, h), f'calendar {w}x{h}: detail strip inside the viewport ({det})')
+            check(bool(go) and inside(go, w, h), f'calendar {w}x{h}: main button inside the viewport ({go})')
+            if (w, h) == (360, 640):
+                g = pg.evaluate('(() => { const g = document.querySelector(".cal-grid"); return { sh: g.scrollHeight, ch: g.clientHeight, st: g.scrollTop }; })()')
+                print('  grid', g)
+                check(g['sh'] > g['ch'] + 4, f'calendar {w}x{h}: grid overflows (forced) {g}')
+                gr = rect(pg, '.cal-grid'); cdp = c.new_cdp_session(pg)
+                swipe(pg, cdp, gr['x'] + gr['w'] / 2, gr['y'] + gr['h'] * 0.8, gr['y'] + gr['h'] * 0.1)
+                st = pg.evaluate('document.querySelector(".cal-grid").scrollTop')
+                check(st > 20, f'calendar {w}x{h}: touch swipe scrolls the grid (scrollTop {st})')
+                pg.evaluate('document.querySelector(".cal-grid").scrollTo(0, 1e5)'); pg.evaluate('new Promise(r => setTimeout(r, 200))')
+                t24 = rect(pg, '.cal-door[data-n="24"]'); gr = rect(pg, '.cal-grid')
+                check(bool(t24) and bool(gr) and t24['y'] >= gr['y'] - 1 and t24['y'] + t24['h'] <= gr['y'] + gr['h'] + 1, f'calendar {w}x{h}: door 24 tile visible after scrolling ({t24})')
+                pg.screenshot(path=SH + 'cal_360x640.png')
+            else: pg.screenshot(path=SH + f'cal_{w}x{h}.png')
+            tap_el(pg, '.cal-close', 'close'); cstep(pg, 6)
+            check(not rect(pg, '.cal-wrap'), f'calendar {w}x{h}: closes')
+            check(not errs_for(tag), f'calendar {w}x{h}: no console errors ({errs_for(tag)[:2]})')
+            c.close()
+
+        # ---- 2-6 on the main phone page (390x844 portrait, then landscape)
+        tag = 'ux_main'; c, pg = new_phone(390, 844, tag); uxload(pg, 7, 390, 844); print('[ux] main page loaded', flush=True)
+        G = f'{CTX}.guide'
+        # 2. HUD layout at the three sizes
+        for (w, h) in ((390, 844), (844, 390), (360, 780)):
+            pg.set_viewport_size({'width': w, 'height': h}); pg.evaluate('new Promise(r => requestAnimationFrame(() => setTimeout(r, 80)))'); cstep(pg, 12)
+            pg.evaluate("document.querySelectorAll('.tbs-corner [hidden]').forEach(e => { e.hidden = false; }); document.querySelectorAll('.tb-online').forEach(o => { o.hidden = false; })")
+            cstep(pg, 2)
+            R = json.loads(pg.evaluate(HUDJS)); bad = []
+            for i in range(len(R)):
+                for j in range(i + 1, len(R)):
+                    if overl(R[i], R[j]): bad.append(R[i]['n'] + 'x' + R[j]['n'])
+            bad += [r['n'] + ' offscreen' for r in R if not inside(r, w, h)]
+            names = {r['n'] for r in R}
+            check(not bad and {'goal', 'joy'} <= names, f'HUD {w}x{h}: no overlaps / all inside viewport ({sorted(names)}) {bad}')
+            pg.screenshot(path=SH + f'hud_{w}x{h}.png')
+        pg.set_viewport_size({'width': 390, 'height': 844}); pg.evaluate('new Promise(r => requestAnimationFrame(() => setTimeout(r, 80)))'); cstep(pg, 12)
+        pg.evaluate("document.querySelectorAll('.tb-online').forEach(o => { o.hidden = true; })")
+        # 3. goal card
+        gt = pg.evaluate('document.querySelector(".tb-goal")?.innerText.replace(/\\s+/g, " ") || ""'); print('  goal:', gt)
+        check('Door 8 · Cookie Bakery' in gt, f'goal card: "Door 8 · Cookie Bakery" ({gt!r})')
+        import re
+        check(re.search(r' · \d+ ?m\b', gt) is not None, f'goal card: distance " · N m" ({gt!r})')
+        if pg.evaluate(f'!!{CTX}.tips'):
+            check(tap_el(pg, '.tb-goal-help', '?'), 'goal card: "?" tapped')
+            wait_ms(pg, 300); cstep(pg, 4)
+            op = rect(pg, '.tbt-help'); check(bool(op), 'goal card: "?" opens the help card'); pg.screenshot(path=SH + 'help.png')
+            if op:
+                check(inside(op, 390, 844), f'help card inside the viewport ({op})')
+                tap_el(pg, '.tbt-hok', 'help OK'); wait_ms(pg, 300); cstep(pg, 4)
+                check(not rect(pg, '.tbt-help'), 'goal card: help card closes (OK)')
+        else: skip('help card: ctx.tips missing')
+        # 4. guide: target = door 8 / Baker Bea, edge arrow far away, hidden next to her
+        pg.evaluate('window.__tinselby.step(1/30,10)')
+        t = pg.evaluate(f'JSON.stringify({G}?.target || null)'); print('  target', t); t = json.loads(t)
+        check(bool(t) and t.get('kind') == 'person' and 'Bea' in (t.get('label') or ''), f'guide: target is Baker Bea, kind person ({t and (t["label"], t["kind"])})')
+        if t:
+            far = (t['x'] + 45, t['z'] + 5)
+            pg.evaluate(f'{CTX}.player.teleport({far[0]}, {far[1]})'); cstep(pg, 25)
+            edge = rect(pg, '.tbg-badge'); check(bool(edge), f'guide: edge arrow visible when far away ({edge})'); pg.screenshot(path=SH + 'guide_far.png')
+            if edge: check(inside(edge, 390, 844), f'guide: edge arrow inside the viewport ({edge})')
+            pg.evaluate(f'{CTX}.player.teleport({t["x"]}, {t["z"] + 1.6})'); cstep(pg, 25)
+            check(not rect(pg, '.tbg-badge'), 'guide: edge arrow hidden when standing next to her'); pg.screenshot(path=SH + 'guide_near.png')
+        # 5. mini-map + full map
+        mm = rect(pg, '.tbm-mini'); check(bool(mm) and mm['x'] < 40 and mm['y'] < 140, f'mini-map visible top-left ({mm})')
+        if mm:
+            tap_el(pg, '.tbm-mini', 'mini-map'); wait_ms(pg, 300); cstep(pg, 4)
+            check(pg.evaluate(f'!!{CTX}.map.isOpen') and bool(rect(pg, '.tbm-card')), 'mini-map: a real tap opens the full map')
+            pg.screenshot(path=SH + 'map_full.png')
+            pid = pg.evaluate(f'(() => {{ const p = {CTX}.map.places.find(p => p.kind !== "door" && /Ferris|Market|Cocoa|Bakery/i.test(p.name)) || {CTX}.map.places[0]; return p.id; }})()')
+            pl = pg.evaluate(f'(() => {{ const p = {CTX}.map.places.find(p => p.id === {json.dumps(pid)}); return [p.name, p.gx, p.gz]; }})()'); print('  place', pid, pl)
+            # tap the place on the canvas: map pixel from the place's own grid coordinates via the map's select() when canvas mapping is private
+            ok = False
+            cv = rect(pg, '.tbm-canvas')
+            sel = pg.evaluate(f'(() => {{ try {{ return {CTX}.map.select({json.dumps(pid)}); }} catch (e) {{ return String(e); }} }})()')
+            cstep(pg, 3)
+            info_open = bool(rect(pg, '.tbm-info'))
+            check(info_open, f'map: selecting a place shows the info + Show the way ({pl[0]})')
+            if info_open:
+                tap_el(pg, '.tbm-go', 'Show the way'); wait_ms(pg, 300); cstep(pg, 6)
+                tg = pg.evaluate(f'JSON.stringify({G}.target)'); print('  target after way', tg); tg = json.loads(tg)
+                check(bool(tg) and (pl[0].lower() in (tg.get('label') or '').lower() or str(pid) in (tg.get('id') or '') or abs(tg['x'] - pl[1]) < 12 and abs(tg['z'] - pl[2]) < 12),
+                      f'map: Show the way sets ctx.guide.target to the place ({tg and tg.get("label")}, id {tg and tg.get("id")})')
+            pg.screenshot(path=SH + 'map_way.png')
+            if pg.evaluate(f'!!{CTX}.map.isOpen'):
+                tap_el(pg, '.tbm-x', 'map close'); wait_ms(pg, 300); cstep(pg, 4)
+            check(not pg.evaluate(f'!!{CTX}.map.isOpen') and not rect(pg, '.tbm-card'), 'map: close (x) closes it')
+        # 6. roster
+        pg.evaluate('window.__tinselby.step(1/30,6)')
+        if rect(pg, '.tb-online'):
+            tap_el(pg, '.tb-online', 'online chip'); wait_ms(pg, 300); cstep(pg, 4)
+            check(bool(rect(pg, '.tbs-roster')), 'roster: online chip opens the sheet'); pg.screenshot(path=SH + 'roster.png')
+            pg.keyboard.press('Escape'); cstep(pg, 4)
+            if rect(pg, '.tbs-roster'):
+                pg.evaluate('document.querySelector(".tbs-roster-layer")?.click()'); cstep(pg, 4)
+            check(not rect(pg, '.tbs-roster'), 'roster: sheet closes')
+        else: skip('roster: online chip hidden with net=off')
+        # 7. activities
+        if pg.evaluate(f'!!{CTX}.activities'):
+            lst = json.loads(pg.evaluate(f'JSON.stringify({CTX}.activities.list())')); print('  activities', len(lst), [a['id'] for a in lst][:12])
+            check(len(lst) > 0, f'activities: list() non-empty ({len(lst)})')
+            fw = next((a for a in lst if 'ferris' in a['id'].lower() or 'ferris' in a['name'].lower() or 'wheel' in a['name'].lower()), None)
+            if fw and not fw.get('locked'):
+                # approach from several sides (outside the 2.5 m "here" radius) until the sign's anchor is on screen and clear of the HUD
+                sg = None
+                for dx, dz in ((0, 3.5), (3.5, 0), (-3.5, 0), (0, 5.5), (0, -3.5)):
+                    pg.evaluate(f'{CTX}.player.teleport({fw["x"] + dx}, {fw["z"] + dz})'); cstep(pg, 25); wait_ms(pg, 300); cstep(pg, 15)
+                    sg = pg.evaluate(f'(() => {{ const e = [...document.querySelectorAll(".tba-sign")].find(e => e.dataset.id === {json.dumps(fw["id"])} && !e.hidden); if (!e) return null; const r = e.getBoundingClientRect(); return {{ x: r.left, y: r.top, w: r.width, h: r.height, op: +getComputedStyle(e).opacity }}; }})()')
+                    if sg and sg['op'] > 0.2: print(f'  ferris sign seen from offset {dx},{dz}'); break
+                check(bool(sg) and sg['op'] > 0.2, f'activities: sign for {fw["name"]} visible near it ({sg})')
+                pg.screenshot(path=SH + 'activity_sign.png')
+                if sg:
+                    R = json.loads(pg.evaluate(HUDJS)); sg['n'] = 'sign'
+                    bad = [r['n'] for r in R if overl(sg, r)]
+                    check(not bad and inside(sg, 390, 844), f'activities: sign does not overlap the HUD ({bad})')
+            else: skip('activities: no unlocked Ferris wheel activity in list()')
+            # locked with ?doors=0
+            pg.evaluate('window.__tinselby.step(1/30,2)'); pg.close(); c.close()
+            c, pg = new_phone(390, 844, 'ux_locked'); uxload(pg, 0, 390, 844)
+            lk = json.loads(pg.evaluate(f'JSON.stringify({CTX}.activities.list().filter(a => a.locked))'))
+            check(len(lk) > 0, f'activities: some are locked with ?doors=0 ({len(lk)})')
+            if lk:
+                a = lk[0]; sg = None
+                for dx, dz in ((0, 3.5), (3.5, 0), (-3.5, 0), (0, 5.5), (0, -3.5)):
+                    pg.evaluate(f'{CTX}.player.teleport({a["x"] + dx}, {a["z"] + dz})'); cstep(pg, 25); wait_ms(pg, 300); cstep(pg, 15)
+                    sg = pg.evaluate(f'(() => {{ const e = [...document.querySelectorAll(".tba-sign.locked")].find(e => !e.hidden && e.dataset.id === {json.dumps(a["id"])}); return e ? {{ lock: !!e.querySelector("svg"), txt: e.textContent.trim(), id: e.dataset.id }} : null; }})()')
+                    if sg: print(f'  locked sign seen from offset {dx},{dz}'); break
+                check(bool(sg) and sg['lock'], f'activities: locked sign shows a lock ({a["name"]}: {sg})'); pg.screenshot(path=SH + 'activity_locked.png')
+            tag = 'ux_locked'
+        else: skip('activities: ctx.activities missing')
+        # 8. console errors across the whole part
+        pg.close(); c.close()
+        ue = [e for e in errs if e.startswith('[ux')]
+        check(not ue, f'ux: 0 console errors ({len(ue)}) {ue[:3]}')
 
     b.close()
 
