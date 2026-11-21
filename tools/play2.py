@@ -378,7 +378,8 @@ def b_view_of(t, pg, other_id, dist=2.4):
           c.cam.follow(c.player); }})()""")
         t.adv(20)
         if ev(pg, f"""(() => {{ const p = window.__p2.screenOf({json.dumps(other_id)}); if (!p) return false;
-          const e = document.elementFromPoint(p.x, p.y); return !!e && e === {C}.engine.renderer.domElement && p.y > innerHeight * 0.15; }})()"""): return True
+          const cv = {C}.engine.renderer.domElement; /* a finger is wide: touch adjustment snaps a tap to a HUD target within ~20 px */
+          return p.y > innerHeight * 0.15 && [[0, 0], [0, -22], [0, 22], [-22, 0], [22, 0]].every(([dx, dy]) => document.elementFromPoint(p.x + dx, p.y + dy) === cv); }})()"""): return True
         print('    view try', d, ev(pg, VIEWDBG % json.dumps(other_id)))
     return False
 CAMDBG = """((id) => { const c = window.__tinselby.ctx, T = c.THREE, cam = c.engine.camera, d = c.net.doll(id); if (!d || !d.visible) return 'not drawn';
@@ -461,7 +462,7 @@ def ride_flow(t, P, rid, wait_frames=900, shots=True):
     labels = ev(B, '[...document.querySelectorAll(".tbs-person-btns button")].map(b => b.textContent.trim())') if opened else []
     if not check(opened and 'Ride together' in labels, f'{P}: {rid}: tap on seated A opens the card with "Ride together" ({labels})'):
         xy = ev(B, f'window.__p2.screenOf("{aid}")')
-        if xy: print('    at tap:', ev(B, f'(() => {{ const e = document.elementFromPoint({xy["x"]}, {xy["y"]}); return [e && (e.className || e.tagName), {C}.net.dollAt({xy["x"]}, {xy["y"]}), {C}.social.free()]; }})()'))
+        if xy: print('    at tap:', ev(B, f'(() => {{ const e = document.elementFromPoint({xy["x"]}, {xy["y"]}); return [e && (e.className?.baseVal ?? e.className ?? e.tagName), e && e.parentElement && String(e.parentElement.className), {C}.net.dollAt({xy["x"]}, {xy["y"]}), {C}.social.free(), {{phase: {C}.game.state.phase, ctl: {C}.player.controllable, shot: {C}.cam.shotActive, ride: {C}.rides.active?.id, mg: !!{C}.minigames.active, modal: {C}.ui.modalOpen(), photo: !!{C}.photo?.isOpen, map: !!{C}.map?.isOpen}}]; }})()'))
         return
     if shots and rid == 'carousel': t.shot(B, f'{P}_B_people_card_ride', 0)
     t.tap_el(B, card_btn(B, 'Ride together')); t.adv(4)
