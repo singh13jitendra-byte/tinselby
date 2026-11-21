@@ -95,7 +95,7 @@ export function createCards(ctx, data, { wear, tint, modalOpen, onShowDoors }) {
     const label = r ? r.label || (wearable(r) ? data.rewardLabel(r.slot, r.key) : '') : '';
     push({
       kind: 'daily', ...rewardIcon(wearable(r) ? r : null), sound: 'task',
-      kicker: streak > 1 ? `Daily gift · ${streak}-day streak!` : 'Daily gift',
+      kicker: 'Daily gift', // the play streak lives on its own chip (src/streaks)
       title: label ? (wearable(r) ? `New: ${label}!` : `${label}!`) : 'A cosy hello from Tinselby!',
       sub: wearable(r) ? 'Come back tomorrow for another gift.' : 'Come back tomorrow for another gift.',
       buttons: wearable(r) ? [{ label: 'Wear it', cls: 'green', fn: () => wear(r.slot, r.key) }, { label: 'Thanks!', cls: 'cream' }] : [{ label: 'Thanks!', cls: 'green' }],

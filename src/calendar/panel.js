@@ -89,7 +89,7 @@ export function createPanel(ctx, data, { onHint, rewardTint }) {
     const h2 = $('.cal-title h2'), want = xm ? `Merry Christmas, ${game.state.playerName || 'friend'}!` : 'Advent Calendar';
     if (h2.textContent !== want) h2.textContent = want;
     // stats
-    const streak = data.streak;
+    const streak = ctx.streaks?.state?.().streak ?? data.streak; // one streak number everywhere (src/streaks)
     streakEl.innerHTML = streak > 0 ? `<b>${streak}</b>-day streak` : 'First visit!';
     const ts = data.townSpirit();
     spiritEl.innerHTML = `Town Spirit · <b>${ts.doors.toLocaleString()}</b> door${ts.doors === 1 ? '' : 's'} opened${ts.helpers ? ` by <b>${ts.helpers.toLocaleString()}</b> helper${ts.helpers === 1 ? '' : 's'}` : ''}`;
