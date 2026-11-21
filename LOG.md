@@ -109,3 +109,10 @@ Decisions made while working autonomously (the user asked me to keep going witho
 ## 2026-11-21 — Release: people list, analytics, activity signs, small fixes
 - Shipped: roster sheet on the online chip (de21dea), PostHog analytics (0463cce), small fixes (2c7ba60), activity signs + glow rings + Things to do tab (096e542), `ux` test part (cf9b216).
 - Release checks on a clean build: playthrough phone + w3tasks + desktop 0 fails (selfTest 359/0), ux 0 fails / 1 skip (roster needs net), play2 phone all pass after a test fix: b_view_of now needs ±22 px of clear canvas round the doll, because touch adjustment snapped a tap just under the full-width goal card onto it (opened the calendar).
+
+## 2026-11-21 (late) — Release: Christmas cards, invite links, home-screen install, streaks, edge signs
+- Phase 1: card maker (src/cards; 3 scenes, 5 greetings, 3 knitted frames, 1080x1350 JPEG, Web Share → WhatsApp/Copy/Save fallback, link /?from=&card=&town=) and invite welcome (src/invite; welcome on the entry card, clean URL, waving hello, og.png + OG/Twitter tags).
+- Phase 2 (part): PWA (src/pwa, public/sw.js network-first, manifest, icons, install card + iPhone guide, offline toast) and streaks (src/streaks; chip, snow day per ISO week, rewards 3/7/14). Daily reminders on hold until PostHog shows play times (user's call).
+- Activity edge signs (off-screen rides get an edge tag with an arrow; tap = show the way). One streak number (calendar uses the play streak). Toasts above guide markers.
+- PostHog dashboard "Tinselby" (id 2392835): players/day, phone vs desktop, new-player funnel, doors/day, retention, mini-game quits.
+- Release checks on clean build: playthrough phone + w3tasks + desktop + ux + p1 = 106 ok / 0 fail / 1 skip / 0 console errors; play2 phone 167 ok / 0 fail.
