@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import { cleanName } from '../core/names.js';
 import { WORLD } from '../core/layout.js';
 import { SHAPES, photoAspect, GREETINGS, FRAMES, FILTERS, filterById, filterCSS, drawPostcard, gradeCanvas, LINK } from './frames.js';
+import posthog from '../posthog.js';
 
 const svg = (body) => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 const IC = {
@@ -601,7 +602,11 @@ export function createPhoto(ctx) {
     await new Promise((r) => setTimeout(r, 40)); // let the flash paint before the heavy frame
     const c = await develop();
     shutter.classList.remove('busy');
-    if (c) { showResult(true); sfx('bell'); }
+    if (c) {
+      showResult(true);
+      sfx('bell');
+      posthog?.capture('photo_created', { shape: S.shape, preset: S.preset, pose: S.pose, filter: S.filter });
+    }
     return c;
   }
 
