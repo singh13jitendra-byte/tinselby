@@ -22,7 +22,7 @@ export function createHUD(ctx, root, data, ui) {
       </div>
       <div class="tb-stats">
         <span class="tb-chip tb-spirit" title="Town Spirit: doors opened by everyone">${ICONS.snowflake}<b></b></span>
-        <span class="tb-chip tb-online" hidden title="Players in your town">${ICONS.people}<b></b></span>
+        <button class="tb-chip tb-online" hidden title="People in your town" aria-label="People in your town">${ICONS.people}<b></b></button>
       </div>
     </div>
     <div class="tb-tr">
@@ -49,6 +49,7 @@ export function createHUD(ctx, root, data, ui) {
   camBtn.addEventListener('click', tap(() => game.emit('camera:toggle')));
   muteBtn.addEventListener('click', tap(() => game.emit('audio:toggle')));
   calBtn.addEventListener('click', tap(() => ctx.calendar?.open?.()));
+  online.addEventListener('click', tap(() => ctx.social?.openRoster?.())); // "People in your town" sheet (src/social/roster.js)
   doorChip.addEventListener('click', tap(() => ctx.calendar?.open?.()));
   doorChip.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ctx.calendar?.open?.(); } });
   // "?" → the Tips module's help card; until it exists, briefly show the whole goal text

@@ -12,7 +12,7 @@
 
 Build first:  npx vite build --outDir /tmp/p4int2/dist      Served on http://localhost:8791 (P4_DIST / P4_PORT).
 Shots: shots/p4int2_*.png (P4_SHOT = prefix).  P4_STAGES=emotes,people,snow,gift,portrait,budget,reload,ferris,
-carousel,tram,carriage,back limits the phone/desktop stages (town setup always runs).  Uses /tmp/tinselby-chrome.lock.
+carousel,tram,carriage,back,roster limits the phone/desktop stages (town setup always runs).  Uses /tmp/tinselby-chrome.lock.
 Usage: python3 tools/play2.py [phone|desktop|w4off ...]   (default: all)"""
 import fcntl, functools, http.server, json, os, sys, threading, time
 from playwright.sync_api import sync_playwright
@@ -602,6 +602,77 @@ def back_to_big(t, P, code):
 def baseline_calls(pg):
     return calls(pg)
 
+
+def roster_flow(t, P):
+    """Online chip -> "People in your town" sheet: both names, live count, status (Ferris wheel), distance, open card, Show the way."""
+    A, B = t.A, t.B
+    aid, bid = ev(A, f'{C}.net.id'), ev(B, f'{C}.net.id')
+    for pg in (A, B): close_panels(pg)
+    t.adv(10)
+    code = ev(A, f'{C}.net.town?.code')
+    for pg, n in ((A, 'A'), (B, 'B')):
+        check(ev(pg, 'document.querySelector(".tb-online").tagName') == 'BUTTON' and ev(pg, 'document.querySelector(".tb-online b").textContent') == '2', f'{P}: {n} online chip is a button showing 2')
+        r = ev(pg, 'window.__p2.rect(".tb-online")'); hit = ev(pg, '(() => { const e = document.querySelector(".tb-online"); const r = getComputedStyle(e, "::before"); return [parseFloat(r.height), parseFloat(r.width)]; })()')
+        check(r and r['h'] + 0 >= 26 and hit[0] >= 44, f'{P}: {n} chip touch target (box {round(r["h"])} px, hit area {round(hit[0])} px)')
+    t.tap_el(A, '.tb-online'); t.adv(6)
+    check(ev(A, 'window.__p2.vis(".tbs-roster")'), f'{P}: A tap on the chip opens the sheet')
+    head = ev(A, 'document.querySelector(".tbs-ro-town").textContent')
+    check(head == f'Friends town {code} · 2 here', f'{P}: A header "{head}"')
+    names = ev(A, '[...document.querySelectorAll(".tbs-ro-name")].map(e => e.textContent)')
+    check(names == ['You', 'Bram'], f'{P}: A sees You + Bram {names}')
+    sub = ev(A, '[...document.querySelectorAll(".tbs-ro-doing")].map(e => e.textContent)'); print('  info rows', sub, ev(A, '[...document.querySelectorAll(".tbs-ro-dist")].map(e => e.textContent)'), flush=True)
+    check(all(sub) and 'near ' in sub[1], f'{P}: A Bram status "{sub[1]}"')
+    t.shot(A, f'{P}_A_roster', 2)
+    # sizes + layout
+    for pg, n in ((A, 'A'),):
+        for vp in ((360, 780), (390, 844)):
+            pg.set_viewport_size({'width': vp[0], 'height': vp[1]}); t.adv(4)
+            r = ev(pg, 'window.__p2.rect(".tbs-roster")'); ok = r and r['l'] >= 0 and r['r'] <= vp[0] and r['t'] >= 0 and r['b'] <= vp[1]
+            btn = ev(pg, '[...document.querySelectorAll(".tbs-roster .tbs-ro-main, .tbs-roster .tbs-ro-way, .tbs-roster .tb-modal-close")].map(e => { const r = e.getBoundingClientRect(); return Math.round(Math.min(r.width, r.height)); })')
+            check(ok and min(btn) >= 44, f'{P}: sheet fits {vp[0]}x{vp[1]} (card {r and [round(r["l"]), round(r["t"]), round(r["r"]), round(r["b"])]}, min button {min(btn)})')
+            if vp[0] == 360: t.shot(pg, f'{P}_A_roster_360x780', 0)
+    t.tap_el(A, '.tbs-roster .tb-modal-close'); t.adv(4)
+    check(not ev(A, 'window.__p2.vis(".tbs-roster")'), f'{P}: A closes the sheet')
+    # B (landscape) sheet, incl. short landscape 667x375
+    t.tap_el(B, '.tb-online'); t.adv(6)
+    check(ev(B, 'window.__p2.vis(".tbs-roster")') and ev(B, '[...document.querySelectorAll(".tbs-ro-name")].map(e => e.textContent)') == ['You', 'Ava'], f'{P}: B sheet lists You + Ava')
+    t.shot(B, f'{P}_B_roster_landscape', 2)
+    B.set_viewport_size({'width': 667, 'height': 375}); t.adv(4)
+    r = ev(B, 'window.__p2.rect(".tbs-roster")'); check(r and r['t'] >= 0 and r['b'] <= 375 and r['r'] <= 667 and r['l'] >= 0, f'{P}: B sheet fits 667x375 ({r and [round(r["t"]), round(r["b"])]})')
+    t.shot(B, f'{P}_B_roster_667x375', 0)
+    B.set_viewport_size({'width': 844, 'height': 390}); t.adv(4)
+    # live: A boards the Ferris wheel -> B's open sheet says so
+    a_on_ride(t, P, 'ferris', aid, 900)
+    ok = t.until(B, 'document.querySelector(".tbs-ro-row:not(.me) .tbs-ro-doing").textContent.includes("Ferris wheel")', 200, 5, 0.1)
+    check(ok, f'{P}: B open sheet live: "{ev(B, "document.querySelector(\".tbs-ro-row:not(.me) .tbs-ro-doing\").textContent")}"')
+    t.shot(B, f'{P}_B_roster_ferris', 2)
+    # tap row -> people card (sheet closes)
+    t.tap_el(B, '.tbs-ro-row:not(.me) .tbs-ro-main'); t.adv(6)
+    check(ev(B, 'window.__p2.vis(".tbs-person")') and not ev(B, 'window.__p2.vis(".tbs-roster")'), f'{P}: B row tap opens Ava\'s people card')
+    t.shot(B, f'{P}_B_roster_card', 2)
+    close_panels(B); t.adv(4)
+    # Show the way
+    t.tap_el(B, '.tb-online'); t.adv(6)
+    ev(B, 'window.__p2.way = null; const g = window.__tinselby.ctx.guide, w0 = g.showWay.bind(g); g.showWay = (o) => { window.__p2.way = o; return w0(o); }; 0')
+    t.tap_el(B, '.tbs-ro-row:not(.me) .tbs-ro-way'); t.adv(6)
+    way = ev(B, 'window.__p2.way')
+    check(way and way['label'] == 'Ava' and not ev(B, 'window.__p2.vis(".tbs-roster")'), f'{P}: B Show the way called with {way}')
+    tg = ev(B, f'(() => {{ const t = {C}.guide.target; return t && [t.label, Math.round(t.dist)]; }})()')
+    print('  info guide target', tg, flush=True)
+    t.shot(B, f'{P}_B_showway', 2)
+    # A gets off, B leaves the town -> A alone: empty state
+    ev(A, f'{C}.rides.active && {C}.rides.active.stop()'); t.until(A, f'!{C}.rides.active', 300, 10); t.until(A, f'{C}.social.free()', 300, 10)
+    t.tap_el(A, '.tb-online'); t.adv(4)
+    ev(B, f'{C}.net.leaveTown()'); 
+    ok = t.until(A, f'window.__p2.vis(".tbs-ro-empty")', 600, 10, 0.1)
+    check(ok, f'{P}: A open sheet goes to the alone state ("{ev(A, "document.querySelector(\".tbs-ro-empty p\").textContent")}") live')
+    t.shot(A, f'{P}_A_roster_alone', 2)
+    if ok:
+        t.tap_el(A, '.tbs-ro-invite'); t.adv(6)
+        check(ev(A, 'window.__p2.vis(".tbs-invite")') and not ev(A, 'window.__p2.vis(".tbs-roster")'), f'{P}: A "Invite friends" opens the invite card')
+    close_panels(A); close_panels(B)
+    ev(B, f'{C}.net.joinTown("{code}")'); t.until(B, f'{C}.net.players().length === 1', 600, 10, 0.1); t.adv(10)
+
 AT_A, AT_B = '-1.3,9.6', '1.3,9.8'
 
 def run_pair(b, P, va, vb, touch):
@@ -617,7 +688,7 @@ def run_pair(b, P, va, vb, touch):
     code = town_flow(t, P)
     if touch and on('reload'): reload_b(t, P, code, 'Bram', AT_B)
     t.shot(t.B, f'{P}_B_sees_A'); t.shot(t.A, f'{P}_A_sees_B', 0)
-    stages = [('emotes', emotes_flow), ('people', people_mute_flow), ('snow', snow_flow), ('gift', gift_flow)]
+    stages = [('emotes', emotes_flow), ('people', people_mute_flow), ('snow', snow_flow), ('gift', gift_flow), ('roster', roster_flow)]
     if touch: stages.append(('portrait', portrait_flow))
     for name, fn in stages:
         if on(name):

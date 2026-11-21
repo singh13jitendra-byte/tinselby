@@ -16,7 +16,7 @@
 //
 //   Helpers: social.free() (true when the social HUD is allowed: free play, no mini-game / ride / finale / photo / panel),
 //   social.nearby(maxDist = 12) → person[] nearest first, social.person(id), social.openPerson(id), social.openInvite(),
-//   social.openWheel(), social.closeAll(), social.emote(id), social.say(phraseId), social.toast(text),
+//   social.openRoster() (the "People in your town" sheet the HUD online chip opens), social.openWheel(), social.closeAll(), social.emote(id), social.say(phraseId), social.toast(text),
 //   social.rideWith(person), social.townCount() (players here incl. you), social.enabled.
 //   Exports: phrases.js (PHRASE_TABS, phraseText, EMOTES, …) for anything that needs to read a phrase id.
 import './social.css';
@@ -24,6 +24,7 @@ import { ICONS } from '../ui/icons.js';
 import { createWheel, SOCIAL_ICONS } from './wheel.js';
 import { createPeople } from './people.js';
 import { createInvite } from './invite.js';
+import { createRoster } from './roster.js';
 import { phraseText, isEmote } from './phrases.js';
 import { W4 } from '../net/play-flag.js';
 import { createSnowball } from './snowball.js';
@@ -54,7 +55,7 @@ export function createSocial(ctx) {
     addHudButton: (def) => (W4 ? addHudButton(def) : () => {}),
     free: () => false,
     nearby: () => [], person: () => null,
-    openPerson() { return false; }, openInvite() { return false; }, openWheel() { return false; }, closeAll() {},
+    openPerson() { return false; }, openInvite() { return false; }, openRoster() { return false; }, openWheel() { return false; }, closeAll() {},
     emote() { return false; }, say() { return false; }, toast() {}, rideWith() {}, townCount: () => 1,
   };
   if (!W4) return api;
@@ -134,9 +135,11 @@ export function createSocial(ctx) {
       if (except !== 'wheel') wheel.close();
       if (except !== 'person') people.close();
       if (except !== 'invite') invite.close();
+      if (except !== 'roster') roster.close();
     },
     openPerson: (id) => people.open(id),
     openInvite: () => invite.open(),
+    openRoster: () => roster.open(),
     openWheel: () => wheel.open(),
   });
 
@@ -159,6 +162,7 @@ export function createSocial(ctx) {
   const wheel = createWheel(ctx, social);
   const people = createPeople(ctx, social);
   const invite = createInvite(ctx, social);
+  const roster = createRoster(ctx, social);
 
   const swallow = (b) => b.addEventListener('pointerdown', (e) => e.stopPropagation());
   const tap = (b, fn) => { swallow(b); b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); fn(); }); };
