@@ -614,7 +614,8 @@ def roster_flow(t, P):
     for pg, n in ((A, 'A'), (B, 'B')):
         check(ev(pg, 'document.querySelector(".tb-online").tagName') == 'BUTTON' and ev(pg, 'document.querySelector(".tb-online b").textContent') == '2', f'{P}: {n} online chip is a button showing 2')
         r = ev(pg, 'window.__p2.rect(".tb-online")'); hit = ev(pg, '(() => { const e = document.querySelector(".tb-online"); const r = getComputedStyle(e, "::before"); return [parseFloat(r.height), parseFloat(r.width)]; })()')
-        check(r and r['h'] + 0 >= 26 and hit[0] >= 44, f'{P}: {n} chip touch target (box {round(r["h"])} px, hit area {round(hit[0])} px)')
+        # the button box itself is the tap target (40 px tall, ui.css); ::before only draws the 28 px pill
+        check(r and r['h'] >= 40 and r['w'] >= 40, f'{P}: {n} chip touch target (box {round(r["w"])}x{round(r["h"])} px, pill {round(hit[0])} px)')
     t.tap_el(A, '.tb-online'); t.adv(6)
     check(ev(A, 'window.__p2.vis(".tbs-roster")'), f'{P}: A tap on the chip opens the sheet')
     head = ev(A, 'document.querySelector(".tbs-ro-town").textContent')

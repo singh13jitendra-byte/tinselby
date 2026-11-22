@@ -130,3 +130,9 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - Scoreboards (src/scores): "Your town" block on results cards (top 3, best + rank, New best in your town ribbon), Scores tab in People. Friends towns only.
 - net.rpc shares the Supabase client; say-hi hint only in free play.
 - Release checks on clean build: playthrough phone + w3tasks + desktop + w3games + ux 139 ok / 0 fail / 1 skip, p1 76 ok / 0 fail, santa3 118 ok / 0 fail, scores2 ALL OK, play2 phone 167 ok / 0 fail, phone_sweep 412x915 + 915x412 all OK (intended calendar giver ellipsis only).
+
+## 2026-11-22 (evening) — Release: knitted T icon, chip fix, launch splash trailer
+- App icon: option C "Knit T" (design/icons/c), new file names tinselby-*.png + SW cache v2 so launchers/caches pick it up. Options A/B kept in design/icons/.
+- Online/streak chips: pill drawn by ::before so they match the snowflake chip on real Android (button box 40 px = tap target).
+- Launch splash trailer (design/splash/trailer.html art, src/splash/* integration via a Vite plugin): paints on first frame (~0.7 s vs 5 s blank on slow 4G + 4x CPU), real boot progress, min 1.6 s / capped holds, tap to skip, skipped under ?capture. Google Fonts link moved into <body> after the splash; inline module script moved to end of <body>.
+- Release checks on clean build: phone + w3tasks + desktop 18 ok / 0 fail; ux + p1 138 ok / 0 fail / 0 console errors; play2 phone 165 ok + roster re-run 29 ok after updating its chip check to the new 40 px button box; phone_sweep 412x915 + 915x412 (entry, invite, hud, calendar, wardrobe, map_todo) all OK except the intended calendar giver ellipsis.
