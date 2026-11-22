@@ -207,14 +207,18 @@
   outline: 1.5px dashed rgba(255, 244, 226, 0.3); outline-offset: -4px;
 }
 .tb-chip svg { width: 18px; height: 18px; }
-/* the online / streak chips are buttons: same 28 px pill look, but the box itself is 40 px tall (a transparent 6 px
-   top/bottom border, cancelled by negative margins so the row doesn't move) so the tap target is ≥ 40 px */
+/* the online / streak chips are buttons: a 40 px tall tap target (negative margins keep the stats row where it was) with
+   the visible 28 px pill drawn by ::before, so they look exactly like the plain snowflake chip on every browser */
 button.tb-chip {
-  position: relative; margin: -6px 0; min-height: 40px; border: solid transparent; border-width: 6px 0; background-clip: padding-box; outline-offset: -10px;
-  box-shadow: none; filter: drop-shadow(0 3px 5px rgba(10, 10, 30, 0.25));
-  cursor: pointer; font-family: var(--font); -webkit-tap-highlight-color: transparent;
+  position: relative; margin: -6px 0; min-height: 40px; border: 0; background: transparent; box-shadow: none; outline: 0;
+  filter: none; isolation: isolate; cursor: pointer; font-family: var(--font); -webkit-tap-highlight-color: transparent;
 }
-button.tb-chip::before { content: ""; position: absolute; inset: -8px -3px; }
+button.tb-chip::before {
+  content: ""; position: absolute; inset: 6px 0; z-index: -1; border-radius: 999px;
+  background: rgba(36, 44, 72, 0.8); box-shadow: 0 4px 12px rgba(10, 10, 30, 0.25);
+  outline: 1.5px dashed rgba(255, 244, 226, 0.3); outline-offset: -4px;
+}
+button.tb-chip:focus-visible::before { outline: 2px solid var(--gold, #ffd66e); outline-offset: 1px; }
 button.tb-chip:active { transform: translateY(1px); }
 .tb-spirit svg { color: #bfe0ff; }
 .tb-online svg { color: #a8e0a8; }
