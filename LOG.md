@@ -116,3 +116,10 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - Activity edge signs (off-screen rides get an edge tag with an arrow; tap = show the way). One streak number (calendar uses the play streak). Toasts above guide markers.
 - PostHog dashboard "Tinselby" (id 2392835): players/day, phone vs desktop, new-player funnel, doors/day, retention, mini-game quits.
 - Release checks on clean build: playthrough phone + w3tasks + desktop + ux + p1 = 106 ok / 0 fail / 1 skip / 0 console errors; play2 phone 167 ok / 0 fail.
+
+## 2026-11-22 — Release: phone feedback round (Activities button, install, guide markers, layout sweep fixes)
+- From the user's phone screenshot: floating activity tags replaced on phones by an Activities round button + "Things to do" sheet (nearest first, tap = lit path, src/activities/sheet.js); desktop keeps signs.
+- Home-screen install: offer to returning players (~45 s into play), Android in-app-browser guide (⋮ → Open in Chrome → Add to Home screen), install row in the "?" help card.
+- Guide markers ("!", pin, badge, labels) keep clear of the HUD; trail ends on arrival.
+- tools/phone_sweep.py (412x915, in-app 412x860, 915x412, 360x780 × 15 screens) found and we fixed: wardrobe sheet off-screen, map Things to do too tall, landscape goal card under the calendar button, calendar titles clipped at 360, card maker not modal over the HUD, small tap targets (?, chips, map tabs, card chips).
+- Release checks on clean build: playthrough phone + w3tasks + desktop + ux + p1 = 156 ok / 0 fail / 1 skip / 0 console errors; play2 phone 167 ok / 0 fail; phone_sweep 412x915 + 915x412 all OK except the intended giver-line ellipsis in the calendar.
