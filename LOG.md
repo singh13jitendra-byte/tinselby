@@ -123,3 +123,10 @@ Decisions made while working autonomously (the user asked me to keep going witho
 - Guide markers ("!", pin, badge, labels) keep clear of the HUD; trail ends on arrival.
 - tools/phone_sweep.py (412x915, in-app 412x860, 915x412, 360x780 × 15 screens) found and we fixed: wardrobe sheet off-screen, map Things to do too tall, landscape goal card under the calendar button, calendar titles clipped at 360, card maker not modal over the HUD, small tap targets (?, chips, map tabs, card chips).
 - Release checks on clean build: playthrough phone + w3tasks + desktop + ux + p1 = 156 ok / 0 fail / 1 skip / 0 console errors; play2 phone 167 ok / 0 fail; phone_sweep 412x915 + 915x412 all OK except the intended giver-line ellipsis in the calendar.
+
+## 2026-11-22 — Release: Phase 3 · Together (Secret Santa + friends-town scoreboards)
+- Backend on Supabase (applied by the user via SQL editor; MCP confirmations auto-cancel here): supabase/migrations/20261122000000_phase3_santa_scores.sql + 20261122010000_santa_my_received.sql. Tables RLS-on/no-policy/no grants; security-definer RPCs; per-device secret (sha256) identity; QQ test towns + p_now. Live smoke tests passed (in rolled-back transactions); advisors: only the expected RLS-no-policy INFO and anon-callable definer WARNs (same as open_door/town_spirit).
+- Secret Santa (src/santa, src/net/identity.js): Friends-card row + roster badge, start/join/leave/draw (≥3), pick a present from your wardrobe, 25 Dec reveal with granted presents (once), late joiners get a town present, nudges. Close 21 Dec 00:00 IST, reveal 25 Dec 00:00 IST.
+- Scoreboards (src/scores): "Your town" block on results cards (top 3, best + rank, New best in your town ribbon), Scores tab in People. Friends towns only.
+- net.rpc shares the Supabase client; say-hi hint only in free play.
+- Release checks on clean build: playthrough phone + w3tasks + desktop + w3games + ux 139 ok / 0 fail / 1 skip, p1 76 ok / 0 fail, santa3 118 ok / 0 fail, scores2 ALL OK, play2 phone 167 ok / 0 fail, phone_sweep 412x915 + 915x412 all OK (intended calendar giver ellipsis only).
