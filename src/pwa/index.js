@@ -171,7 +171,7 @@ export function createPwa(ctx) {
     b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); sfx('ui'); try { fn(); } catch (er) { console.error('[pwa]', er); } });
     return b;
   };
-  const ICON = '<img class="tb-pwa-app" src="./icons/icon-192.png" alt="" draggable="false">';
+  const ICON = '<img class="tb-pwa-app" src="./icons/tinselby-192.png" alt="" draggable="false">';
   const ev = (extra = {}) => ({ platform: platform() || (ios ? 'ios' : android ? 'android' : 'desktop'), trigger, guide: guideKind(), ...extra });
 
   function renderAsk() {

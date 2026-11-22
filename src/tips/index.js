@@ -44,7 +44,7 @@ export function createTips(ctx) {
     <div class="tbt-help knit-card" hidden>
       <div class="tbt-txt"></div>
       <div class="tbt-row"><button class="knit-btn cream tbt-way" type="button">Show me the way</button><button class="knit-btn green tbt-hok" type="button">OK</button></div>
-      <button class="tbt-install" type="button" hidden><img class="tbt-install-ico" src="./icons/icon-192.png" alt="" draggable="false"><span class="tbt-install-t">Add Tinselby to your home screen</span><span class="tbt-install-go" aria-hidden="true">›</span></button>
+      <button class="tbt-install" type="button" hidden><img class="tbt-install-ico" src="./icons/tinselby-192.png" alt="" draggable="false"><span class="tbt-install-t">Add Tinselby to your home screen</span><span class="tbt-install-go" aria-hidden="true">›</span></button>
     </div>`;
   uiRoot.appendChild(root);
   const ring = root.querySelector('.tbt-ring'), call = root.querySelector('.tbt-call'), callTxt = call.querySelector('.tbt-txt');

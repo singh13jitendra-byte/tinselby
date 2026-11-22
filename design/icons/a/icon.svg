@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>Tinselby - knitted bauble</title>
+<defs>
+<pattern id="knitBg" width="20" height="18" patternUnits="userSpaceOnUse">
+  <rect width="20" height="18" fill="#fff4e2"/>
+  <ellipse cx="5.8" cy="9.0" rx="4.0" ry="7.9" transform="rotate(-30 5.8 9.0)" fill="#fff9ee" stroke="rgba(150,110,60,0.09)" stroke-width="1.1"/>
+  <ellipse cx="14.2" cy="9.0" rx="4.0" ry="7.9" transform="rotate(30 14.2 9.0)" fill="#fff9ee" stroke="rgba(150,110,60,0.09)" stroke-width="1.1"/>
+</pattern>
+<radialGradient id="bgVig" cx="50%" cy="45%" r="65%">
+  <stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#8a5a2a" stop-opacity="0.16"/>
+</radialGradient><pattern id="knitRed" width="22" height="20" patternUnits="userSpaceOnUse">
+  <ellipse cx="6.4" cy="10.0" rx="4.4" ry="8.8" transform="rotate(-30 6.4 10.0)" fill="rgba(255,255,255,0.08)" stroke="rgba(0,0,0,0.1)" stroke-width="1.2"/>
+  <ellipse cx="15.6" cy="10.0" rx="4.4" ry="8.8" transform="rotate(30 15.6 10.0)" fill="rgba(255,255,255,0.08)" stroke="rgba(0,0,0,0.1)" stroke-width="1.2"/>
+</pattern><pattern id="knitBand" width="22" height="20" patternUnits="userSpaceOnUse">
+  <ellipse cx="6.4" cy="10.0" rx="4.4" ry="8.8" transform="rotate(-30 6.4 10.0)" fill="rgba(255,255,255,0.35)" stroke="rgba(0,0,0,0.1)" stroke-width="1.2"/>
+  <ellipse cx="15.6" cy="10.0" rx="4.4" ry="8.8" transform="rotate(30 15.6 10.0)" fill="rgba(255,255,255,0.35)" stroke="rgba(0,0,0,0.1)" stroke-width="1.2"/>
+</pattern>
+<radialGradient id="ballG" cx="36%" cy="30%" r="75%">
+  <stop offset="0" stop-color="#ef6a5f"/><stop offset="0.45" stop-color="#b8302d"/><stop offset="1" stop-color="#7a1d1c"/>
+</radialGradient>
+<linearGradient id="bandG" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#ead6b3"/>
+</linearGradient>
+<linearGradient id="capG" x1="0" y1="0" x2="1" y2="0">
+  <stop offset="0" stop-color="#b9801f"/><stop offset="0.35" stop-color="#ffd36e"/><stop offset="1" stop-color="#b9801f"/>
+</linearGradient>
+<clipPath id="ballClip"><circle cx="256" cy="292" r="146"/></clipPath>
+<filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="10"/></filter>
+</defs>
+<rect width="512" height="512" fill="url(#knitBg)"/>
+<rect width="512" height="512" fill="url(#bgVig)"/>
+<circle cx="256" cy="256" r="232" fill="none" stroke="#b8302d" stroke-width="12.0" stroke-dasharray="23.2 17.4" stroke-linecap="round" opacity="0.92"/>
+<g transform="translate(256 262) scale(1.0) translate(-256 -262)">
+  <ellipse cx="256" cy="452" rx="120" ry="16" fill="#6b4022" opacity="0.18" filter="url(#soft)"/>
+  <!-- hanger loop + cap -->
+  <circle cx="256" cy="104" r="20" fill="none" stroke="#b9801f" stroke-width="13"/>
+  <circle cx="256" cy="102" r="20" fill="none" stroke="#e3aa3a" stroke-width="10"/>
+  <circle cx="256" cy="302" r="146" fill="#c9a77a"/>
+  <!-- body -->
+  <circle cx="256" cy="292" r="146" fill="url(#ballG)"/>
+  <g clip-path="url(#ballClip)">
+    <rect x="100" y="140" width="320" height="310" fill="url(#knitRed)"/>
+    <!-- knitted band -->
+    <rect x="100" y="250" width="320" height="72" fill="url(#bandG)"/>
+    <rect x="100" y="250" width="320" height="72" fill="url(#knitBand)" opacity="0.6"/>
+    <path d="M100,300 L110,300 L132,270 L154,300 L176,270 L198,300 L220,270 L242,300 L264,270 L286,300 L308,270 L330,300 L352,270 L374,300 L396,270 L418,300" fill="none" stroke="#b8302d" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/>
+    <rect x="100" y="322" width="320" height="7" fill="#5a1514" opacity="0.35"/>
+    <!-- cream running stitches either side of the band -->
+    <line x1="100" y1="236" x2="420" y2="236" stroke="#fff4e2" stroke-width="7" stroke-dasharray="16 12" stroke-linecap="round"/>
+    <line x1="100" y1="344" x2="420" y2="344" stroke="#fff4e2" stroke-width="7" stroke-dasharray="16 12" stroke-linecap="round"/>
+    <!-- felt rim shading -->
+    <circle cx="256" cy="292" r="146" fill="none" stroke="#5a1514" stroke-width="10" opacity="0.25"/>
+  </g>
+  <!-- shine -->
+  <ellipse cx="196" cy="200" rx="40" ry="22" transform="rotate(-38 196 200)" fill="#fff" opacity="0.55"/>
+  <circle cx="160" cy="246" r="9" fill="#fff" opacity="0.45"/>
+  <!-- cap -->
+  <rect x="216" y="128" width="80" height="40" rx="9" fill="url(#capG)" stroke="#b9801f" stroke-width="4"/>
+  <path d="M232,134 v28 M248,134 v28 M264,134 v28 M280,134 v28" stroke="#b9801f" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+</g>
+</svg>

@@ -7,11 +7,11 @@
  *  - /icons/*, /og.png, /manifest.webmanifest: cache first (they rarely change; bump VERSION when they do).
  *  - Everything else, and every request to another origin (PostHog, Supabase, Google Fonts), is not touched at all.
  */
-const VERSION = 'v1';
+const VERSION = 'v2'; // v2: knitted T icons (new file names so launchers and caches pick them up)
 const CACHE = `tinselby-${VERSION}`;
 const SCOPE = new URL(self.registration.scope);
 const PAGE_KEY = new URL('./', SCOPE).href; // every page load (any ?query) is stored under the scope root
-const STATIC = ['icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'manifest.webmanifest']
+const STATIC = ['icons/tinselby-192.png', 'icons/tinselby-512.png', 'icons/tinselby-maskable-512.png', 'icons/tinselby-apple-180.png', 'manifest.webmanifest']
   .map((p) => new URL(p, SCOPE).href);
 
 self.addEventListener('install', (e) => {

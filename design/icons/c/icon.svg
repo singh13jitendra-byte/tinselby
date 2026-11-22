@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>Tinselby - Knit T</title>
+<defs>
+<radialGradient id="bgG" cx="50%" cy="42%" r="72%">
+  <stop offset="0" stop-color="#4f8a56"/><stop offset="0.55" stop-color="#3f6e45"/><stop offset="1" stop-color="#1f3d26"/>
+</radialGradient>
+<pattern id="knit" width="24" height="20" patternUnits="userSpaceOnUse">
+  <path d="M2,1 Q4,13 12,19 Q9,7 2,1 Z" fill="#fff" fill-opacity="0.075"/>
+  <path d="M22,1 Q20,13 12,19 Q15,7 22,1 Z" fill="#fff" fill-opacity="0.075"/>
+  <path d="M2,1 Q4,13 12,19 M22,1 Q20,13 12,19" fill="none" stroke="#000" stroke-opacity="0.13" stroke-width="1.4"/>
+</pattern>
+<pattern id="knitRed" width="18" height="15" patternUnits="userSpaceOnUse">
+  <path d="M1.5,1 Q3,10 9,14 Q6.8,5 1.5,1 Z M16.5,1 Q15,10 9,14 Q11.2,5 16.5,1 Z" fill="#fff" fill-opacity="0.10"/>
+  <path d="M1.5,1 Q3,10 9,14 M16.5,1 Q15,10 9,14" fill="none" stroke="#3a0c0b" stroke-opacity="0.16" stroke-width="1.1"/>
+</pattern>
+<linearGradient id="redG" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#e2504a"/><stop offset="0.55" stop-color="#c83a35"/><stop offset="1" stop-color="#a3262a"/>
+</linearGradient>
+<linearGradient id="goldG" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#ffd36e"/><stop offset="1" stop-color="#e3aa3a"/>
+</linearGradient>
+<clipPath id="tClip"><path d="M112.0,154.0 A36.0,36.0 0 0 1 148.0,118.0 H364.0 A36.0,36.0 0 0 1 400.0,154.0 V172.0 A36.0,36.0 0 0 1 364.0,208.0 H324.0 A22.0,22.0 0 0 0 302.0,230.0 V362.0 A42.0,42.0 0 0 1 260.0,404.0 H252.0 A42.0,42.0 0 0 1 210.0,362.0 V230.0 A22.0,22.0 0 0 0 188.0,208.0 H148.0 A36.0,36.0 0 0 1 112.0,172.0 Z"/></clipPath>
+<radialGradient id="vig" cx="50%" cy="50%" r="71%">
+  <stop offset="0.75" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.16"/>
+</radialGradient>
+</defs>
+
+<rect width="512" height="512" fill="url(#bgG)"/>
+<rect width="512" height="512" fill="url(#knit)"/>
+<rect width="512" height="512" fill="url(#vig)"/>
+<circle cx="256" cy="256" r="230" fill="none" stroke="#fff4e2" stroke-width="10"
+        stroke-dasharray="23 15" stroke-linecap="round" opacity="0.92"/><circle cx="130.0" cy="330.0" r="7.0" fill="#fff4e2" opacity="0.75"/><circle cx="166.0" cy="392.0" r="5.0" fill="#fff4e2" opacity="0.75"/><circle cx="112.0" cy="250.0" r="4.5" fill="#fff4e2" opacity="0.75"/><circle cx="360.0" cy="360.0" r="6.5" fill="#fff4e2" opacity="0.75"/><circle cx="398.0" cy="300.0" r="4.5" fill="#fff4e2" opacity="0.75"/><circle cx="330.0" cy="418.0" r="4.5" fill="#fff4e2" opacity="0.75"/><circle cx="150.0" cy="160.0" r="4.0" fill="#fff4e2" opacity="0.75"/>
+<g transform="translate(256 256) scale(0.94) translate(-268 -256)">
+
+<path d="M112.0,154.0 A36.0,36.0 0 0 1 148.0,118.0 H364.0 A36.0,36.0 0 0 1 400.0,154.0 V172.0 A36.0,36.0 0 0 1 364.0,208.0 H324.0 A22.0,22.0 0 0 0 302.0,230.0 V362.0 A42.0,42.0 0 0 1 260.0,404.0 H252.0 A42.0,42.0 0 0 1 210.0,362.0 V230.0 A22.0,22.0 0 0 0 188.0,208.0 H148.0 A36.0,36.0 0 0 1 112.0,172.0 Z" transform="translate(0 12)" fill="#10261a" fill-opacity="0.55" stroke="#10261a" stroke-opacity="0.55"
+      stroke-width="26" stroke-linejoin="round"/>
+<path d="M112.0,154.0 A36.0,36.0 0 0 1 148.0,118.0 H364.0 A36.0,36.0 0 0 1 400.0,154.0 V172.0 A36.0,36.0 0 0 1 364.0,208.0 H324.0 A22.0,22.0 0 0 0 302.0,230.0 V362.0 A42.0,42.0 0 0 1 260.0,404.0 H252.0 A42.0,42.0 0 0 1 210.0,362.0 V230.0 A22.0,22.0 0 0 0 188.0,208.0 H148.0 A36.0,36.0 0 0 1 112.0,172.0 Z" transform="translate(0 5)" fill="#d8bf93" stroke="#d8bf93" stroke-width="26" stroke-linejoin="round"/>
+<path d="M112.0,154.0 A36.0,36.0 0 0 1 148.0,118.0 H364.0 A36.0,36.0 0 0 1 400.0,154.0 V172.0 A36.0,36.0 0 0 1 364.0,208.0 H324.0 A22.0,22.0 0 0 0 302.0,230.0 V362.0 A42.0,42.0 0 0 1 260.0,404.0 H252.0 A42.0,42.0 0 0 1 210.0,362.0 V230.0 A22.0,22.0 0 0 0 188.0,208.0 H148.0 A36.0,36.0 0 0 1 112.0,172.0 Z" fill="#fff4e2" stroke="#fff4e2" stroke-width="26" stroke-linejoin="round"/>
+<path d="M112.0,154.0 A36.0,36.0 0 0 1 148.0,118.0 H364.0 A36.0,36.0 0 0 1 400.0,154.0 V172.0 A36.0,36.0 0 0 1 364.0,208.0 H324.0 A22.0,22.0 0 0 0 302.0,230.0 V362.0 A42.0,42.0 0 0 1 260.0,404.0 H252.0 A42.0,42.0 0 0 1 210.0,362.0 V230.0 A22.0,22.0 0 0 0 188.0,208.0 H148.0 A36.0,36.0 0 0 1 112.0,172.0 Z" fill="url(#redG)"/>
+<rect x="100" y="100" width="320" height="320" fill="url(#knitRed)" clip-path="url(#tClip)"/>
+<path d="M112.0,154.0 A36.0,36.0 0 0 1 148.0,118.0 H364.0 A36.0,36.0 0 0 1 400.0,154.0 V172.0 A36.0,36.0 0 0 1 364.0,208.0 H324.0 A22.0,22.0 0 0 0 302.0,230.0 V362.0 A42.0,42.0 0 0 1 260.0,404.0 H252.0 A42.0,42.0 0 0 1 210.0,362.0 V230.0 A22.0,22.0 0 0 0 188.0,208.0 H148.0 A36.0,36.0 0 0 1 112.0,172.0 Z" fill="none" stroke="#6e1a19" stroke-opacity="0.35" stroke-width="7" clip-path="url(#tClip)" transform="translate(0 -3)"/>
+<path d="M129,154 A19,19 0 0 1 148,135 H364 A19,19 0 0 1 383,154 V172 A19,19 0 0 1 364,191 H324 A39,39 0 0 0 285,230 V362 A25,25 0 0 1 260,387 H252 A25,25 0 0 1 227,362 V230 A39,39 0 0 0 188,191 H148 A19,19 0 0 1 129,172 Z" fill="none" stroke="#fff4e2" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="15 11" opacity="0.95"/>
+
+<path d="M399.5,63.9 L407.0,106.7 L447.8,121.5 L409.4,141.9 L408.0,185.3 L376.7,155.1 L335.0,167.1 L354.1,128.1 L329.7,92.1 L372.8,98.2 Z" transform="translate(0 9)" fill="#10261a" fill-opacity="0.5" stroke="#10261a" stroke-opacity="0.5" stroke-width="22" stroke-linejoin="round"/>
+<path d="M399.5,63.9 L407.0,106.7 L447.8,121.5 L409.4,141.9 L408.0,185.3 L376.7,155.1 L335.0,167.1 L354.1,128.1 L329.7,92.1 L372.8,98.2 Z" fill="#b9801f" stroke="#b9801f" stroke-width="22" stroke-linejoin="round"/>
+<path d="M399.5,63.9 L407.0,106.7 L447.8,121.5 L409.4,141.9 L408.0,185.3 L376.7,155.1 L335.0,167.1 L354.1,128.1 L329.7,92.1 L372.8,98.2 Z" fill="url(#goldG)" stroke="url(#goldG)" stroke-width="12" stroke-linejoin="round"/>
+<path d="M393.7,87.2 L398.6,113.8 L423.9,123.2 L400.1,136.1 L399.0,163.1 L379.4,144.4 L353.4,151.7 L365.0,127.3 L350.1,104.8 L376.9,108.4 Z" fill="none" stroke="#fff6dc" stroke-width="4.5" stroke-dasharray="9 8" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+</g>
+</svg>

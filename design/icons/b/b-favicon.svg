@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<title>Tinselby - stitched tree</title>
+<defs><pattern id="knitBg" width="22" height="19" patternUnits="userSpaceOnUse">
+  <ellipse cx="6.38" cy="9.50" rx="4.18" ry="8.17" transform="rotate(-28 6.38 9.50)" fill="rgba(255,255,255,0.55)" stroke="rgba(140,96,50,0.10)" stroke-width="1.2"/>
+  <ellipse cx="15.62" cy="9.50" rx="4.18" ry="8.17" transform="rotate(28 15.62 9.50)" fill="rgba(255,255,255,0.55)" stroke="rgba(140,96,50,0.10)" stroke-width="1.2"/>
+</pattern><pattern id="knitGreen" width="16" height="14" patternUnits="userSpaceOnUse">
+  <ellipse cx="4.64" cy="7.00" rx="3.04" ry="6.02" transform="rotate(-28 4.64 7.00)" fill="rgba(255,255,255,0.05)" stroke="rgba(10,30,15,0.16)" stroke-width="1.0"/>
+  <ellipse cx="11.36" cy="7.00" rx="3.04" ry="6.02" transform="rotate(28 11.36 7.00)" fill="rgba(255,255,255,0.05)" stroke="rgba(10,30,15,0.16)" stroke-width="1.0"/>
+</pattern>
+<radialGradient id="bgVig" cx="50%" cy="44%" r="70%">
+  <stop offset="0.55" stop-color="#8a5a2a" stop-opacity="0"/><stop offset="1" stop-color="#8a5a2a" stop-opacity="0.20"/>
+</radialGradient>
+<linearGradient id="tierLight" x1="0" y1="0" x2="1" y2="0.3">
+  <stop offset="0" stop-color="#4f8655" stop-opacity="0.75"/><stop offset="0.5" stop-color="#4f8655" stop-opacity="0"/>
+  <stop offset="1" stop-color="#2c5233" stop-opacity="0.35"/>
+</linearGradient>
+<mask id="tierMask0" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><path d="M256,236 Q341.0,309.0 406,382 Q356.0,398 306.0,382 Q256.0,398 206.0,382 Q156.0,398 106,382 Q171.0,309.0 256,236 Z" fill="#fff" stroke="#fff" stroke-width="26" stroke-linejoin="round"/></mask><mask id="tierMask1" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><path d="M256,176 Q324.0,240.0 372,304 Q333.3,320 294.7,304 Q256.0,320 217.3,304 Q178.7,320 140,304 Q188.0,240.0 256,176 Z" fill="#fff" stroke="#fff" stroke-width="26" stroke-linejoin="round"/></mask><mask id="tierMask2" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><path d="M256,124 Q307.0,177.0 338,230 Q310.7,246 283.3,230 Q256.0,246 228.7,230 Q201.3,246 174,230 Q205.0,177.0 256,124 Z" fill="#fff" stroke="#fff" stroke-width="26" stroke-linejoin="round"/></mask>
+<linearGradient id="starLight" x1="0" y1="0" x2="0.6" y2="1">
+  <stop offset="0" stop-color="#f7cd62" stop-opacity="0.9"/><stop offset="0.55" stop-color="#f7cd62" stop-opacity="0"/>
+</linearGradient></defs>
+<rect width="512" height="512" fill="#fff4e2"/><rect width="512" height="512" fill="url(#bgVig)"/>
+<g transform="translate(256 262) scale(1.12) translate(-256 -262)">
+<ellipse cx="256" cy="432" rx="136" ry="13" fill="#7a4c22" opacity="0.16"/>
+<rect x="226" y="372" width="60" height="58" rx="10" fill="#7a4a2c"/>
+<rect x="226" y="372" width="60" height="22" fill="#5a3420" opacity="0.6"/>
+<path d="M256,236 Q341.0,309.0 406,382 Q356.0,398 306.0,382 Q256.0,398 206.0,382 Q156.0,398 106,382 Q171.0,309.0 256,236 Z" transform="translate(0 10)" fill="#1f3d25" stroke="#1f3d25" stroke-width="26" stroke-linejoin="round"/>
+<path d="M256,236 Q341.0,309.0 406,382 Q356.0,398 306.0,382 Q256.0,398 206.0,382 Q156.0,398 106,382 Q171.0,309.0 256,236 Z" fill="#3f6e45" stroke="#3f6e45" stroke-width="26" stroke-linejoin="round"/>
+<g mask="url(#tierMask0)">
+<path d="M118,334 Q262,342 408,380" fill="none" stroke="#1f3d25" stroke-opacity="0.45" stroke-width="16" stroke-linecap="round" transform="translate(0 6)"/>
+<path d="M118,334 Q262,342 408,380" fill="none" stroke="#fff4e2" stroke-width="16" stroke-linecap="round"/>
+</g>
+<circle cx="194" cy="368" r="19" fill="#1f3d25" opacity="0.5"/>
+<circle cx="194" cy="364" r="19" fill="#b8302d" stroke="#8b2523" stroke-width="3.5"/>
+<circle cx="187.2" cy="356.8" r="5.7" fill="#fff" opacity="0.8"/>
+<circle cx="296" cy="377" r="13" fill="#1f3d25" opacity="0.5"/>
+<circle cx="296" cy="373" r="13" fill="#e3aa3a" stroke="#a8701a" stroke-width="3.5"/>
+<circle cx="291.3" cy="368.1" r="3.9" fill="#fff" opacity="0.8"/>
+<path d="M256,176 Q324.0,240.0 372,304 Q333.3,320 294.7,304 Q256.0,320 217.3,304 Q178.7,320 140,304 Q188.0,240.0 256,176 Z" transform="translate(0 10)" fill="#1f3d25" stroke="#1f3d25" stroke-width="26" stroke-linejoin="round"/>
+<path d="M256,176 Q324.0,240.0 372,304 Q333.3,320 294.7,304 Q256.0,320 217.3,304 Q178.7,320 140,304 Q188.0,240.0 256,176 Z" fill="#3f6e45" stroke="#3f6e45" stroke-width="26" stroke-linejoin="round"/>
+<g mask="url(#tierMask1)">
+<path d="M150,258 Q262,270 382,304" fill="none" stroke="#1f3d25" stroke-opacity="0.45" stroke-width="15" stroke-linecap="round" transform="translate(0 6)"/>
+<path d="M150,258 Q262,270 382,304" fill="none" stroke="#fff4e2" stroke-width="15" stroke-linecap="round"/>
+</g>
+<circle cx="204" cy="294" r="18" fill="#1f3d25" opacity="0.5"/>
+<circle cx="204" cy="290" r="18" fill="#b8302d" stroke="#8b2523" stroke-width="3.5"/>
+<circle cx="197.5" cy="283.2" r="5.4" fill="#fff" opacity="0.8"/>
+<circle cx="300" cy="301" r="12" fill="#1f3d25" opacity="0.5"/>
+<circle cx="300" cy="297" r="12" fill="#e3aa3a" stroke="#a8701a" stroke-width="3.5"/>
+<circle cx="295.7" cy="292.4" r="3.6" fill="#fff" opacity="0.8"/>
+<path d="M256,124 Q307.0,177.0 338,230 Q310.7,246 283.3,230 Q256.0,246 228.7,230 Q201.3,246 174,230 Q205.0,177.0 256,124 Z" transform="translate(0 10)" fill="#1f3d25" stroke="#1f3d25" stroke-width="26" stroke-linejoin="round"/>
+<path d="M256,124 Q307.0,177.0 338,230 Q310.7,246 283.3,230 Q256.0,246 228.7,230 Q201.3,246 174,230 Q205.0,177.0 256,124 Z" fill="#3f6e45" stroke="#3f6e45" stroke-width="26" stroke-linejoin="round"/>
+<g mask="url(#tierMask2)">
+<path d="M176,170 Q262,184 344,218" fill="none" stroke="#1f3d25" stroke-opacity="0.45" stroke-width="13" stroke-linecap="round" transform="translate(0 6)"/>
+<path d="M176,170 Q262,184 344,218" fill="none" stroke="#fff4e2" stroke-width="13" stroke-linecap="round"/>
+</g>
+<circle cx="232" cy="210" r="16" fill="#1f3d25" opacity="0.5"/>
+<circle cx="232" cy="206" r="16" fill="#b8302d" stroke="#8b2523" stroke-width="3.5"/>
+<circle cx="226.2" cy="199.9" r="4.8" fill="#fff" opacity="0.8"/>
+<polygon points="256.0,50.0 270.7,85.8 309.3,88.7 279.8,113.7 288.9,151.3 256.0,131.0 223.1,151.3 232.2,113.7 202.7,88.7 241.3,85.8" transform="translate(0 7)" fill="#1f3d25" opacity="0.35" stroke="#1f3d25" stroke-width="14" stroke-linejoin="round"/>
+<polygon points="256.0,50.0 270.7,85.8 309.3,88.7 279.8,113.7 288.9,151.3 256.0,131.0 223.1,151.3 232.2,113.7 202.7,88.7 241.3,85.8" fill="#a8701a" stroke="#a8701a" stroke-width="17" stroke-linejoin="round"/>
+<polygon points="256.0,50.0 270.7,85.8 309.3,88.7 279.8,113.7 288.9,151.3 256.0,131.0 223.1,151.3 232.2,113.7 202.7,88.7 241.3,85.8" fill="#e3aa3a" stroke="#e3aa3a" stroke-width="6" stroke-linejoin="round"/>
+</g>
+</svg>
