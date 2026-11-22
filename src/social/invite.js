@@ -19,6 +19,7 @@ export function createInvite(ctx, social) {
           <div class="tbs-inv-make">
             <p class="tbs-lead">Make a private town, then share the link. Friends who open it walk in right beside you.</p>
             <button class="knit-btn green tbs-create">Create a friends town</button>
+            <p class="tbsa-fi-hint" hidden>Make a friends town to play Secret Santa</p>
           </div>
           <div class="tbs-inv-have" hidden>
             <div class="tbs-kicker">Your friends town</div>
@@ -30,6 +31,7 @@ export function createInvite(ctx, social) {
             </div>
             <div class="tbs-here"></div>
           </div>
+          <button class="knit-btn cream tbsa-from-invite" hidden><span class="tbsa-fi-ico"></span><span>Secret Santa</span><span class="tbsa-fi-badge"></span></button>
           <button class="knit-btn tbc-from-invite" hidden><span class="tbc-fi-ico"></span><span>Send a Christmas card</span></button>
         </section>
         <section class="tbs-inv-b">
@@ -65,6 +67,7 @@ export function createInvite(ctx, social) {
   const setMsg = (t, bad) => { msg.textContent = t || ''; msg.classList.toggle('bad', !!bad); };
 
   function render() {
+    santaRow();
     const t = town();
     const key = t ? `${t.code}|${t.count}|${t.url}` : '';
     const offline = !hasNet();
@@ -132,6 +135,19 @@ export function createInvite(ctx, social) {
   const cardBtn = $('.tbc-from-invite');
   cardBtn.addEventListener('click', (e) => { stop(e); if (!ctx.cards) return; close(); if (!ctx.cards.open('friends')) open(); });
 
+  // Secret Santa (src/santa): a row while in a friends town, a one-line hint in the big town
+  const santaBtn = $('.tbsa-from-invite'), santaHint = $('.tbsa-fi-hint');
+  function santaRow() {
+    const s = ctx.santa, inTown = !!net()?.town?.code;
+    santaBtn.hidden = !s || !inTown || !s.available;
+    santaHint.hidden = !s || inTown || !hasNet();
+    if (santaBtn.hidden) return;
+    if (!santaBtn.dataset.ico && s.icon) { santaBtn.dataset.ico = '1'; santaBtn.querySelector('.tbsa-fi-ico').outerHTML = s.icon; }
+    santaBtn.querySelector('.tbsa-fi-badge').textContent = s.summary?.()?.badge || '';
+  }
+  santaBtn.addEventListener('click', (e) => { stop(e); if (!ctx.santa) return; close(); if (!ctx.santa.open()) open(); });
+  game.on('santa:status', () => { if (isOpen) santaRow(); });
+
   back.addEventListener('click', (e) => {
     stop(e);
     social.sfx('ui');
@@ -172,6 +188,7 @@ export function createInvite(ctx, social) {
     cardBtn.hidden = !ctx.cards; if (ctx.cards && !cardBtn.dataset.ico) { cardBtn.dataset.ico = '1'; cardBtn.querySelector('.tbc-fi-ico').outerHTML = ctx.cards.icon || ''; }
     setMsg('');
     render();
+    try { ctx.santa?.peek?.(); } catch (e) { /* */ }
     social.sfx('ui');
     return true;
   }
