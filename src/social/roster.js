@@ -23,7 +23,7 @@ export function createRoster(ctx, social) {
     <div class="tbs-roster knit-card interactive" role="dialog" aria-label="People in your town">
       <div class="tb-modal-title"><span class="tbs-title-ico">${ICONS.people}</span>People in your town</div>
       <button class="knit-btn cream round tb-modal-close" aria-label="Close">${SOCIAL_ICONS.close}</button>
-      <div class="tbs-ro-head"><b class="tbs-ro-town"></b></div>
+      <div class="tbs-ro-head"><b class="tbs-ro-town"></b><button class="tbsa-ro-badge" hidden aria-label="Secret Santa"></button></div>
       <div class="tbs-ro-list" role="list"></div>
       <div class="tbs-ro-empty" hidden>
         <p>Just you here — invite friends!</p>
@@ -37,7 +37,10 @@ export function createRoster(ctx, social) {
   card.addEventListener('pointerdown', stop);
   el.addEventListener('pointerdown', (e) => { stop(e); if (e.target === el) close(); });
 
-  let isOpen = false, acc = 0, order = '', lastTown = '';
+  let isOpen = false, acc = 0, order = '', lastTown = '', lastSanta = '';
+  // Secret Santa (src/santa): a badge in the header when this friends town has a group
+  const santaBadge = $('.tbsa-ro-badge');
+  santaBadge.addEventListener('click', (e) => { stop(e); social.sfx('ui'); close(); ctx.santa?.open?.(); });
   const rows = new Map(); // id → {el, name, doing, dist, state}
   const net = () => ctx.net;
 
@@ -105,6 +108,8 @@ export function createRoster(ctx, social) {
     const code = net()?.town?.code;
     const t = code ? `Friends town ${code} · ${all.length} here` : `Big town · ${all.length} here`;
     if (t !== lastTown) { lastTown = t; townEl.textContent = t; }
+    const ss = code ? ctx.santa?.summary?.() : null, sl = ss && ss.state && ss.state !== 'none' ? ss.label : '';
+    if (sl !== lastSanta) { lastSanta = sl; santaBadge.hidden = !sl; santaBadge.innerHTML = sl ? `${ctx.santa.icon || ''}<span>${esc(sl)}</span>` : ''; }
     // rows: rebuild structure only when the set of people changes (so taps never land on a re-rendered node)
     const key = all.map((p) => p.id).join(',');
     if (key !== order) {
@@ -127,10 +132,12 @@ export function createRoster(ctx, social) {
   function open() {
     if (isOpen || !social.free()) return false;
     social.closeAll('roster');
-    isOpen = true; acc = 0; order = ''; lastTown = '';
+    isOpen = true; acc = 0; order = ''; lastTown = ''; lastSanta = '';
+    try { ctx.santa?.peek?.(); } catch (e) { /* */ }
     list.textContent = ''; rows.clear();
     el.hidden = false;
     update();
+    try { ctx.scores?.onRosterOpen?.(card); } catch (e) { console.warn('[roster] scores', e); } // friends towns: People | Scores tab (src/scores)
     social.sfx('ui');
     game.emit('social:roster', { open: true });
     return true;

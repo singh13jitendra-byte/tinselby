@@ -188,6 +188,7 @@ export function createMiniGames(ctx) {
     for (let i = 0; i < 3; i++) el('span', i < r.stars ? 'on' : '', st).textContent = '★';
     if (!r.quit) el('div', 'mg-res-score', card).textContent = `Score ${r.score}${r.newBest ? ' · new best!' : ''}`;
     if (r.text) el('p', '', card).textContent = r.text;
+    if (!r.quit) { try { ctx.scores?.resultsBlock?.(card, def, r); } catch (e) { console.warn('[minigames] town scores', e); } } // friends towns: submit + "Your town" top 3 (src/scores)
     const row = el('div', 'mg-row', card);
     const again = el('button', 'knit-btn cream', row);
     again.textContent = 'Play again';

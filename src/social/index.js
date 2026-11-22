@@ -279,7 +279,7 @@ export function createSocial(ctx) {
     const on = !!t?.code;
     if (on !== lastOn) { lastOn = on; friendsBtn.classList.toggle('on', on); root.classList.toggle('tbs-in-town', on); }
     for (const h of hudButtons) pollButton(h);
-    if (!hinted && !people.isOpen && nearby(3)[0]) { hinted = true; toast(coarse ? 'Tap a friend to say hi!' : 'Click a friend, or press E next to them, to say hi!', 3600); }
+    if (!hinted && !people.isOpen && free() && nearby(3)[0]) { /* free(): not over a results card, mini-game or panel */ hinted = true; toast(coarse ? 'Tap a friend to say hi!' : 'Click a friend, or press E next to them, to say hi!', 3600); }
   }, 160);
 
   // arriving through an invite link / a remembered friends town: say so once

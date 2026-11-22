@@ -33,6 +33,8 @@ import { createAnalytics } from './analytics/index.js';
 import { createInvite } from './invite/index.js';
 import { createPwa } from './pwa/index.js';
 import { createStreaks } from './streaks/index.js';
+import { createScores } from './scores/index.js';
+import { createSanta } from './santa/index.js';
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
@@ -74,6 +76,8 @@ ctx.analytics = createAnalytics(ctx); // anonymous PostHog events (src/analytics
 ctx.invite = createInvite(ctx); // card / invite links (?from=Name): welcome on the start card, clean URL (src/invite); after analytics
 ctx.pwa = createPwa(ctx); // install as an app: service worker, "Add to home screen" card after a door, offline toast (src/pwa); after analytics
 ctx.streaks = createStreaks(ctx); // play streaks: days in a row → mitten chip + wardrobe pieces at 3/7/14 days (src/streaks)
+ctx.scores = createScores(ctx); // friends-town scoreboards: results-card "Your town" block + roster Scores tab (src/scores, PHASE3.md)
+ctx.santa = createSanta(ctx); // Secret Santa for friends towns: Friends card row + roster badge + sheet (src/santa, PHASE3.md)
 let rideT = 0;
 engine.addUpdate((dt) => { rideT += dt; ctx.rides.update(dt, rideT); }, 50);
 // the wave-end card asks for a sky teaser: use the world's moon fly-by
