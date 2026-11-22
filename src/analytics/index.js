@@ -86,14 +86,19 @@ export function createAnalytics(ctx) {
   on('card:created', ({ scene, greeting, frame }) => track('card_created', { scene: id24(scene), greeting: id24(greeting), frame: id24(frame) }));
   on('card:shared', ({ method }) => track('card_shared', { method: id24(method) }));
   on('map:open', () => { S.mapOpen = true; track('map_opened', {}); });
+  on('activities:open', () => track('activities_opened', {})); // phones: the "Things to do" button's sheet (src/activities/sheet.js)
+  on('activities:way', ({ id }) => track('activity_way', { id: id24(id) })); // a row tapped → the way there is lit
   on('tips:skipped', () => track('tips_skipped', {}));
   on('invite:open', ({ hasCard, hasTown }) => track('invite_opened', { has_card: !!hasCard, has_town: !!hasTown })); // never the sender's name
   on('invite:played', () => track('invite_played', {}));
   // install as an app (src/pwa): platform android | ios | desktop
   const plat = (p) => (p === 'android' || p === 'ios' ? p : 'desktop');
-  on('pwa:prompt', ({ platform }) => track('install_prompt_shown', { platform: plat(platform) }));
-  on('pwa:accept', ({ platform }) => track('install_accepted', { platform: plat(platform) }));
-  on('pwa:dismiss', ({ platform, native }) => track('install_dismissed', { platform: plat(platform), native: !!native }));
+  // trigger: door | returning | help ("?" card row); guide: prompt | ios | android_menu | desktop_hint (what Add opens)
+  const trig = (t) => (t === 'returning' || t === 'help' ? t : 'door');
+  const gd = (g) => (g === 'ios' || g === 'android_menu' || g === 'desktop_hint' ? g : 'prompt');
+  on('pwa:prompt', ({ platform, trigger, guide }) => track('install_prompt_shown', { platform: plat(platform), trigger: trig(trigger), guide: gd(guide) }));
+  on('pwa:accept', ({ platform, trigger, guide }) => track('install_accepted', { platform: plat(platform), trigger: trig(trigger), guide: gd(guide) }));
+  on('pwa:dismiss', ({ platform, native, trigger, guide }) => track('install_dismissed', { platform: plat(platform), native: !!native, trigger: trig(trigger), guide: gd(guide) }));
   on('pwa:installed', ({ via }) => track('installed', { via: via === 'prompt' ? 'prompt' : 'launch' }));
   on('streak:day', ({ streak, snowDayUsed }) => track('streak_day', { streak: Math.max(0, Math.min(9999, +streak | 0)), snow_day_used: !!snowDayUsed })); // play streaks (src/streaks)
   on('streak:reward', ({ days }) => track('streak_reward', { days: +days | 0 }));

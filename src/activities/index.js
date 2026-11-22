@@ -20,11 +20,18 @@
 // - a soft pulsing glow ring on the ground at each unlocked activity's start spot within 10 m (rings.js, ≤ 1 draw call).
 // - a one-time tip toast the first time you walk up to each one (localStorage `tinselby.acts.v1`).
 // Hidden outside free play (same rule as src/social/index.js free()), and while the full town map is open.
+//
+// Phones (touch device or a viewport < 600 px wide, with the social HUD on): NO floating / edge signs (they ate the screen);
+// instead a round "Things to do" button in the bottom-right social stack (badge = open activities within 15 m, one gentle
+// pulse the first time you come near each one) opens a sheet listing every activity nearest first; tapping one lights the
+// way there (src/activities/sheet.js). The glow rings and tips stay. activities.mobile → true when that mode is on;
+// activities.sheet → the sheet API (open/close/rows…). Desktop is unchanged.
 import './activities.css';
 import * as THREE from 'three';
 import { ICONS } from '../ui/icons.js';
 import { buildActivities, iconOf } from './data.js';
 import { createRings } from './rings.js';
+import { createActSheet } from './sheet.js';
 
 const SIGN_R = 18; // metres: signs show within this
 const FADE_M = 4; // …fading in over the outer 4 m
@@ -118,6 +125,11 @@ export function createActivities(ctx) {
     });
   }
   let lastWay = null;
+  /** Phone UI: touch device or a narrow viewport (< 600 CSS px), and the social HUD exists to hold the button. */
+  const coarseMQ = matchMedia('(pointer: coarse)');
+  const narrow = () => window.innerWidth < 600;
+  const phoneUI = () => !!ctx.social?.enabled && (!!engine.isMobile || coarseMQ.matches || narrow());
+  let mobile = phoneUI();
   function showWayTo(a) {
     const name = a.sub ? `${a.name} · ${a.sub}` : a.name;
     let ok = false;
@@ -166,7 +178,8 @@ export function createActivities(ctx) {
   // ------------------------------------------------------------------ obstacle rects (like src/guide/screen.js)
   const rects = new Float32Array(MAXR * 4);
   let nRects = 0, rectT = 0, els = [], elsT = 0;
-  window.addEventListener('resize', () => { readSafe(); rectT = 0; elsT = 0; for (const sg of signs) sg.key = ''; });
+  window.addEventListener('resize', () => { readSafe(); rectT = 0; elsT = 0; for (const sg of signs) sg.key = ''; mobile = phoneUI(); });
+  try { coarseMQ.addEventListener('change', () => { mobile = phoneUI(); }); } catch (e) { /* old Safari */ }
   function refreshRects(dt, W, H) {
     elsT -= dt; rectT -= dt;
     if (elsT <= 0) { elsT = 0.5; els = uiRoot.querySelectorAll(AVOID); }
@@ -243,6 +256,17 @@ export function createActivities(ctx) {
   // ------------------------------------------------------------------ rings
   const rings = createRings(ctx, N);
 
+  // ------------------------------------------------------------------ phones: "Things to do" button + sheet
+  const placeAt = (x, z) => { try { return ctx.guide?.placeAt?.(x, z) || 'Tinselby'; } catch (e) { return 'Tinselby'; } };
+  /** From the sheet: light the way (same path as an edge sign / the map's Things to do), and keep the footprint trail
+   *  lit as long as the goal points there (45 s, or until you arrive: the guide clears it within 1.6 m). */
+  function sheetWay(a) {
+    const ok = showWayTo(a);
+    try { if (ok) ctx.guide?.showTrail?.(45); } catch (e) { /* */ }
+    return ok;
+  }
+  const sheet = createActSheet(ctx, { acts, free, wayTo: sheetWay, placeAt, iconOf });
+
   // ------------------------------------------------------------------ per frame
   const v = new THREE.Vector3();
   const order = new Int16Array(N); // candidate indices, nearest first
@@ -266,6 +290,7 @@ export function createActivities(ctx) {
 
   engine.addUpdate((dt, t) => {
     const isFree = free();
+    sheet.update(dt, isFree && mobile);
     if (!isFree) {
       if (wasFree) { for (const sg of signs) hideSign(sg); rings.begin(); rings.end(); }
       wasFree = false;
@@ -295,9 +320,8 @@ export function createActivities(ctx) {
     // ---- pick ≤ 3 signs: present, in range, not "here", nearest first (on screen or not: edge signs) (5×/s)
     btnUp = actBtn();
     pickT -= dt;
-    const camera = engine.camera;
-    camera.updateMatrixWorld();
-    if (pickT <= 0) {
+    const pickNow = pickT <= 0;
+    if (pickNow) {
       pickT = 0.2;
       for (let i = 0; i < N; i++) {
         const a = acts[i];
@@ -305,6 +329,15 @@ export function createActivities(ctx) {
         if (near && !nearFlag[i]) { nearFlag[i] = 1; game.emit('activity:near', { id: a.id, locked: a.locked }); tipFor(a); }
         else if (!near && a.dist > NEAR_R + 1.5) nearFlag[i] = 0;
       }
+    }
+    // phones: no signs at all (the "Things to do" button + sheet replace them); the rings above stay
+    if (mobile) {
+      if (nOrder) { for (const sg of signs) hideSign(sg); nOrder = 0; }
+      return;
+    }
+    const camera = engine.camera;
+    camera.updateMatrixWorld();
+    if (pickNow) {
       // every spot in range counts, on screen or not (off-screen ones get an edge sign); spots behind you / below the
       // screen only get a slot after the ones ahead (they can only use the bottom edge, which is often taken)
       nOrder = 0;
@@ -462,11 +495,15 @@ export function createActivities(ctx) {
     iconOf,
     /** "Show the way" to an activity (what tapping its edge sign does). */
     showWay(id) { const a = acts.find((q) => q.id === id); return a ? showWayTo(a) : false; },
+    /** Phones: true when the signs are replaced by the "Things to do" button + sheet. */
+    get mobile() { return mobile; },
+    /** The phone sheet: open() / close() / isOpen / rows() / btn / badge. */
+    sheet,
     resetTips() { store = { seen: {} }; save(); nearFlag.fill(0); },
     get lastTip() { return lastTip; },
     state() {
       return {
-        free: free(),
+        free: free(), mobile, sheet: sheet.isOpen, button: !!sheet.btn && !sheet.btn.hidden, badge: sheet.badge,
         signs: signs.filter((s) => s.on && s.vis).map((s) => {
           const r = s.el.getBoundingClientRect();
           return {

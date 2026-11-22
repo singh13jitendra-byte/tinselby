@@ -18,7 +18,9 @@ Wave-3 parts (all use ?w3; shots/e2e3_*.png):
   p1         phase 1/2 on a phone (touch, 390x844 + 844x390 layout): Christmas card maker from the Friends card (every scene /
              greeting / frame by tap, stubbed Web Share → one 1080x1350 JPEG + greeting + card link, no-share fallback, ✕),
              invite welcome (?from=Ava&card=… entry card → taps/typing → play, URL cleaned, toast; junk name injects nothing),
-             install card (Android UA + faked beforeinstallprompt, door 1 → card, Not now), streak chip (?streak=5, skips if
+             install card (Android UA + faked beforeinstallprompt, door 1 → card, Not now; returning player on an Android in-app
+             browser → offer ~45 s into play → ⋮ menu guide; Chrome + prompt; iPhone guide; "?" help row; standalone → nothing;
+             shots/pwa2_*.png), streak chip (?streak=5, skips if
              ctx.streaks missing) clear of the HUD, 0 console errors; shots/p1_*.png
 Usage: python3 tools/playthrough.py [desktop|games|phone|w3games|w3cal|w3finale|w3tasks|w3tris|ux|p1 ...]   (default: all)"""
 import fcntl, json, os, sys, time
@@ -29,7 +31,9 @@ BASE = f'file://{DIST}/index.html?capture&net=off&tod=17.5'
 PARTS = set(sys.argv[1:]) or {'desktop', 'games', 'phone', 'w3games', 'w3cal', 'w3finale', 'w3tasks', 'w3tris', 'ux', 'p1'}
 GAMES = ['ornaments', 'cookies', 'snowball', 'sled', 'skate', 'tram', 'giftwrap', 'snowman', 'sled2']
 W2_GAMES = {'skate', 'tram', 'giftwrap', 'snowman', 'sled2'}
-lock = open('/tmp/tinselby-chrome.lock', 'w'); fcntl.flock(lock, fcntl.LOCK_EX)
+lock = open('/tmp/tinselby-chrome.lock', 'w')
+if os.environ.get('NOLOCK') == '1': print('NOLOCK=1: not taking the shared Chrome lock (run it under nice -n 19)', flush=True)
+else: fcntl.flock(lock, fcntl.LOCK_EX)
 errs, fails, skips = [], [], []
 W3 = BASE + '&w3'
 CTX = 'window.__tinselby.ctx'
@@ -416,7 +420,7 @@ with sync_playwright() as p:
             c.close()
 
         # ---- 2-6 on the main phone page (390x844 portrait, then landscape)
-        tag = 'ux_main'; c, pg = new_phone(390, 844, tag); uxload(pg, 7, 390, 844); print('[ux] main page loaded', flush=True)
+        tag = 'ux_main'; c, pg = new_phone(390, 844, tag); uxload(pg, '7&streak=5', 390, 844); print('[ux] main page loaded', flush=True)
         G = f'{CTX}.guide'
         # 2. HUD layout at the three sizes
         for (w, h) in ((390, 844), (844, 390), (360, 780)):
@@ -492,38 +496,103 @@ with sync_playwright() as p:
                 pg.evaluate('document.querySelector(".tbs-roster-layer")?.click()'); cstep(pg, 4)
             check(not rect(pg, '.tbs-roster'), 'roster: sheet closes')
         else: skip('roster: online chip hidden with net=off')
-        # 7. activities
+        # 7. activities on a phone: no floating signs / edge tags; the round "Things to do" button opens a sheet (nearest first);
+        #    tapping the Ferris wheel row lights the way (guide target + trail); arriving clears it and the door goal comes back.
+        #    Locked Cocoa hut row with ?doors=0; desktop 1280x720 still shows the signs.
         if pg.evaluate(f'!!{CTX}.activities'):
-            lst = json.loads(pg.evaluate(f'JSON.stringify({CTX}.activities.list())')); print('  activities', len(lst), [a['id'] for a in lst][:12])
+            A = f'{CTX}.activities'
+            lst = json.loads(pg.evaluate(f'JSON.stringify({A}.list())')); print('  activities', len(lst), [a['id'] for a in lst][:12])
             check(len(lst) > 0, f'activities: list() non-empty ({len(lst)})')
-            fw = next((a for a in lst if 'ferris' in a['id'].lower() or 'ferris' in a['name'].lower() or 'wheel' in a['name'].lower()), None)
+            check(pg.evaluate(f'{A}.mobile === true'), 'activities: phone mode on (touch device)')
+            SIGNJS = '[...document.querySelectorAll(".tba-sign")].filter(e => !e.hidden && +getComputedStyle(e).opacity > 0.05).map(e => e.dataset.id + ":" + (e.classList.contains("edge") ? "edge" : "float"))'
+            fw = next((a for a in lst if a['id'] == 'ferris'), None)
             if fw and not fw.get('locked'):
-                # approach from several sides (outside the 2.5 m "here" radius) until the sign's anchor is on screen and clear of the HUD
-                sg = None
-                for dx, dz in ((0, 3.5), (3.5, 0), (-3.5, 0), (0, 5.5), (0, -3.5)):
-                    pg.evaluate(f'{CTX}.player.teleport({fw["x"] + dx}, {fw["z"] + dz})'); cstep(pg, 25); wait_ms(pg, 300); cstep(pg, 15)
-                    sg = pg.evaluate(f'(() => {{ const e = [...document.querySelectorAll(".tba-sign")].find(e => e.dataset.id === {json.dumps(fw["id"])} && !e.hidden); if (!e) return null; const r = e.getBoundingClientRect(); return {{ x: r.left, y: r.top, w: r.width, h: r.height, op: +getComputedStyle(e).opacity }}; }})()')
-                    if sg and sg['op'] > 0.2: print(f'  ferris sign seen from offset {dx},{dz}'); break
-                check(bool(sg) and sg['op'] > 0.2, f'activities: sign for {fw["name"]} visible near it ({sg})')
-                pg.screenshot(path=SH + 'activity_sign.png')
-                if sg:
-                    R = json.loads(pg.evaluate(HUDJS)); sg['n'] = 'sign'
-                    bad = [r['n'] for r in R if overl(sg, r)]
-                    check(not bad and inside(sg, 390, 844), f'activities: sign does not overlap the HUD ({bad})')
+                seen = []
+                for dx, dz in ((0, 3.5), (-6, 14), (3.5, 0)):  # near it, ~15 m away (it would be an edge tag / floating sign on desktop)
+                    pg.evaluate(f'{CTX}.player.teleport({fw["x"] + dx}, {fw["z"] + dz})'); cstep(pg, 25); wait_ms(pg, 300); cstep(pg, 10)
+                    seen += pg.evaluate(SIGNJS)
+                check(not seen and not pg.evaluate(f'{A}.state().signs.length'), f'activities phone: no floating sign / edge tag shown ({seen})')
+                pg.screenshot(path=SH + 'activity_button.png')
+                # the button: visible, inside the viewport, clear of the HUD (goal card, chips incl. the streak chip, round buttons,
+                # mini-map, joystick, green action button); it lives in the social corner stack, so that group itself is skipped
+                ACTSJS = HUDJS.replace("return JSON.stringify(out);", "add('acts', document.querySelector('.tbs-x-acts')); return JSON.stringify(out);")
+                R = json.loads(pg.evaluate(ACTSJS)); ab = next((r for r in R if r['n'] == 'acts'), None)
+                names = sorted(r['n'] for r in R)
+                check(bool(ab) and inside(ab, 390, 844), f'activities phone: "Things to do" button visible inside the viewport ({ab})')
+                if ab:
+                    bad = [r['n'] for r in R if r['n'] not in ('acts', 'social') and overl(ab, r)]
+                    check(not bad and 'joy' in names and any(n.startswith('chip') for n in names), f'activities phone: button clear of the HUD ({names}) overlaps {bad}')
+                    sk = pg.evaluate('document.querySelector(".tb-streak b")?.textContent || ""')
+                    check(sk == '5', f'activities phone: streak chip shown during the overlap check ({sk!r})')
+                # a real tap opens the sheet; rows nearest first, open ones before locked / away ones
+                pg.evaluate(f'{CTX}.player.teleport({fw["x"] - 6}, {fw["z"] + 14})'); cstep(pg, 15)
+                check(tap_el(pg, '.tbs-x-acts', 'Things to do'), 'activities phone: button tapped')
+                wait_ms(pg, 200); cstep(pg, 4)
+                sh = rect(pg, '.tba-sheet')
+                check(bool(sh) and pg.evaluate(f'{A}.sheet.isOpen') and inside(sh, 390, 844), f'activities phone: a real tap opens the sheet inside the viewport ({sh})')
+                rows = pg.evaluate(f'{A}.sheet.rows()'); dom = pg.evaluate('[...document.querySelectorAll(".tba-row")].map(r => r.dataset.id)')
+                print('  rows', [(r['id'], r['dist'], 'L' if r['locked'] else 'A' if r['away'] else '') for r in rows])
+                rk = [(2 if r['locked'] else 1 if r['away'] else 0, r['dist']) for r in rows]
+                check(len(rows) >= 5 and rk == sorted(rk) and dom == [r['id'] for r in rows], f'activities phone: rows sorted nearest first, unlocked first, as shown ({[r["id"] for r in rows]})')
+                fr = pg.evaluate('document.querySelector(\'.tba-row[data-id="ferris"]\')?.innerText.replace(/\\s+/g, " ") || ""')
+                check(re.search(r'Ferris wheel Ride .+ · \d+ m', fr) is not None, f'activities phone: Ferris row shows name, verb, place · distance ({fr!r})')
+                pg.screenshot(path=SH + 'activity_sheet.png')
+                # tap the Ferris wheel row → sheet closes, guide target = Ferris wheel, trail lit
+                pg.evaluate(f'{G}.route.tick({CTX}.engine.time, 1e7)')  # build the walk grid now (it fills over ~70 frames; Chrome here is ~1 frame/s)
+                pg.evaluate('document.querySelector(\'.tba-row[data-id="ferris"]\')?.scrollIntoView({ block: "nearest" })')
+                check(tap_el(pg, '.tba-row[data-id="ferris"]', 'Ferris row'), 'activities phone: Ferris wheel row tapped')
+                cstep(pg, 20)
+                tg = json.loads(pg.evaluate(f'JSON.stringify({G}.state)'))
+                t, tr = tg.get('target') or {}, tg.get('trail') or {}
+                print('  after row', t.get('label'), round(t.get('dist') or -1, 1), tr)
+                check(not pg.evaluate(f'{A}.sheet.isOpen') and not rect(pg, '.tba-sheet'), 'activities phone: the sheet closes after the tap')
+                check('Ferris' in (t.get('label') or '') and abs(t['x'] - fw['x']) < 1 and abs(t['z'] - fw['z']) < 1, f'activities phone: guide target is the Ferris wheel ({t.get("label")}, {t.get("x")}, {t.get("z")})')
+                check(tr.get('wanted') and tr.get('shown', 0) > 0, f'activities phone: footprint trail lit ({tr})')
+                gt = pg.evaluate('document.querySelector(".tb-goal")?.innerText.replace(/\\s+/g, " ") || ""')
+                check(re.search(r'Ferris wheel · \d+ m', gt) is not None, f'activities phone: goal card shows "Ferris wheel · N m" ({gt!r})')
+                pg.screenshot(path=SH + 'activity_way.png')
+                # arrive (walking in: a step just inside the guide's 1.6 m arrival ring, then onto the spot): trail off, the ride's
+                # green button shows, the guide goes back to the door goal
+                pg.evaluate(f'{CTX}.player.teleport({fw["x"]}, {fw["z"] + 1.45})'); cstep(pg, 4)
+                pg.evaluate(f'{CTX}.player.teleport({fw["x"]}, {fw["z"]})'); cstep(pg, 15)
+                tg = json.loads(pg.evaluate(f'JSON.stringify({G}.state)')); t, tr = tg.get('target') or {}, tg.get('trail') or {}
+                act = pg.evaluate('document.querySelector(".tb-act:not([hidden])")?.innerText || ""')
+                check(not tr.get('wanted') and 'Ferris' not in (t.get('label') or '') and 'Ferris' in act, f'activities phone: arriving clears the trail, shows "{act}", goal back to {t.get("label")}')
             else: skip('activities: no unlocked Ferris wheel activity in list()')
-            # locked with ?doors=0
+            # locked with ?doors=0: the Cocoa hut row is greyed, after the open ones, "Opens with Door 19"; a tap only toasts
             pg.evaluate('window.__tinselby.step(1/30,2)'); pg.close(); c.close()
             c, pg = new_phone(390, 844, 'ux_locked'); uxload(pg, 0, 390, 844)
             lk = json.loads(pg.evaluate(f'JSON.stringify({CTX}.activities.list().filter(a => a.locked))'))
             check(len(lk) > 0, f'activities: some are locked with ?doors=0 ({len(lk)})')
-            if lk:
-                a = lk[0]; sg = None
-                for dx, dz in ((0, 3.5), (3.5, 0), (-3.5, 0), (0, 5.5), (0, -3.5)):
-                    pg.evaluate(f'{CTX}.player.teleport({a["x"] + dx}, {a["z"] + dz})'); cstep(pg, 25); wait_ms(pg, 300); cstep(pg, 15)
-                    sg = pg.evaluate(f'(() => {{ const e = [...document.querySelectorAll(".tba-sign.locked")].find(e => !e.hidden && e.dataset.id === {json.dumps(a["id"])}); return e ? {{ lock: !!e.querySelector("svg"), txt: e.textContent.trim(), id: e.dataset.id }} : null; }})()')
-                    if sg: print(f'  locked sign seen from offset {dx},{dz}'); break
-                check(bool(sg) and sg['lock'], f'activities: locked sign shows a lock ({a["name"]}: {sg})'); pg.screenshot(path=SH + 'activity_locked.png')
+            check(tap_el(pg, '.tbs-x-acts', 'Things to do'), 'activities locked: button tapped'); wait_ms(pg, 200); cstep(pg, 4)
+            rows = pg.evaluate(f'{CTX}.activities.sheet.rows()')
+            ci = next((i for i, r in enumerate(rows) if r['id'] == 'cocoa'), -1)
+            co = pg.evaluate('(() => { const e = document.querySelector(\'.tba-row[data-id="cocoa"]\'); return e ? { txt: e.innerText.replace(/\\s+/g, " "), locked: e.classList.contains("locked"), lock: !!e.querySelector(".tba-rgo svg") } : null; })()')
+            check(bool(co) and co['locked'] and 'Opens with Door 19' in co['txt'] and ci >= 0 and all(r['locked'] or r['away'] for r in rows[ci:]), f'activities locked: Cocoa hut row greyed, "Opens with Door 19", after the open ones ({co}, at {ci}/{len(rows)})')
+            pg.evaluate('document.querySelector(\'.tba-row[data-id="cocoa"]\')?.scrollIntoView({ block: "nearest" })')
+            pg.screenshot(path=SH + 'activity_locked.png')
+            wait_ms(pg, 150)
+            tap_el(pg, '.tba-row[data-id="cocoa"]', 'Cocoa row'); wait_ms(pg, 200)
+            toasts = pg.evaluate('[...document.querySelectorAll(".tb-toast")].map(t => t.textContent)')
+            check(pg.evaluate(f'{CTX}.activities.sheet.isOpen') and any('Door 19' in x for x in toasts) and 'Cocoa' not in (pg.evaluate(f'{G}.target?.label') or ''),
+                  f'activities locked: tapping the Cocoa row keeps the sheet, toasts, no way ({toasts})')
+            tap_el(pg, '.tba-sh-x', 'close'); cstep(pg, 3)
+            check(not rect(pg, '.tba-sheet'), 'activities locked: ✕ closes the sheet')
             tag = 'ux_locked'
+            # desktop 1280x720 (no touch): the floating signs are still there, no button
+            pg.close(); c.close()
+            c = b.new_context(viewport={'width': 1280, 'height': 720}); pg = c.new_page(); pg.set_default_timeout(120000); attach(pg, 'ux_desk')
+            uxload(pg, 7, 1280, 720)
+            dk = pg.evaluate(f'{CTX}.activities.mobile')
+            fw2 = json.loads(pg.evaluate(f'JSON.stringify({CTX}.activities.list().find(a => a.id === "ferris") || null)'))
+            seen = []
+            if fw2:
+                for dx, dz in ((0, 3.5), (3.5, 0), (0, 5.5)):
+                    pg.evaluate(f'{CTX}.player.teleport({fw2["x"] + dx}, {fw2["z"] + dz})'); cstep(pg, 25); wait_ms(pg, 300); cstep(pg, 10)
+                    seen = pg.evaluate(SIGNJS)
+                    if seen: break
+            check(dk is False and any(s.startswith('ferris') for s in seen) and not rect(pg, '.tbs-x-acts'), f'activities desktop 1280x720: signs still shown, no button (mobile {dk}, signs {seen})')
+            pg.screenshot(path=SH + 'activity_desktop.png')
         else: skip('activities: ctx.activities missing')
         # 8. console errors across the whole part
         pg.close(); c.close()
@@ -673,8 +742,8 @@ with sync_playwright() as p:
                 if not tap_el(pg, '.tb-cards:not(.tb-pwa-layer) .tb-card:not(.out) .knit-btn', 'reward card'):
                     pg.evaluate("document.querySelector('.tb-cards:not(.tb-pwa-layer) .tb-card:not(.out) .knit-btn')?.click()")
                 wait_ms(pg, 400); cstep(pg, 3)
-            for _ in range(14):
-                cstep(pg, 4); wait_ms(pg, 500)
+            for _ in range(14):  # the card waits ~2.6 s of game time after the door, then 1.2 s of nothing else on screen
+                pg.evaluate('window.__tinselby.step(0.5, 3)'); cstep(pg, 1); wait_ms(pg, 200)
                 if pg.evaluate(f'{CTX}.pwa.cardShown'): break
             shown = pg.evaluate(f'{CTX}.pwa.cardShown'); cr = rect(pg, '.tb-pwa-card')
             check(shown and bool(cr) and inside(cr, 390, 844), f'install: card shown in free play after door 1, inside the viewport ({cr}, {pg.evaluate(f"JSON.stringify({CTX}.pwa.state)")})')
@@ -684,6 +753,112 @@ with sync_playwright() as p:
                 check(not pg.evaluate(f'{CTX}.pwa.cardShown') and not rect(pg, '.tb-pwa-card'), 'install: "Not now" hides the card')
         else: skip('install: ctx.pwa missing')
         c.close()
+
+        # ---- 3b. install, part 2 (returning players, Android without beforeinstallprompt, iPhone, the "?" help row, standalone)
+        SH2 = '/home/claude/tinselby/shots/pwa2_'
+        UA_WV = 'Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/AP1A.240505.005; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/131.0.0.0 Mobile Safari/537.36'
+        UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
+        PWA_EV = f"""(() => {{ window.__pwaEv = []; for (const n of ['pwa:prompt', 'pwa:accept', 'pwa:dismiss']) {CTX}.game.on(n, (d) => window.__pwaEv.push({{ n, ...d }})); }})()"""
+        FAKE_BIP = """(() => { window.__prompted = (window.__prompted || 0); const e = new Event('beforeinstallprompt', { cancelable: true });
+          e.prompt = () => { window.__prompted++; return Promise.resolve(); }; e.userChoice = Promise.resolve({ outcome: 'dismissed', platform: 'web' });
+          window.dispatchEvent(e); })()"""
+        STANDALONE = """(() => { const mm = window.matchMedia.bind(window); window.matchMedia = (q) => /display-mode:\\s*standalone/.test(q)
+          ? { matches: true, media: q, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return false; } } : mm(q); })()"""
+        def pstate(pg): return pg.evaluate(f'{CTX}.pwa.state')
+        def evs(pg): return pg.evaluate('window.__pwaEv || []')
+        def step_to_offer(pg, n=26):  # game clock in 2.5 s steps (Chrome here renders a frame every few seconds)
+            for _ in range(n):
+                pg.evaluate('window.__tinselby.step(2.5, 1)')
+                if pg.evaluate(f'!!{CTX}.ui.cards.busy'): pg.evaluate("document.querySelector('.tb-cards:not(.tb-pwa-layer) .tb-card:not(.out) .knit-btn')?.click()")
+                if pg.evaluate(f'{CTX}.pwa.cardShown'): return True
+            return False
+        def card_fits(pg, w, h, label):
+            relayout(pg, w, h); cstep(pg, 1); wait_ms(pg, 120)
+            cr, joy, goal = rect(pg, '.tb-pwa-card'), rect(pg, '.tb-joy'), rect(pg, '.tb-goal')
+            btn = rect(pg, '.tb-pwa-card .knit-btn')
+            ok = bool(cr) and inside(cr, w, h) and bool(btn) and inside(btn, w, h) and not (joy and overl(cr, joy)) and not (goal and overl(cr, goal))
+            check(ok, f'{label} {w}x{h}: card inside the viewport, clear of joystick / goal card ({cr}, joy {joy}, goal {goal})')
+        def open_help_row(pg, label):
+            pg.evaluate(f'{CTX}.tips.closeHelp(); {CTX}.tips.help()'); cstep(pg, 1)
+            r = rect(pg, '.tbt-install')
+            return r
+
+        if pg is not None:
+            # (1) Android in-app browser / Custom Tab: no beforeinstallprompt; a returning player (8 doors done)
+            tag = 'p1_pwa2_wv'; c, pg = new_phone(412, 915, tag, user_agent=UA_WV)
+            p1load(pg, '&play&reset&reveal=all&doors=8&pwa', 4); pg.evaluate(PWA_EV); print('[p1] pwa2 in-app page loaded', flush=True)
+            st = pstate(pg)
+            check(st['android'] == 'chrome' and st['inApp'] and not st['bip'] and st['guide'] == 'android_menu', f'install2 in-app: Android in-app browser detected, no prompt → menu guide ({st})')
+            pg.evaluate('window.__tinselby.step(2.5, 12)')  # 30 s of play: not yet
+            check(not pg.evaluate(f'{CTX}.pwa.cardShown'), f'install2 in-app: no card 30 s into play (playT {pstate(pg)["playT"]})')
+            shown = step_to_offer(pg); st = pstate(pg)
+            check(shown and st['trigger'] == 'returning' and 45 <= st['playT'] <= 62 and pg.evaluate(f'{CTX}.pwa.mode') == 'ask',
+                  f'install2 in-app: returning-player offer appears 45–60 s into play ({shown}, trigger {st["trigger"]}, playT {st["playT"]})')
+            e = [x for x in evs(pg) if x['n'] == 'pwa:prompt']
+            check(len(e) == 1 and e[0].get('trigger') == 'returning' and e[0].get('guide') == 'android_menu' and e[0].get('platform') == 'android', f'install2 in-app: pwa:prompt {{trigger: returning, guide: android_menu}} ({e})')
+            cstep(pg, 1); pg.screenshot(path=SH2 + 'returning_412x915.png')
+            check(tap_el(pg, '.tb-pwa-add', 'Add'), 'install2 in-app: Add tapped'); cstep(pg, 1)
+            gt = pg.evaluate("document.querySelector('.tb-pwa-card')?.innerText.replace(/\\s+/g, ' ') || ''")
+            check(pg.evaluate(f'{CTX}.pwa.mode') == 'guide-android' and 'Open in Chrome' in gt and 'Add to Home screen' in gt and pg.evaluate("document.querySelectorAll('.tb-pwa-card .tb-pwa-steps li').length") == 2,
+                  f'install2 in-app: Add → 2-step Android guide (Open in Chrome, Add to Home screen) ({gt!r})')
+            e = [x for x in evs(pg) if x['n'] == 'pwa:accept']
+            check(len(e) == 1 and e[0].get('guide') == 'android_menu' and e[0].get('trigger') == 'returning', f'install2 in-app: pwa:accept {{guide: android_menu}} ({e})')
+            pg.screenshot(path=SH2 + 'android_guide_412x915.png')
+            for (w, h) in ((844, 390), (360, 640), (390, 844)): card_fits(pg, w, h, 'install2 android guide')
+            relayout(pg, 844, 390); pg.screenshot(path=SH2 + 'android_guide_844x390.png'); relayout(pg, 412, 915)
+            check(tap_el(pg, '.tb-pwa-ok', 'Got it'), 'install2 in-app: Got it tapped'); wait_ms(pg, 400); cstep(pg, 2)
+            check(not rect(pg, '.tb-pwa-card') and pstate(pg)['done'] == 1, 'install2 in-app: Got it closes the guide, never asked again')
+            # (4) the "?" help card row, on demand, opens the same guide
+            r = open_help_row(pg, 'in-app')
+            check(bool(r) and inside(r, 412, 915) and 'home screen' in pg.evaluate("document.querySelector('.tbt-install').innerText"), f'install2 help: "Add Tinselby to your home screen" row in the ? card ({r})')
+            pg.screenshot(path=SH2 + 'help_412x915.png')
+            relayout(pg, 844, 390); r2 = rect(pg, '.tbt-install'); hr = rect(pg, '.tbt-help')
+            check(bool(r2) and inside(r2, 844, 390) and bool(hr) and inside(hr, 844, 390), f'install2 help 844x390: card + row inside the viewport ({hr}, {r2})')
+            pg.screenshot(path=SH2 + 'help_844x390.png'); relayout(pg, 412, 915)
+            check(tap_el(pg, '.tbt-install', 'help row'), 'install2 help: row tapped'); cstep(pg, 1)
+            e = [x for x in evs(pg) if x['n'] == 'pwa:prompt']
+            check(pg.evaluate(f'{CTX}.pwa.mode') == 'guide-android' and not pg.evaluate(f'{CTX}.tips.helpOpen') and e[-1].get('trigger') == 'help',
+                  f'install2 help: row → Android guide, help card closed, pwa:prompt trigger help ({pg.evaluate(f"{CTX}.pwa.mode")}, {e[-1:]})')
+            c.close()
+
+            # (2) Android Chrome with a (faked) beforeinstallprompt: Add → prompt(); the help row → prompt() too
+            tag = 'p1_pwa2_chrome'; c, pg = new_phone(412, 915, tag, user_agent=UA_ANDROID)
+            p1load(pg, '&play&reset&reveal=all&doors=8&pwa', 4); pg.evaluate(PWA_EV); pg.evaluate(FAKE_BIP); print('[p1] pwa2 chrome page loaded', flush=True)
+            check(pg.evaluate(f'{CTX}.pwa.show(true)'), 'install2 chrome: card shown'); cstep(pg, 1)
+            check(tap_el(pg, '.tb-pwa-add', 'Add'), 'install2 chrome: Add tapped'); wait_ms(pg, 300); cstep(pg, 2)
+            e = [x for x in evs(pg) if x['n'] in ('pwa:dismiss', 'pwa:accept')]
+            check(pg.evaluate('window.__prompted') == 1 and not rect(pg, '.tb-pwa-card') and e and e[-1].get('guide') == 'prompt', f'install2 chrome: Add → beforeinstallprompt.prompt() ({pg.evaluate("window.__prompted")}, {e})')
+            pg.evaluate(FAKE_BIP)
+            r = open_help_row(pg, 'chrome'); check(bool(r), f'install2 chrome: help row shown ({r})')
+            check(tap_el(pg, '.tbt-install', 'help row'), 'install2 chrome: help row tapped'); wait_ms(pg, 300); cstep(pg, 1)
+            e = [x for x in evs(pg) if x['n'] == 'pwa:prompt']
+            check(pg.evaluate('window.__prompted') == 2 and e[-1].get('trigger') == 'help' and e[-1].get('guide') == 'prompt', f'install2 chrome: help row → prompt() ({pg.evaluate("window.__prompted")}, {e[-1:]})')
+            c.close()
+
+            # (3) iPhone: Add → Share / Add to Home Screen guide; the help row → the same guide
+            tag = 'p1_pwa2_ios'; c, pg = new_phone(412, 915, tag, user_agent=UA_IPHONE)
+            p1load(pg, '&play&reset&reveal=all&doors=8&pwa', 4); pg.evaluate(PWA_EV); print('[p1] pwa2 iphone page loaded', flush=True)
+            check(pg.evaluate(f'{CTX}.pwa.platform') == 'ios' and pg.evaluate(f'{CTX}.pwa.show(true)'), 'install2 iphone: platform ios, card shown'); cstep(pg, 1)
+            check(tap_el(pg, '.tb-pwa-add', 'Add'), 'install2 iphone: Add tapped'); cstep(pg, 1)
+            gt = pg.evaluate("document.querySelector('.tb-pwa-card')?.innerText.replace(/\\s+/g, ' ') || ''")
+            check(pg.evaluate(f'{CTX}.pwa.mode') == 'guide' and 'Share' in gt and 'Add to Home Screen' in gt, f'install2 iphone: Add → Share / Add to Home Screen guide ({gt!r})')
+            pg.screenshot(path=SH2 + 'ios_guide_412x915.png')
+            card_fits(pg, 844, 390, 'install2 iphone guide'); pg.screenshot(path=SH2 + 'ios_guide_844x390.png'); relayout(pg, 412, 915)
+            check(tap_el(pg, '.tb-pwa-ok', 'Got it'), 'install2 iphone: Got it'); wait_ms(pg, 400); cstep(pg, 2)
+            r = open_help_row(pg, 'iphone'); check(bool(r), f'install2 iphone: help row shown ({r})')
+            check(tap_el(pg, '.tbt-install', 'help row'), 'install2 iphone: help row tapped'); cstep(pg, 1)
+            check(pg.evaluate(f'{CTX}.pwa.mode') == 'guide', f'install2 iphone: help row → iPhone guide ({pg.evaluate(f"{CTX}.pwa.mode")})')
+            c.close()
+
+            # (5) running as the installed app (display-mode: standalone): no offer, no help row
+            tag = 'p1_pwa2_standalone'; c, pg = new_phone(412, 915, tag, init=STANDALONE, user_agent=UA_WV)
+            p1load(pg, '&play&reset&reveal=all&doors=8&pwa', 4); print('[p1] pwa2 standalone page loaded', flush=True)
+            check(pg.evaluate(f'{CTX}.pwa.standalone') and not pg.evaluate(f'{CTX}.pwa.helpAvailable'), 'install2 standalone: detected, nothing to offer')
+            pg.evaluate('window.__tinselby.step(2.5, 26)')
+            check(not pg.evaluate(f'{CTX}.pwa.cardShown') and not rect(pg, '.tb-pwa-card'), f'install2 standalone: no offer 65 s into play ({pstate(pg)})')
+            r = open_help_row(pg, 'standalone')
+            check(not r and pg.evaluate(f'{CTX}.tips.helpOpen'), f'install2 standalone: ? card open without the install row ({r})')
+            c.close()
 
         # ---- 5. console errors across the part (Google Fonts can't load here: no network for file:// runs)
         pe = [e for e in errs if e.startswith('[p1') and not re.search(r'fonts\.(googleapis|gstatic)\.com', e)]
