@@ -1,0 +1,18 @@
+<!-- Fallback splash, only used when design/splash/trailer.html is missing. Same contract as the real trailer:
+     #tb-splash (bg #2b3452), --p (0..1) fills the bar, .tbs-status text, .tbs-idle loop, .tbs-out exit (~500 ms). -->
+<style>
+#tb-splash{position:fixed;inset:0;z-index:9999;background:#2b3452;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff4e2;font:600 16px/1.2 Fredoka,"Trebuchet MS",system-ui,sans-serif;transition:opacity .5s ease,transform .5s ease;--p:0}
+#tb-splash .tbs-star{width:64px;height:64px;animation:tbs-spin 4.5s ease-out both}
+#tb-splash.tbs-idle .tbs-star{animation:tbs-bob 2.4s ease-in-out infinite}
+#tb-splash .tbs-bar{width:min(220px,60vw);height:10px;border-radius:5px;background:rgba(255,255,255,.14);overflow:hidden}
+#tb-splash .tbs-fill{height:100%;background:#e8b64c;transform-origin:0 50%;transform:scaleX(var(--p));transition:transform .45s ease-out}
+#tb-splash.tbs-out{opacity:0;transform:scale(1.03)}
+@keyframes tbs-spin{from{transform:scale(.4) rotate(-90deg);opacity:0}30%{opacity:1}to{transform:none}}
+@keyframes tbs-bob{50%{transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){#tb-splash,#tb-splash *{animation:none!important;transition:opacity .3s ease!important}#tb-splash.tbs-out{transform:none}}
+</style>
+<div id="tb-splash" role="status" aria-label="Tinselby is loading">
+  <svg class="tbs-star" viewBox="0 0 24 24" aria-hidden="true"><path fill="#e8b64c" d="M12 1.5l3 6.8 7.3.7-5.5 4.9 1.6 7.2L12 17.4l-6.4 3.7 1.6-7.2L1.7 9l7.3-.7z"/></svg>
+  <div class="tbs-bar" aria-hidden="true"><div class="tbs-fill"></div></div>
+  <div class="tbs-status">Loading…</div>
+</div>

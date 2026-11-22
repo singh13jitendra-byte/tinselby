@@ -32,9 +32,12 @@
     <meta name="twitter:description" content="Explore a cosy knitted Christmas city, open advent doors and play with friends." />
     <meta name="twitter:image" content="https://tinselby-sepia.vercel.app/og.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <!-- tb-splash -->
+    <!-- launch splash goes first (src/splash/vite-plugin.js); the web font sits after it so its request never holds
+         back the splash's first paint (a stylesheet in <body> only blocks what comes after it) -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <canvas id="c"></canvas>
     <div id="ui"></div>
     <script type="module" src="/src/main.js"></script>

@@ -35,6 +35,9 @@ import { createPwa } from './pwa/index.js';
 import { createStreaks } from './streaks/index.js';
 import { createScores } from './scores/index.js';
 import { createSanta } from './santa/index.js';
+import { bootSplash } from './splash/index.js'; // launch trailer progress (src/splash): parsed → world → first frame → entry
+
+bootSplash.parsed();
 
 const params = new URLSearchParams(location.search);
 const canvas = document.getElementById('c');
@@ -55,6 +58,7 @@ ctx.audio = createAudio(ctx);
 ctx.city = buildCity(ctx);
 ctx.world = createWorld(ctx);
 ctx.life = buildLife(ctx);
+bootSplash.world();
 ctx.progress = createProgress(ctx);
 ctx.minigames = createMiniGames(ctx);
 for (const def of MINIGAMES) ctx.minigames.register(def);
@@ -146,4 +150,4 @@ function applyTestParams() {
 }
 applyTestParams();
 window.__tinselby.ready = true;
-engine.start();
+bootSplash.start(() => engine.start()); // = engine.start(); with the launch splash up, one painted frame later
