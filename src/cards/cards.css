@@ -1,12 +1,17 @@
 /* Christmas card maker (src/cards). Knitted panel like the invite / wardrobe cards. Phone first: 360×640, 390×844,
    844×390 (landscape: preview left, choices right), desktop. */
-.tbc-layer { z-index: 23; overflow: hidden; }
+/* a full modal: the backdrop covers the whole screen (HUD included) and catches every tap outside the panel */
+#ui .tbc-layer { z-index: 23; overflow: hidden; pointer-events: auto; }
 .tbc-layer[hidden], .tbc-busy[hidden], .tbc-msg[hidden], .tbc-actions [hidden], .tbc-chip[hidden] { display: none !important; }
 .tbc-panel {
   position: relative; width: min(440px, 100%); max-height: calc(100vh - 34px - var(--safe-t) - var(--safe-b)); max-height: calc(100dvh - 34px - var(--safe-t) - var(--safe-b));
-  padding: 26px 16px 14px; display: flex; flex-direction: column; animation: calIn .32s cubic-bezier(.3, 1.4, .5, 1) both;
+  padding: 14px 16px 14px; display: flex; flex-direction: column; gap: 8px; animation: calIn .32s cubic-bezier(.3, 1.4, .5, 1) both;
 }
-.tbc-panel .tb-modal-title, .tbc-panel .tb-modal-close { z-index: 2; }
+/* header row inside the panel (clear of the HUD round buttons): title tab left, ✕ right */
+.tbc-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
+.tbc-panel .tbc-head .tb-modal-title { position: static; left: auto; top: auto; min-width: 0; white-space: nowrap; box-shadow: 0 3px 0 #2b4d30; }
+.tbc-panel .tbc-head .tb-modal-close { position: relative; right: auto; top: auto; flex: none; width: 44px; height: 44px; min-height: 44px; padding: 0; display: grid; place-items: center; }
+.tbc-panel .tbc-head .tb-modal-close svg { width: 20px; height: 20px; }
 .tbc-tico { display: inline-grid; place-items: center; }
 .tbc-tico svg { width: 20px; height: 20px; }
 .tbc-body { display: flex; flex-direction: column; gap: 10px; min-height: 0; flex: 1; }
@@ -65,14 +70,14 @@
   .tbc-panel {
     width: 100%; max-width: 640px; border-radius: 24px 24px 0 0;
     max-height: calc(100vh - 60px - var(--safe-t)); max-height: calc(100dvh - 60px - var(--safe-t));
-    padding: 24px calc(14px + var(--safe-r)) calc(12px + var(--safe-b)) calc(14px + var(--safe-l));
+    padding: 12px calc(14px + var(--safe-r)) calc(12px + var(--safe-b)) calc(14px + var(--safe-l));
   }
-  .tbc-panel .tb-modal-close { right: calc(12px + var(--safe-r)); top: -22px; }
-  .tbc-panel .tb-modal-title { left: calc(16px + var(--safe-l)); top: -16px; }
-  .tbc-preview { height: clamp(150px, calc(100vh - 430px), 52vh); height: clamp(150px, calc(100dvh - 430px), 52dvh); }
+  /* the header row inside the panel costs ~20 px more than the old tabs on its edge: the preview gives them back */
+  .tbc-preview { height: clamp(150px, calc(100vh - 460px - var(--safe-b)), 50vh); height: clamp(150px, calc(100dvh - 460px - var(--safe-b)), 50dvh); }
 }
 @media (orientation: portrait) and (max-height: 700px) {
-  .tbc-preview { height: clamp(140px, calc(100vh - 438px), 52vh); height: clamp(140px, calc(100dvh - 438px), 52dvh); }
+  .tbc-panel { gap: 6px; }
+  .tbc-preview { height: clamp(130px, calc(100vh - 446px - var(--safe-b)), 50vh); height: clamp(130px, calc(100dvh - 446px - var(--safe-b)), 50dvh); }
 }
 /* phones: scene chips without icons so the three fit one row; the fallback row WhatsApp / Copy link / Save fits one line */
 @media (max-width: 440px) {
@@ -82,29 +87,33 @@
 }
 /* short portrait phones (360×640): tighter rows so the preview can stay bigger */
 @media (orientation: portrait) and (max-height: 700px) {
-  .tbc-chip { min-height: 38px; }
   .tbc-lab { margin-top: 2px; }
   .tbc-scroll { gap: 5px; }
   .tbc-actions .knit-btn { min-height: 46px; }
 }
 /* small phones */
 @media (max-width: 380px) {
-  .tbc-panel { padding: 24px calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l)); }
+  .tbc-panel { padding: 12px calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l)); }
   .tbc-chip { font-size: 13.5px; padding: 0 9px; }
   .tbc-scenes .tbc-chip { padding: 0 8px; gap: 4px; }
   .tbc-chip .tbc-ci svg { width: 16px; height: 16px; }
   .tbc-actions .knit-btn { font-size: 15px; padding: 0 8px; }
 }
-/* landscape: preview on the left, choices on the right */
+/* landscape: preview on the left (full height), header row + choices on the right */
 @media (orientation: landscape) and (min-width: 560px) {
-  .tbc-panel { width: min(780px, 100%); }
-  .tbc-body { flex-direction: row; gap: 16px; align-items: stretch; }
-  .tbc-preview { align-self: flex-start; height: min(520px, calc(100vh - 92px - var(--safe-t) - var(--safe-b))); height: min(520px, calc(100dvh - 92px - var(--safe-t) - var(--safe-b))); }
+  .tbc-panel {
+    width: min(780px, 100%); display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "prev head" "prev side"; column-gap: 16px; row-gap: 6px;
+  }
+  .tbc-body { display: contents; }
+  .tbc-head { grid-area: head; }
+  .tbc-side { grid-area: side; }
+  .tbc-preview { grid-area: prev; align-self: start; height: min(520px, calc(100vh - 82px - var(--safe-t) - var(--safe-b))); height: min(520px, calc(100dvh - 82px - var(--safe-t) - var(--safe-b))); }
 }
 @media (orientation: landscape) and (max-height: 460px) {
-  .tbc-panel { padding: 22px 14px 10px; }
-  .tbc-lab { margin-top: 2px; }
-  .tbc-chip { min-height: 38px; }
+  .tbc-panel { padding: 12px 14px 10px; row-gap: 4px; }
+  .tbc-lab { margin-top: 0; }
+  .tbc-scroll { gap: 5px; }
   .tbc-actions .knit-btn { min-height: 44px; }
 }
 

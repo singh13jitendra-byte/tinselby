@@ -163,6 +163,27 @@
   .cal-dtxt { flex-basis: 100%; }
   .cal-go { width: 100%; justify-content: center; min-height: 46px; padding: 8px 14px; }
 }
+/* portrait phones: a slimmer open-door strip so every title fits two whole lines (widest: "Ferris Wheel Gnomes" ≈ 66 px) */
+@media (orientation: portrait) and (max-width: 599px) {
+  .cal-door { padding: 6px 6px 5px 7px; }
+  .cal-door.s-done { padding-left: 14px; }
+  .cal-door.s-done::before { width: 9px; }
+}
+/* narrow phones (≤ 400 px: 360×780, 390×844): win tile width from the margins, and rows tall enough for
+   number + two title lines + giver line (6 + 19 + 2 + 2 × 13.2 + 2 + 11.5 + 5 ≈ 72 px) */
+@media (orientation: portrait) and (max-width: 400px) {
+  .cal-wrap { padding-left: calc(4px + var(--safe-l)); padding-right: calc(4px + var(--safe-r)); }
+  .cal-panel { padding: 11px 9px; outline-offset: -6px; }
+  .cal-grid { column-gap: 4px; row-gap: 6px; grid-auto-rows: minmax(74px, 1fr); }
+  .cal-door { padding: 6px 5px 5px 6px; }
+  .cal-door.s-done { padding-left: 12px; }
+  .cal-door.s-done::before { width: 7px; }
+  .cal-t { letter-spacing: -.01em; }
+}
+@media (orientation: portrait) and (max-width: 374px) {
+  .cal-grid { grid-auto-rows: minmax(72px, 1fr); }
+  .cal-t { font-size: 11px; }
+}
 @media (orientation: portrait) and (min-width: 600px) {
   .cal-grid { gap: 10px; }
   .cal-n { font-size: 24px; }

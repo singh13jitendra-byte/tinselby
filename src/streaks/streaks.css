@@ -19,3 +19,18 @@
   .tb-streak-pop .tbk-t { font-size: 15px; }
   .tb-streak-pop .tbk-x { margin-top: 4px; }
 }
+
+/* The mitten chip (markup in src/ui/hud.js, look in src/ui/ui.css): a 40 px tall tap target with the same 28 px pill.
+   The button box grows 6 px above and below (negative margins keep the stats row and its neighbours where they were);
+   the visible pill is drawn by ::before in the original 28 px band. --tbk-hit tells the popover where the pill ends. */
+#ui .tb-stats button.tb-streak {
+  --tbk-hit: 6px;
+  min-height: 40px; margin: calc(-1 * var(--tbk-hit)) 0; isolation: isolate;
+  background: transparent; box-shadow: none; outline: 0;
+}
+#ui .tb-stats button.tb-streak::before {
+  inset: var(--tbk-hit) 0; z-index: -1; border-radius: 999px;
+  background: rgba(36, 44, 72, 0.8); box-shadow: 0 4px 12px rgba(10, 10, 30, 0.25);
+  outline: 1.5px dashed rgba(255, 244, 226, 0.3); outline-offset: -4px;
+}
+#ui .tb-stats button.tb-streak:focus-visible::before { outline: 2px solid var(--gold, #ffd66e); outline-offset: 1px; }

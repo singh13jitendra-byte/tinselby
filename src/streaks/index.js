@@ -98,7 +98,8 @@ export function createStreaks(ctx, opts = {}) {
     const w = pop.offsetWidth;
     const left = Math.max(8, Math.min(W - w - 8, r.left + r.width / 2 - w / 2));
     pop.style.left = `${Math.round(left)}px`;
-    pop.style.top = `${Math.round(r.bottom + 9)}px`;
+    const hit = parseFloat(getComputedStyle(popAnchor).getPropertyValue('--tbk-hit')) || 0; // invisible tap margin under the pill (streaks.css)
+    pop.style.top = `${Math.round(r.bottom - hit + 9)}px`;
     pop.style.setProperty('--ax', `${Math.round(Math.max(14, Math.min(w - 14, r.left + r.width / 2 - left)))}px`);
   }
   /** Show (or, if open, close) the little "5-day streak!" card under the chip. */

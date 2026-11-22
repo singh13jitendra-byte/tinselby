@@ -50,12 +50,15 @@ export function createCards(ctx) {
   // ---------------------------------------------------------------- DOM
   const chip = (g, id, inner, extra = '') => `<button class="tbc-chip" data-g="${g}" data-id="${id}" ${extra}>${inner}</button>`;
   const el = document.createElement('div');
-  el.className = 'tb-modal tbc-layer';
+  // a full modal: the backdrop (interactive, so it catches taps) covers the whole screen, HUD included; title + ✕ sit inside the panel
+  el.className = 'tb-modal tbc-layer interactive';
   el.hidden = true;
   el.innerHTML = `
-    <div class="tbc-panel knit-card interactive" role="dialog" aria-label="Send a Christmas card">
-      <div class="tb-modal-title"><span class="tbc-tico">${CARD_ICONS.card}</span>Christmas card</div>
-      <button class="knit-btn cream round tb-modal-close tbc-x" aria-label="Close">${CARD_ICONS.close}</button>
+    <div class="tbc-panel knit-card interactive" role="dialog" aria-modal="true" aria-label="Send a Christmas card">
+      <div class="tbc-head">
+        <div class="tb-modal-title tbc-title"><span class="tbc-tico">${CARD_ICONS.card}</span>Christmas card</div>
+        <button class="knit-btn cream round tb-modal-close tbc-x" aria-label="Close">${CARD_ICONS.close}</button>
+      </div>
       <div class="tbc-body">
         <div class="tbc-preview">
           <canvas class="tbc-canvas" width="${CARD_W}" height="${CARD_H}" aria-label="Your Christmas card"></canvas>
