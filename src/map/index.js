@@ -145,8 +145,14 @@ export function createMap(ctx) {
   // just under it) and the goal card spans the screen below; landscape/desktop: map top-left, goal card beside it up to
   // the round buttons. We place the HUD's goal column (.tb-tl) here too, since we're the ones measuring.
   let size = 72, lastRect = '';
+  // safe-area insets as px (the goal column's CSS left is calc(--safe-l + --tl-left), so its width must leave that out)
+  const safeProbe = document.createElement('div');
+  safeProbe.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:0 var(--safe-r, 0px) 0 var(--safe-l, 0px)';
+  uiRoot.appendChild(safeProbe);
+  const safeLR = () => { const c = getComputedStyle(safeProbe); return [parseFloat(c.paddingLeft) || 0, parseFloat(c.paddingRight) || 0]; };
   function layoutMini() {
     const vw = window.innerWidth, vh = window.innerHeight;
+    const [sl, sr] = safeLR();
     const hud = uiRoot.querySelector('.tb-hud');
     const tl = uiRoot.querySelector('.tb-hud .tb-tl');
     const tr = uiRoot.querySelector('.tb-hud .tb-tr');
@@ -160,17 +166,21 @@ export function createMap(ctx) {
       if (gap >= 52) { // fits in the corner beside the buttons
         size = Math.min(66, Math.floor(gap), Math.round(rowH + 14));
         top = Math.max(6, rowTop + (rowH - size) / 2);
-        tlTop = Math.max(rowBottom, top + size) + 8; tlLeft = L; tlW = vw - 2 * L;
+        tlTop = Math.max(rowBottom, top + size) + 8; tlLeft = L; tlW = vw - 2 * L - sl - sr;
       } else { // narrow phone: just under the row, goal card beside it
         size = 60; top = rowBottom + 8;
-        tlTop = top; tlLeft = L + size + 8; tlW = vw - tlLeft - L;
+        tlTop = top; tlLeft = L + size + 8; tlW = vw - tlLeft - L - sl - sr;
       }
     } else {
       size = vh <= 500 ? 62 : 80;
       top = 12;
       tlTop = 12; tlLeft = L + 2 + size + 10;
-      const right = has ? r.left - 10 : vw - 12;
-      tlW = Math.max(180, Math.min(520, right - tlLeft));
+      // the goal card takes only the free width between the mini-map and the round-button row (viewport px, so the
+      // left safe inset counts); if that leaves too little, it drops under the row and uses the width up to the edge
+      const right = has ? r.left - 10 : vw - 12 - sr;
+      const free = Math.min(520, right - sl - tlLeft);
+      if (free >= 200 || !has) tlW = Math.max(160, free);
+      else { tlTop = Math.round(r.bottom + 8); tlW = Math.max(160, Math.min(520, vw - 12 - sr - sl - tlLeft)); }
     }
     const key = `${top}|${size}|${tlTop}|${tlLeft}|${tlW}`;
     if (key !== lastRect) {
@@ -289,9 +299,16 @@ export function createMap(ctx) {
     const vw = window.innerWidth, vh = window.innerHeight;
     const B = base.bounds, bw = B.x1 - B.x0, bh = B.z1 - B.z0;
     let aw, ah;
-    if (vw > vh && vh <= 500) { aw = vw - 16 - 20 - 170 - 10; ah = vh - 22 - 24 - 6; } // map left, info right
-    else if (vh >= vw) { aw = Math.min(880, vw - 20) - 20; ah = vh - 28 - 32 - 60 - 24; } // info under the map
-    else { fc.style.width = fc.style.height = '0px'; const r = stage.getBoundingClientRect(); aw = r.width; ah = r.height; }
+    // room inside the overlay (measured: safe areas + the card's padding, which clears the tabs and ✕, are counted)
+    const px = (v) => parseFloat(v) || 0, fcs = getComputedStyle(full), ccs = getComputedStyle(card);
+    const cw = full.clientWidth - px(fcs.paddingLeft) - px(fcs.paddingRight), ch = full.clientHeight - px(fcs.paddingTop) - px(fcs.paddingBottom);
+    const cpx = px(ccs.paddingLeft) + px(ccs.paddingRight), cpy = px(ccs.paddingTop) + px(ccs.paddingBottom), cg = px(ccs.columnGap) || 8;
+    const measured = cw > 0 && ch > 0;
+    if (vw > vh && vh <= 500) { // map left, info right (170 px column)
+      if (measured) { aw = cw - cpx - cg - 170; ah = ch - cpy; } else { aw = vw - 16 - 20 - 170 - 10; ah = vh - 22 - 40 - 6; }
+    } else if (vh >= vw) { // info under the map (52 px foot)
+      if (measured) { aw = Math.min(880, cw) - cpx; ah = ch - cpy - cg - 52; } else { aw = Math.min(880, vw - 20) - 20; ah = vh - 28 - 54 - 60 - 24; }
+    } else { fc.style.width = fc.style.height = '0px'; const r = stage.getBoundingClientRect(); aw = r.width; ah = r.height; }
     const k = Math.max(1, Math.min(aw / bw, ah / bh));
     const w = Math.floor(bw * k), h = Math.floor(bh * k);
     fc.style.width = `${w}px`; fc.style.height = `${h}px`;
