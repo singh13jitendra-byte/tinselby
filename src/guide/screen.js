@@ -1,27 +1,39 @@
 // Guide DOM layer: the edge arrow (target off-screen: a knitted badge pinned to the screen border, pointing at it, with
-// a tiny "who / what · 24 m" label; steers clear of the joystick, HUD card, top-right buttons, mini-map, social stack and
-// interact button by reading their rects ~4×/s) and the bouncing "!" bubble over the target person (or a glowing pin +
-// ring over a spot) when it is on screen. DOM only (0 draw calls); transforms are written only when they change.
+// a tiny "who / what · 24 m" label) and the bouncing "!" bubble over the target person (or a glowing pin + ring over a
+// spot) when it is on screen. No marker ever covers a HUD piece (goal card, stat chips, round buttons, mini-map,
+// joystick, action button, social corner, toasts, cards): their rects are read ~4×/s into a flat array; the "!" is pushed
+// the shortest way out with a pointer still aiming at the target (or turns into the edge badge when that's too far), the
+// badge and its label pick free spots. DOM only (0 draw calls); transforms are written only when they change.
 import { ICONS } from '../ui/icons.js';
 
 const PERSON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4.2" fill="currentColor"/><path d="M4 21c0-4.6 3.6-7.6 8-7.6s8 3 8 7.6z" fill="currentColor"/></svg>';
-/** Elements the edge arrow must not cover (other modules can opt in with data-guide-avoid). */
+/**
+ * Elements no guide marker (edge badge + label, "!" bubble, pin) may cover; other modules can opt in with data-guide-avoid.
+ * Round buttons are matched generically (HUD row, emote / friends / activities in the bottom-right corner, later ones).
+ * Hidden elements measure 0×0 and drop out by themselves.
+ */
 const AVOID = [
-  '.tb-hud:not([hidden]) .tb-tl', '.tb-hud:not([hidden]) .tb-tc', '.tb-hud:not([hidden]) .tb-tr', '.tb-hud:not([hidden]) .tb-goal',
+  '.tb-hud:not([hidden]) .tb-goal', '.tb-hud:not([hidden]) .tb-stats > *', '.tb-hud:not([hidden]) .tb-tc', '.tb-hud:not([hidden]) .tb-tr',
   '.tb-act:not([hidden])', '.tb-joylayer:not([hidden]) .tb-joy', '.tb-keys:not([hidden])',
-  '.tbs-root .tbs-corner', '.tbs-root .tbs-main', '.tbs-root .tbs-extra', '.tbs-root .tbs-pill',
-  '.tbm-mini', '.tb-minimap', '.tbm-root .tbm-btn', '[data-guide-avoid]', '.tb-cards:not(:empty)',
+  '.knit-btn.round', '.tbs-corner .knit-btn', '.tbs-root .tbs-pill', '.tbs-root .tbs-extra > *',
+  '.tbm-mini:not([hidden])', '.tb-minimap', '.tbm-root .tbm-btn', '[data-guide-avoid]',
+  '.tb-toast', '.tb-cards > *', '.sn-cards > .tb-card:not(.out)', '.tbt-call:not([hidden])', '.tbt-help:not([hidden])',
 ].join(',');
-const MAXR = 24;
+const MAXR = 48;
 const BADGE = 46; // badge diameter (px)
 const EDGE = 37; // badge centre ↔ screen border: the arrowhead (11 px past the rim) stays on screen
+const GAP = 6; // px: clear space kept between a marker and a HUD piece
+/** "!" / pin footprint relative to its anchor (bottom centre) at scale 1: l, t, r, b — incl. the bob, glow ring and tail. */
+const MARK_BOX = { person: [-24, -48, 24, 11], spot: [-28, -59, 28, 13] }; // pointer reaches 27 px from the bubble's centre
+const MARK_MAXD = 150; // px: a marker pushed further than this off its target switches to the edge-badge form…
+const MARK_BACK = 110; // …and comes back as a marker once the push needed is under this (hysteresis)
 
 export function createScreen(ctx) {
   const { uiRoot } = ctx;
   const root = document.createElement('div');
   root.className = 'tbg-root';
   root.innerHTML = `
-    <div class="tbg-mark" hidden><div class="tbg-bob"><div class="tbg-bang">!</div></div><div class="tbg-ring"></div></div>
+    <div class="tbg-mark" hidden><div class="tbg-bob"><div class="tbg-bang">!</div><span class="tbg-mrot"><i class="tbg-mtip"></i></span></div><div class="tbg-ring"></div></div>
     <div class="tbg-edge" hidden>
       <button class="tbg-badge" aria-label="Show the way"><span class="tbg-rot"><i class="tbg-tip"></i></span><span class="tbg-ico"></span></button>
       <div class="tbg-lab"><b class="tbg-who"></b><span class="tbg-dist"></span></div>
@@ -29,7 +41,7 @@ export function createScreen(ctx) {
     <div class="tbg-safe" aria-hidden="true"></div>`;
   uiRoot.appendChild(root);
   const $ = (s) => root.querySelector(s);
-  const mark = $('.tbg-mark'), bang = $('.tbg-bang');
+  const mark = $('.tbg-mark'), bang = $('.tbg-bang'), mrot = $('.tbg-mrot');
   const edge = $('.tbg-edge'), badge = $('.tbg-badge'), rot = $('.tbg-rot'), ico = $('.tbg-ico'), who = $('.tbg-who'), distEl = $('.tbg-dist');
   const probe = $('.tbg-safe');
 
@@ -46,7 +58,7 @@ export function createScreen(ctx) {
   window.addEventListener('resize', () => { readSafe(); rectT = 0; elsT = 0; });
   function refreshRects(dt, W, H) {
     elsT -= dt; rectT -= dt;
-    if (elsT <= 0) { elsT = 2; els = uiRoot.querySelectorAll(AVOID); }
+    if (elsT <= 0) { elsT = 0.5; els = uiRoot.querySelectorAll(AVOID); } // new buttons / toasts / cards are picked up within 0.5 s
     if (rectT > 0) return;
     rectT = 0.25;
     nRects = 0;
@@ -57,13 +69,21 @@ export function createScreen(ctx) {
       const o = nRects * 4; rects[o] = r.left; rects[o + 1] = r.top; rects[o + 2] = r.right; rects[o + 3] = r.bottom; nRects++;
     }
   }
-  const PAD = BADGE / 2 + 6;
+  const PAD = Math.ceil(BADGE / 2 * 1.09) + GAP; // badge radius at the top of its pulse + gap
   function clear(x, y) {
     for (let i = 0; i < nRects; i++) {
       const o = i * 4;
       if (x > rects[o] - PAD && x < rects[o + 2] + PAD && y > rects[o + 1] - PAD && y < rects[o + 3] + PAD) return false;
     }
     return true;
+  }
+  /** Index of the first obstacle the box (l, t, r, b) comes within GAP of, or -1. */
+  function hit(l, t, r, b) {
+    for (let i = 0; i < nRects; i++) {
+      const o = i * 4;
+      if (r > rects[o] - GAP && l < rects[o + 2] + GAP && b > rects[o + 1] - GAP && t < rects[o + 3] + GAP) return i;
+    }
+    return -1;
   }
 
   // ---- perimeter of the safe rect (clockwise from top-left) → point
@@ -99,7 +119,7 @@ export function createScreen(ctx) {
   }
 
   // ---- edge arrow state
-  const st = { edge: false, ex: 0, ey: 0, angle: 0, side: '', mark: false, mx: 0, my: 0, kind: '' };
+  const st = { edge: false, ex: 0, ey: 0, angle: 0, side: '', mark: false, mx: 0, my: 0, kind: '', push: 0 };
   let ex = -1, ey = -1, lastEX = NaN, lastEY = NaN, lastRot = NaN, lastSide = '', lastKind = '', lastIcon = '', lastWho = '', lastDist = -1, edgeOn = false;
   let lastMX = NaN, lastMY = NaN, lastMS = NaN, markOn = false, markKind = '';
 
@@ -132,7 +152,10 @@ export function createScreen(ctx) {
       if (!found) return false;
       gx = px; gy = py;
     }
-    if (ex < 0 || !edgeOn) { ex = gx; ey = gy; } else { const a = Math.min(1, dt * 10); ex += (gx - ex) * a; ey += (gy - ey) * a; }
+    if (ex < 0 || !edgeOn) { ex = gx; ey = gy; } else {
+      const a = Math.min(1, dt * 10); ex += (gx - ex) * a; ey += (gy - ey) * a;
+      if (!clear(ex, ey)) { ex = gx; ey = gy; } // never glide across a HUD piece: jump to the free spot instead
+    }
     // aim: from the badge at the target's screen point when it is in front, else along the centre ray
     let ax = dx, ay = dy;
     if (inFront) { ax = aimX - ex; ay = aimY - ey; }
@@ -140,7 +163,13 @@ export function createScreen(ctx) {
     // label towards the middle of the screen, else the first side where it covers no HUD
     const ox = ex - cx, oy = (ey - cy) * (W / H);
     let side = Math.abs(oy) >= Math.abs(ox) ? (oy < 0 ? 't' : 'b') : (ox < 0 ? 'l' : 'r');
-    if (!labelFits(side, ex, ey, W, H)) for (let i = 0; i < 4; i++) if (labelFits(SIDES[i], ex, ey, W, H)) { side = SIDES[i]; break; }
+    const prev = lastSide.charAt(0);
+    if (prev && prev !== 'n' && prev !== side && labelFits(prev, ex, ey, W, H)) side = prev; // keep the label where it is while it fits (no flip-flop)
+    else if (!labelFits(side, ex, ey, W, H)) {
+      let found = false;
+      for (let i = 0; i < 4; i++) if (labelFits(SIDES[i], ex, ey, W, H)) { side = SIDES[i]; found = true; break; }
+      if (!found) side = 'n'; // nowhere clear: badge only (the label never covers the HUD)
+    }
     st.edge = true; st.ex = ex; st.ey = ey; st.side = side;
     const qx = Math.round(ex * 2) / 2, qy = Math.round(ey * 2) / 2, qa = Math.round(st.angle * 57.2958);
     if (qx !== lastEX || qy !== lastEY) { edge.style.transform = `translate(${qx}px,${qy}px)`; lastEX = qx; lastEY = qy; }
@@ -164,12 +193,53 @@ export function createScreen(ctx) {
   function hideEdge() { if (edgeOn) { edgeOn = false; edge.hidden = true; } st.edge = false; }
   function hideMark() { if (markOn) { markOn = false; mark.hidden = true; } st.mark = false; }
 
-  function placeMark(x, y, kind, scale) {
+  // ---- "!" / pin: keep its whole footprint off the HUD. Pushed the shortest way out (down below the top band, sideways
+  // off a column, up off the bottom buttons), with a small pointer still aiming at the target; too far → edge badge.
+  let fx = 0, fy = 0, fDir = 0, mDir = 0, moved = false, blocked = false, lastPA = NaN;
+  /** Fit the footprint (offsets ol..ob, already scaled) near anchor (ax, ay): sets fx / fy / fDir, returns the push in px or -1. */
+  function fitMark(ax, ay, ol, ot, or, ob, W, H) {
+    const minX = safe.l + 4 - ol, maxX = W - safe.r - 4 - or, minY = safe.t + 4 - ot, maxY = H - safe.b - 4 - ob;
+    const x0 = Math.max(minX, Math.min(maxX, ax)), y0 = Math.max(minY, Math.min(maxY, ay));
+    if (hit(x0 + ol, y0 + ot, x0 + or, y0 + ob) < 0) { fx = x0; fy = y0; fDir = 0; return Math.abs(x0 - ax) + Math.abs(y0 - ay); }
+    let best = Infinity;
+    for (let d = 1; d <= 4; d++) { // 1 down, 2 left, 3 right, 4 up
+      let x = x0, y = y0, ok = false;
+      for (let it = 0; it < 6; it++) {
+        const i = hit(x + ol, y + ot, x + or, y + ob);
+        if (i < 0) { ok = true; break; }
+        const o = i * 4;
+        if (d === 1) y = rects[o + 3] + GAP + 0.5 - ot; else if (d === 2) x = rects[o] - GAP - 0.5 - or;
+        else if (d === 3) x = rects[o + 2] + GAP + 0.5 - ol; else y = rects[o + 1] - GAP - 0.5 - ob;
+        if (x < minX || x > maxX || y < minY || y > maxY) break;
+      }
+      if (!ok) continue;
+      const cost = Math.abs(x - ax) + Math.abs(y - ay) - (d === mDir ? 24 : 0); // stick with the last way out (no jitter)
+      if (cost < best) { best = cost; fx = x; fy = y; fDir = d; }
+    }
+    return best === Infinity ? -1 : Math.abs(fx - ax) + Math.abs(fy - ay);
+  }
+
+  /** Show the "!" (person) / pin (spot, area) for anchor (x, y). Returns false when it can't sit near its target clear of
+   * the HUD (the caller then shows the edge badge instead). */
+  function placeMark(x, y, kind, scale, W, H) {
+    const box = MARK_BOX[kind === 'person' ? 'person' : 'spot'];
+    const push = fitMark(x, y, box[0] * scale, box[1] * scale, box[2] * scale, box[3] * scale, W, H);
+    if (push < 0 || push > (blocked ? MARK_BACK : MARK_MAXD)) { blocked = true; mDir = 0; hideMark(); return false; }
+    blocked = false; mDir = fDir;
     if (kind !== markKind) { markKind = kind; mark.dataset.kind = kind; bang.textContent = kind === 'person' ? '!' : ''; if (kind !== 'person') bang.innerHTML = ICONS.star; }
-    const qx = Math.round(x * 2) / 2, qy = Math.round(y * 2) / 2, qs = Math.round(scale * 50) / 50;
+    // pointer: on once pushed > 14 px, off again under 8 px
+    const mv = moved ? push > 8 : push > 14;
+    if (mv !== moved) { moved = mv; if (mv) mark.dataset.moved = ''; else delete mark.dataset.moved; lastPA = NaN; }
+    if (moved) { // aim from the bubble's centre at the real anchor
+      const cy = fy - (17 + (kind === 'person' ? 0 : 14)) * scale;
+      const qa = Math.round(Math.atan2(x - fx, -(y - cy)) * 57.2958);
+      if (qa !== lastPA) { mrot.style.transform = `rotate(${qa}deg)`; lastPA = qa; }
+    }
+    const qx = Math.round(fx * 2) / 2, qy = Math.round(fy * 2) / 2, qs = Math.round(scale * 50) / 50;
     if (qx !== lastMX || qy !== lastMY || qs !== lastMS) { mark.style.transform = `translate(${qx}px,${qy}px) scale(${qs})`; lastMX = qx; lastMY = qy; lastMS = qs; }
     if (!markOn) { markOn = true; mark.hidden = false; }
-    st.mark = true; st.mx = x; st.my = y; st.kind = kind;
+    st.mark = true; st.mx = fx; st.my = fy; st.kind = kind; st.push = push;
+    return true;
   }
 
   return {

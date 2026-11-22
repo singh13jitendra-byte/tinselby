@@ -154,7 +154,11 @@ export function createGuide(ctx) {
   // ------------------------------------------------------------ per frame
   const v = new THREE.Vector3();
   engine.addUpdate(() => {
+    const prev = target;
     resolve();
+    // the target was swapped out as you reached it (e.g. a "Show the way" spot cleared on arrival before we saw dist < ARRIVE):
+    // that still counts as arriving, so the lit trail ends instead of running on to the next goal
+    if (prev && target !== prev && Math.hypot(prev.x - player.pos.x, prev.z - player.pos.z) < ARRIVE + 1.5) trailUntil = 0;
     if (target) target.dist = Math.hypot(target.x - player.pos.x, target.z - player.pos.z);
     if (pendingEmit) { pendingEmit = false; game.emit('guide:target', target); }
   }, 6); // after tasks (5) picked the objective, before the HUD (150) reads target.dist
@@ -188,12 +192,16 @@ export function createGuide(ctx) {
     const onScreen = inFront && sx > 12 && sx < W - 12 && sy > 12 && sy < H - 12;
     // "!" / pin
     const talking = (doll && talkWho === doll.who && engine.time < talkUntil) || !!ctx.tasks?.choosing;
+    let covered = false; // on screen, but its spot is under the HUD: the edge badge points at it from a clear place
     if (onScreen && !talking && target.dist > 0.9 && !(doll && doll.hidden)) {
       const far = Math.min(1, Math.max(0, (target.dist - 12) / 20));
-      screen.placeMark(sx, Math.max(sy, 56), target.kind, 1 - 0.22 * far); // keep the whole bubble on screen
+      covered = !screen.placeMark(sx, sy, target.kind, 1 - 0.22 * far, W, H); // kept on screen and off the HUD
     } else screen.hideMark();
     // edge arrow
-    if (!onScreen && target.dist > EDGE_MIN) {
+    if (covered) {
+      if (screen.showEdge(dt, W, H, sx - W / 2, sy - H / 2, true, sx, sy, t)) { screen.edgeOn(); screen.setLabel(target, iconKey); }
+      else screen.hideEdge();
+    } else if (!onScreen && target.dist > EDGE_MIN) {
       let dx, dy;
       if (inFront) { v.set(target.x, gy, target.z).applyMatrix4(camera.matrixWorldInverse); dx = v.x; dy = -v.y; } // = towards the projected point
       else { // behind the camera: the ground bearing from you, relative to the camera's heading (down = behind you)
@@ -230,7 +238,7 @@ export function createGuide(ctx) {
       return {
         free: lastFree, target: target && { ...target },
         arrow: s.edge ? { x: Math.round(s.ex), y: Math.round(s.ey), angle: +s.angle.toFixed(3), side: s.side } : null,
-        mark: s.mark ? { x: Math.round(s.mx), y: Math.round(s.my), kind: s.kind } : null,
+        mark: s.mark ? { x: Math.round(s.mx), y: Math.round(s.my), kind: s.kind, push: Math.round(s.push) } : null,
         trail: { wanted, laid: trail.laid, shown: trail.shown, left: +trail.left.toFixed(1), until: Math.max(0, +(trailUntil - engine.time).toFixed(1)) },
         avoid: screen.rects,
       };

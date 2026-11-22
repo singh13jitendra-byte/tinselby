@@ -21,7 +21,8 @@ function printTexture() {
     g.beginPath(); g.ellipse(w / 2 - 1, 86, 13 + grow, 17 + grow, 0, 0, Math.PI * 2); g.fill();
   };
   // halo: alpha only (r = 0)
-  g.shadowColor = 'rgba(0,0,0,0.9)'; g.shadowBlur = 9; g.fillStyle = 'rgba(0,0,0,0.55)'; sole(3); // shadowBlur: Safari-safe soft edge
+  // (a firm rim: the red-orange halo is what reads against white snow in daylight on a phone)
+  g.shadowColor = 'rgba(0,0,0,0.9)'; g.shadowBlur = 8; g.fillStyle = 'rgba(0,0,0,0.8)'; sole(3.5); // shadowBlur: Safari-safe soft edge
   g.shadowColor = 'transparent'; g.shadowBlur = 0;
   // core: r = 255 → bright gold in the shader
   g.fillStyle = '#ff0000'; sole(0);
@@ -42,7 +43,8 @@ export function createTrail(ctx) {
   const geo = new THREE.PlaneGeometry(PW, PL).rotateX(-Math.PI / 2); // flat, toe towards −z
   const fade = new Float32Array(MAXP);
   geo.setAttribute('aFade', new THREE.InstancedBufferAttribute(fade, 1).setUsage(THREE.DynamicDrawUsage));
-  const core = new THREE.Color('#ffc94d'), halo = new THREE.Color('#ff9a3c');
+  // gold core + deep red-orange halo: glows at night, and keeps contrast on sunlit snow (a pale yellow-orange washed out there)
+  const core = new THREE.Color('#ffc94d'), halo = new THREE.Color('#e2462a');
   const mat = new THREE.ShaderMaterial({
     uniforms: { map: { value: printTexture() }, core: { value: new THREE.Vector3(core.r, core.g, core.b).multiplyScalar(2.3) }, halo: { value: new THREE.Vector3(halo.r, halo.g, halo.b).multiplyScalar(1.1) } },
     vertexShader: /* glsl */ `
