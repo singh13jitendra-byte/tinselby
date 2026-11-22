@@ -242,6 +242,8 @@ function createNetImpl(ctx) {
     gather(g) { try { return view.setGather(g); } catch (e) { return () => {}; } },
     /** Count a completed door towards Town Spirit (fire and forget; queued while offline; deduped). */
     recordDoor(n) { try { core.recordDoor(n); } catch (e) { /* never throw */ } },
+    /** Phase 3 RPCs (src/santa, src/scores) reuse this transport's Supabase client instead of making a second one. */
+    rpc: mode === 'supabase' && transport && transport.rpc ? (fn, args) => transport.rpc(fn, args) : undefined,
     setStyle(style) {
       try {
         if (style && typeof style === 'object') game.state.style = { ...game.state.style, ...style };
