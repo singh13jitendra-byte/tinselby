@@ -42,3 +42,40 @@
 .tbi-toast-ico svg { width: 21px; height: 21px; }
 /* toasts sit under the guide's world markers (.tbg-root z 4); lift the stack above them while ours is showing */
 #ui .tb-toasts:has(> .tbi-toast) { z-index: 5; }
+
+/* Secret Santa link (santa.js): the welcome's present sits on a gold disc; the join card; the "You're in!" banner */
+.tbi-welcome.tbi-santa { background: #fbe3d9; box-shadow: inset 0 0 0 2px rgba(184, 48, 45, 0.45); outline-color: rgba(184, 48, 45, 0.4); }
+.tbi-santa .tbi-ico { background: #fff6e4; box-shadow: 0 3px 0 rgba(139, 37, 35, 0.5); }
+.tbi-santa .tbi-ico svg { width: 32px; height: 32px; }
+.tbi-santa .tbi-l2 { color: var(--green); font-weight: 600; opacity: 1; }
+.tbi-cards:empty { display: none; }
+.tbi-cards { z-index: 9; }
+.tb-card.tbi-sacard[hidden] { display: none; }
+.tbi-sacard .tb-card-ico { background: radial-gradient(circle at 50% 40%, #fffaf0, #f6d9c8); }
+.tbi-sacard .tb-card-ico svg { width: 42px; height: 42px; }
+.tbi-sacard .tb-card-title { overflow-wrap: anywhere; }
+.tbi-sacard .tb-card-btns .knit-btn { min-width: 96px; }
+@media (max-width: 380px) {
+  .tbi-sacard { gap: 10px; padding: 10px 12px; }
+  .tbi-sacard .tb-card-ico { width: 48px; height: 48px; }
+  .tbi-sacard .tb-card-ico svg { width: 34px; height: 34px; }
+  .tbi-sacard .tb-card-title { font-size: 17px; }
+  .tbi-sacard .tb-card-btns .knit-btn { min-width: 84px; padding: 10px 12px; }
+}
+@media (max-height: 480px) {
+  .tbi-cards { bottom: calc(64px + var(--safe-b)); }
+  .tbi-sacard { padding: 8px 12px; }
+  .tbi-sacard .tb-card-ico { width: 46px; height: 46px; }
+  .tbi-sacard .tb-card-ico svg { width: 32px; height: 32px; }
+  .tbi-sacard .tb-card-btns { flex-direction: row; }
+}
+.tbi-sa-banner {
+  flex: none; display: flex; align-items: center; gap: 10px; margin: 0; padding: 8px 12px 8px 8px; border-radius: 14px;
+  background: #e3f1dc; box-shadow: inset 0 0 0 2px rgba(63, 110, 69, 0.45); font: 700 16px/1.2 var(--font); color: var(--green);
+  animation: fadeIn .4s ease both;
+}
+.tbi-sa-bico {
+  flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--green); color: var(--cream); box-shadow: 0 2px 0 rgba(30, 60, 34, 0.5);
+}
+.tbi-sa-bico svg { width: 18px; height: 18px; }

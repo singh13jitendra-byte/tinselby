@@ -7,9 +7,13 @@
 //     waves too. Joining the town itself is src/net's job: ?town=CODE is joined on load (initialTown), never twice.
 //   - game events for analytics: 'invite:open' {hasCard, hasTown} on load, 'invite:played' on the first game:start
 //   ctx.invite.data → the parsed invite (see parse.js) | null
+// Secret Santa links /?town=CODE&santa=1[&from=Ava] (src/santa/link.js): see santa.js. The Secret Santa welcome replaces the
+// line above (new players only), santa=1 is cleaned from the address bar too, and the join card replaces the
+// "waving hello" toast (the sender's doll still waves).   ctx.invite.santa → the arrival (santa.js) | null
 import './invite.css';
 import { ICONS } from '../ui/icons.js';
 import { parseInvite } from './parse.js';
+import { parseSantaInvite, createSantaArrival } from './santa.js';
 
 // knitted envelope with a little heart seal (stroke/fill use currentColor, like src/ui/icons.js)
 const ENVELOPE = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
@@ -22,15 +26,27 @@ export function createInvite(ctx) {
   const { game } = ctx;
   let data = null;
   try { data = parseInvite(ctx.params); } catch (e) { data = null; }
-  const api = { data, active: !!data, welcomeEl: null };
-  if (!data) return api;
+  let santa = null;
+  try { santa = createSantaArrival(ctx, parseSantaInvite(ctx.params)); } catch (e) { console.warn('[invite] santa', e); santa = null; }
+  const santaOn = !!(santa && santa.active);
+  const api = { data, active: !!data, welcomeEl: null, santa: santaOn ? santa : null };
+  window.__invite = api; // debugging / tests
+  cleanUrl();
+  if (!data && !santaOn) return api;
 
-  game.emit('invite:open', { hasCard: !!data.hasCard, hasTown: !!data.town });
+  if (data) game.emit('invite:open', { hasCard: !!data.hasCard, hasTown: !!data.town });
 
   // ---- welcome line on the start / name card
   function addWelcome() {
     const card = document.querySelector('.tb-entry-card');
     if (!card || card.querySelector('.tbi-welcome')) return;
+    const returning = !!card.querySelector('.tb-namebox')?.hidden; // "Welcome back, Mia!" (src/ui/entry.js)
+    if (santaOn) {
+      // Secret Santa link: festive welcome for new players; returning players go straight on to the join card
+      santa.returning = returning;
+      if (!returning && santa.addWelcome(card)) api.welcomeEl = card.querySelector('.tbi-welcome');
+      return;
+    }
     const box = document.createElement('div');
     box.className = 'tbi-welcome';
     box.setAttribute('role', 'status');
@@ -62,16 +78,7 @@ export function createInvite(ctx) {
     api.welcomeEl = box;
   }
   if (game.state.phase === 'entry') addWelcome();
-
-  // ---- clean URL: drop from / card once every module has read the start-up params (main.js builds them synchronously)
-  setTimeout(() => {
-    try {
-      const parts = location.search.replace(/^\?/, '').split('&').filter(Boolean);
-      const keep = parts.filter((kv) => !/^(from|card)(=|$)/.test(kv)); // the rest stays exactly as it was (town, test flags)
-      if (keep.length === parts.length) return;
-      history.replaceState(history.state, '', location.pathname + (keep.length ? '?' + keep.join('&') : '') + location.hash);
-    } catch (e) { /* file:// or sandboxed */ }
-  }, 0);
+  else if (santaOn) santa.returning = true;
 
   // ---- after the name: analytics + "Ava is waving hello!"
   const sameName = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
@@ -102,6 +109,7 @@ export function createInvite(ctx) {
       }
     } catch (e) { /* cosmetic */ }
   }
+  if (!data) return api; // Secret Santa link without ?from: santa.js does the rest
   let played = false;
   game.on('game:start', () => {
     if (played) return;
@@ -110,10 +118,21 @@ export function createInvite(ctx) {
     game.emit('invite:played', {});
     const free = () => game.state.phase === 'play' && !ctx.minigames?.active && !ctx.cam?.shotActive;
     // after the friends-town toast (src/social, 2.2 s) so the two don't fight for the same spot
-    setTimeout(() => { if (free()) toast(); waveSender(); }, data.town ? 3800 : 1600);
+    setTimeout(() => { if (free() && !santaOn) toast(); waveSender(); }, data.town ? 3800 : 1600);
     setTimeout(waveSender, 8000); // presence may still be syncing at the first try
   });
-
-  window.__invite = api; // debugging / tests
   return api;
+}
+
+// ---- clean URL: drop from / card / santa=1 once every module has read the start-up params (main.js builds them
+// synchronously). The rest stays exactly as it was (town: src/net keeps it in step; test flags such as santa=mock).
+function cleanUrl() {
+  setTimeout(() => {
+    try {
+      const parts = location.search.replace(/^\?/, '').split('&').filter(Boolean);
+      const keep = parts.filter((kv) => !/^(from|card)(=|$)/.test(kv) && kv !== 'santa=1');
+      if (keep.length === parts.length) return;
+      history.replaceState(history.state, '', location.pathname + (keep.length ? '?' + keep.join('&') : '') + location.hash);
+    } catch (e) { /* file:// or sandboxed */ }
+  }, 0);
 }
