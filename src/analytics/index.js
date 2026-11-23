@@ -105,12 +105,18 @@ export function createAnalytics(ctx) {
   on('scores:town_best', ({ game: g }) => track('town_best', { game: id24(g) })); // friends-town scoreboards (src/scores): game id only, never names
   on('scores:viewed', ({ where }) => track('scores_viewed', { where: where === 'roster' ? 'roster' : 'results' }));
   // Secret Santa (src/santa): no names, no codes, no presents; members = how many were in the draw
-  on('santa:started', () => track('santa_started', {}));
+  on('santa:started', ({ from } = {}) => track('santa_started', { from: from === 'public' ? 'public' : 'friends' })); // public = one tap from the big town
+  on('santa:invite', ({ method } = {}) => track('santa_invite_shared', { method: method === 'whatsapp' || method === 'copy' ? method : 'share' }));
+  on('santa:card', ({ where } = {}) => track('santa_card_shown', { where: where === 'nudge' || where === 'away' ? where : 'public' }));
   on('santa:joined', () => track('santa_joined', {}));
   on('santa:left', () => track('santa_left', {}));
   on('santa:drawn', ({ members }) => track('santa_drawn', { members: Math.max(0, Math.min(16, +members | 0)) }));
   on('santa:gift', () => track('santa_gift_chosen', {}));
   on('santa:revealed', () => track('santa_revealed', {}));
+  // Secret Santa invite links /?town=…&santa=1&from=… (src/invite/santa.js): has_from only, never the name or the code
+  on('santaInvite:open', ({ hasFrom }) => track('santa_invite_opened', { has_from: !!hasFrom }));
+  on('santaInvite:joined', () => track('santa_invite_joined', {}));
+  on('santaInvite:dismissed', () => track('santa_invite_dismissed', {}));
   const finaleDone = () => { if (!S.finale) return; track('finale_watched', { secs: secsSince(S.finale.t), replay: !!S.finale.replay }); S.finale = null; };
   on('finale:start', ({ preview, replay }) => { if (!preview) S.finale = { t: performance.now(), replay: !!replay }; });
   on('finale:exit', ({ preview }) => { if (!preview) finaleDone(); });

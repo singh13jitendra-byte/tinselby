@@ -3,7 +3,7 @@
 the in-memory Santa mock, src/santa/mock.js). Each page plays as its own player via ?santaAs=<uuid> (tabs of one browser
 share the save). Phone context (touch) at 412x915; landscape shots at 915x412; fit checks at 360x640 / 390x844 / 844x390.
 
-  public  big town: Friends card has no Secret Santa row, shows the one-line hint
+  public  big town: Friends card has the Secret Santa row (badge New, no hint line; the growth loop is tools/santa2.py)
   flow    A starts (Friends card row → sheet → Start), B gets the join nudge → joins, 2 members can't draw (button
           disabled + server too_few), C joins / leaves / joins, A draws (confirm), everyone sees exactly one match (not
           themselves, all different), presents picked (tile, change, "let the elves choose"), a 4th page in town but not
@@ -144,10 +144,11 @@ def public_part(b):
     ctxt = b.new_context(is_mobile=True, has_touch=True)
     fresh_storage(ctxt)
     pg = load(ctxt, 'Ava', '&town=')
-    check(ev(pg, f'{C}.net.town === null && {C}.santa.available === false && {C}.santa.summary() === null'), 'public: big town, Santa unavailable, no summary')
+    check(ev(pg, f'{C}.net.town === null && {C}.santa.available === false && {C}.santa.startable === true && {C}.santa.summary() === null'), 'public: big town, Santa not available in-town but startable, no summary')
     tap(pg, '.tbs-friends-btn'); step(pg, 2)
-    check(ev(pg, 'window.__s3.vis(".tbs-invite") && !window.__s3.vis(".tbsa-from-invite")'), 'public: Friends card has no Secret Santa row')
-    check(ev(pg, 'window.__s3.vis(".tbsa-fi-hint")') and 'Secret Santa' in ev(pg, 'window.__s3.text(".tbsa-fi-hint")'), 'public: one-line hint "Make a friends town to play Secret Santa"')
+    # growth loop (tools/santa2.py has the rest): the row is always there in the big town, badge "New", no hint line
+    check(ev(pg, 'window.__s3.vis(".tbs-invite") && window.__s3.vis(".tbsa-from-invite") && !window.__s3.vis(".tbsa-inv-from-invite")'), 'public: Friends card has the Secret Santa row (no invite row)')
+    check(not ev(pg, 'window.__s3.vis(".tbsa-fi-hint")') and ev(pg, 'window.__s3.text(".tbsa-fi-badge")') == 'New', 'public: no hint line, row badge "New"')
     pg.evaluate('window.__s3.fast(false); window.__tinselby.step(1/30, 1)'); pg.evaluate('document.getAnimations().forEach(a => { try { a.finish(); } catch (e) {} })')
     pg.screenshot(path=f'{SHOTS}/santa_public_friends_412x915.png'); pg.evaluate('window.__s3.fast(true)')
     tap(pg, '.tbs-invite .tb-modal-close')

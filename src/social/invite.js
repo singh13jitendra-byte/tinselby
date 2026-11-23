@@ -32,6 +32,7 @@ export function createInvite(ctx, social) {
             <div class="tbs-here"></div>
           </div>
           <button class="knit-btn cream tbsa-from-invite" hidden><span class="tbsa-fi-ico"></span><span>Secret Santa</span><span class="tbsa-fi-badge"></span></button>
+          <button class="knit-btn green tbsa-inv-from-invite" hidden>${SOCIAL_ICONS.share}<span>Invite friends to Secret Santa</span></button>
           <button class="knit-btn tbc-from-invite" hidden><span class="tbc-fi-ico"></span><span>Send a Christmas card</span></button>
         </section>
         <section class="tbs-inv-b">
@@ -135,17 +136,22 @@ export function createInvite(ctx, social) {
   const cardBtn = $('.tbc-from-invite');
   cardBtn.addEventListener('click', (e) => { stop(e); if (!ctx.cards) return; close(); if (!ctx.cards.open('friends')) open(); });
 
-  // Secret Santa (src/santa): a row while in a friends town, a one-line hint in the big town
-  const santaBtn = $('.tbsa-from-invite'), santaHint = $('.tbsa-fi-hint');
+  // Secret Santa (src/santa): the row is always there (big town: what it is + "Start with friends"; friends town: the
+  // group), plus "Invite friends to Secret Santa" while the town's group is open (the share sheet straight away)
+  const santaBtn = $('.tbsa-from-invite'), santaHint = $('.tbsa-fi-hint'), santaInv = $('.tbsa-inv-from-invite');
   function santaRow() {
     const s = ctx.santa, inTown = !!net()?.town?.code;
-    santaBtn.hidden = !s || !inTown || !s.available;
-    santaHint.hidden = !s || inTown || !hasNet();
+    santaBtn.hidden = !s || !(inTown ? s.available : s.startable);
+    santaHint.hidden = true;
+    let grpOpen = false;
+    try { grpOpen = !!s && inTown && s.available && s.status?.()?.state === 'open'; } catch (e) { grpOpen = false; }
+    santaInv.hidden = !grpOpen;
     if (santaBtn.hidden) return;
     if (!santaBtn.dataset.ico && s.icon) { santaBtn.dataset.ico = '1'; santaBtn.querySelector('.tbsa-fi-ico').outerHTML = s.icon; }
-    santaBtn.querySelector('.tbsa-fi-badge').textContent = s.summary?.()?.badge || '';
+    santaBtn.querySelector('.tbsa-fi-badge').textContent = inTown ? s.summary?.()?.badge || '' : 'New';
   }
   santaBtn.addEventListener('click', (e) => { stop(e); if (!ctx.santa) return; close(); if (!ctx.santa.open()) open(); });
+  santaInv.addEventListener('click', (e) => { stop(e); if (!ctx.santa) return; social.sfx('ui'); close(); if (!ctx.santa.invite()) open(); });
   game.on('santa:status', () => { if (isOpen) santaRow(); });
 
   back.addEventListener('click', (e) => {

@@ -55,6 +55,27 @@
 .tbsa-star { display: inline-grid; place-items: center; color: var(--gold); font-style: normal; }
 .tbsa-star svg { width: 16px; height: 16px; }
 
+/* open group: invite step, progress stitches, the big invite button */
+.tbsa-step .tbsa-big { margin-top: 2px; }
+.tbsa-prog {
+  align-self: center; display: inline-flex; align-items: center; gap: 10px; max-width: 100%; padding: 7px 14px 7px 10px; border-radius: 999px;
+  background: #fff6e4; color: var(--red); font: 700 15px/1.2 var(--font); box-shadow: inset 0 0 0 2px rgba(184, 48, 45, .22);
+}
+.tbsa-prog.ready { background: #e6f1dc; color: var(--green); box-shadow: inset 0 0 0 2px rgba(63, 110, 69, .3); }
+.tbsa-prog-t { text-align: left; }
+.tbsa-dots { flex: none; display: inline-flex; gap: 4px; }
+.tbsa-dots i { width: 14px; height: 14px; border-radius: 50%; background: #fffaf0; box-shadow: inset 0 0 0 2px currentColor; opacity: .55; }
+.tbsa-dots i.on { background: currentColor; opacity: 1; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .45); }
+.tbsa-inv { display: flex; gap: 8px; justify-content: center; }
+.tbsa-inv .knit-btn.big { flex: 1 1 0; max-width: 340px; min-height: 54px; padding: 0 16px; font-size: 18px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; white-space: nowrap; }
+.tbsa-inv.two .knit-btn.big { font-size: 16px; padding: 0 10px; }
+.tbsa-inv .knit-btn svg { width: 24px; height: 24px; flex: none; }
+.tbsa-inv .knit-btn.done { background: var(--green); color: var(--cream); }
+/* big town: what it is, in three steps */
+.tbsa-steps { list-style: none; margin: 0 auto; padding: 0; display: flex; flex-direction: column; gap: 6px; text-align: left; max-width: 340px; width: 100%; }
+.tbsa-steps li { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 4px 12px 4px 6px; border-radius: 14px; background: #fffaf0; box-shadow: 0 2px 0 #d9bf8c; font: 600 15px/1.2 var(--font); }
+.tbsa-steps b { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--green); color: var(--cream); font: 700 14px/1 var(--font); }
+
 /* drawn: your match + present */
 .tbsa-match { padding: 12px 10px; border-radius: 18px; background: #fff6e4; box-shadow: inset 0 0 0 2px rgba(184, 48, 45, .25); outline: 2px dashed rgba(184, 48, 45, .35); outline-offset: -7px; }
 .tbsa-match .tbsa-big { font-size: 24px; margin-top: 3px; overflow-wrap: anywhere; }
@@ -120,6 +141,8 @@
   }
 }
 @media (max-width: 380px) {
+  .tbsa-prog { font-size: 14px; padding: 6px 12px 6px 8px; }
+  .tbsa-inv .knit-btn.big { font-size: 16px; }
   .tbsa-actions .knit-btn { font-size: 15px; padding: 0 8px; gap: 5px; }
   .tbsa-actions .knit-btn svg { display: none; }
   .tbsa-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
@@ -141,6 +164,11 @@
   .tbsa-match .tbsa-big { font-size: 21px; }
   .tbsa-actions .knit-btn { min-height: 44px; }
   .tbsa-gift .tbsa-sw, .tbsa-got .tbsa-sw { width: 52px; height: 52px; }
+  .tbsa-inv .knit-btn.big { min-height: 46px; font-size: 16px; }
+  .tbsa-steps { flex-direction: row; max-width: none; }
+  .tbsa-steps li { flex: 1 1 0; font-size: 13.5px; padding: 4px 8px 4px 5px; }
+  .tbsa-steps b { width: 24px; height: 24px; }
+  .tbsa-big { font-size: 20px; }
 }
 body.tb-photo .tbsa-layer, body.tb-photo .tbsa-cards { display: none !important; }
 
@@ -153,6 +181,9 @@ body.tb-photo .tbsa-layer, body.tb-photo .tbsa-cards { display: none !important;
 .tbsa-from-invite svg { width: 22px; height: 22px; flex: none; }
 .tbsa-fi-badge { font: 700 12px/1 var(--font); padding: 4px 8px; border-radius: 999px; background: var(--red); color: #fff; white-space: nowrap; }
 .tbsa-fi-badge:empty { display: none; }
+.tbsa-inv-from-invite { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; font-size: 16px; padding: 12px 14px; }
+.tbsa-inv-from-invite svg { width: 22px; height: 22px; flex: none; }
+.tbsa-inv-from-invite[hidden] { display: none; }
 .tbsa-fi-hint { margin: 0; font: 500 13px/1.3 var(--font); opacity: .7; text-align: center; }
 /* roster header badge */
 .tbs-ro-head:has(.tbsa-ro-badge:not([hidden])) { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
